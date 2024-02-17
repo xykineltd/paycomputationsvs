@@ -11,11 +11,12 @@ public class PaymentInfo {
     private String departmentId;
     private String fullName;
     private String taxClass;
+    private Integer numberOfDaysOfUnpaidAbsence;
+    private Integer numberOfHours;
     private BigDecimal basicSalary;
-    private BigDecimal pfaDeductionPercentage;
-    private String pfaName;
-    private String pfaAccount;
-    private BigDecimal totalBonusDue;
+    private BigDecimal hourlyRate;
     private BigDecimal totalDeduction;
+    private BigDecimal totalEarning;
     private BigDecimal totalPaymentDue;
+    private BigDecimal others;
 }

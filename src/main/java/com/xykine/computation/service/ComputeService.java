@@ -3,15 +3,20 @@ package com.xykine.computation.service;
 import com.xykine.computation.model.PaymentInfo;
 import com.xykine.computation.request.PaymentComputeRequest;
 import com.xykine.computation.response.PaymentComputeResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.net.URI;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class ComputeService {
+
+    private final PaymentCalculator paymentCalculator;
 
     public PaymentComputeResponse computePayroll(PaymentComputeRequest paymentComputeRequest) {
 
@@ -45,10 +50,13 @@ public class ComputeService {
                 .build();
     }
 
-    // apply formula and generate report for finance
     private  List<PaymentInfo> generateReport(List<PaymentInfo> rawInfo) {
-        // apply formula
-        return null;
+        return rawInfo
+                .stream()
+                .map(x -> paymentCalculator.computeTotalEarning(x))
+                .map(x -> paymentCalculator.computeTotalDeduction(x))
+                .map(x -> paymentCalculator.computeOthers(x))
+                .collect(Collectors.toList());
     }
 
 }
