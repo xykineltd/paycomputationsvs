@@ -20,7 +20,7 @@ public class ComputeService {
 
     public PaymentComputeResponse computePayroll(PaymentComputeRequest paymentComputeRequest) {
 
-        WebClient client = WebClient.create("https://126.67.98.43:8080");
+        WebClient client = WebClient.create("https://localhost:8080");
         WebClient.UriSpec<WebClient.RequestBodySpec> uriSpec = client.post();
         WebClient.RequestBodySpec bodySpec = uriSpec.uri(URI.create("/resource"));
 
