@@ -26,4 +26,16 @@ public enum Others {
         group = aGroup;
         infoType = anInfoType;
     }
+
+    public String getRange() {
+        return range;
+    }
+
+    public String getGroup() {
+        return group;
+    }
+
+    public String getInfoType() {
+        return infoType;
+    }
 }
