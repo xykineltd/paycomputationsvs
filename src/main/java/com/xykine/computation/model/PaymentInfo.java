@@ -3,6 +3,8 @@ package com.xykine.computation.model;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.Map;
 
 @Data
 public class PaymentInfo {
@@ -15,8 +17,10 @@ public class PaymentInfo {
     private Integer numberOfHours;
     private BigDecimal basicSalary;
     private BigDecimal hourlyRate;
-    private BigDecimal totalDeduction;
-    private BigDecimal totalEarning;
-    private BigDecimal totalPaymentDue;
-    private BigDecimal others;
+    private String band;
+    private Map<String, BigDecimal>  deduction;
+    private Map<String, BigDecimal> earning;
+    private Map<String, BigDecimal> others;
+    private LocalDate startDate;
+    private LocalDate endDate;
 }

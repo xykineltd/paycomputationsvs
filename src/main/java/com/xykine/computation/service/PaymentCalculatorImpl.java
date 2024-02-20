@@ -26,15 +26,15 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     // To do ==> complete implementation
     @Override
     public PaymentInfo computeTotalEarning(PaymentInfo paymentInfo) {
-
+        String band = paymentInfo.getBand();
         Map<String, BigDecimal> totalEarningMap = new HashMap<>();
         totalEarningMap.put(Earnings.BASIC_SALARY.getGroup(), prorateBasicSalary(paymentInfo));
         totalEarningMap.put(Earnings.HOURLY_PAID.getGroup(), BigDecimal.ZERO);
         totalEarningMap.put(Earnings.ADDITIONAL_PAYMENT.getGroup(), calculateAdditionalPayment(paymentInfo));
-        totalEarningMap.put(Earnings.RECURRING_PAYMENT.getGroup(), calculateRecurringPayment(paymentInfo));
         totalEarningMap.put(Earnings.OVERTIME.getGroup(), calculateOvertime(paymentInfo));
-
-        paymentInfo.setTotalEarning(getTotal(totalEarningMap));
+        totalEarningMap = insertRecurrentPaymentMap(totalEarningMap, band);
+        totalEarningMap.put("total earning", getTotal(totalEarningMap));
+        paymentInfo.setEarning(totalEarningMap);
         return paymentInfo;
     }
 
@@ -47,8 +47,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         totalDeductionMap.put(Deductions.RECURRING_DEDUCTIONS.getGroup(), BigDecimal.ZERO);
         totalDeductionMap.put(Deductions.MEMBERSHIP_FEES.getGroup(), BigDecimal.ZERO);
         totalDeductionMap.put(Deductions.EXTERNAL_TRANSFER.getGroup(), BigDecimal.ZERO);
-
-        paymentInfo.setTotalDeduction(getTotal(totalDeductionMap));
+        totalDeductionMap.put("total deduction", getTotal(totalDeductionMap));
         return paymentInfo;
     }
 
@@ -72,18 +71,16 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         otherPaymentMap.put(Others.TAX_CALCULATION.getGroup(), BigDecimal.ZERO);
         otherPaymentMap.put(Others.PROVISIONS.getGroup(), BigDecimal.ZERO);
         otherPaymentMap.put(Others.LEAVE_VALUATION_ABSENCES.getGroup(), BigDecimal.ZERO);
-
-        paymentInfo.setOthers(getTotal(otherPaymentMap));
+        otherPaymentMap.put("total others", getTotal(otherPaymentMap));
+        paymentInfo.setOthers(otherPaymentMap);
         return paymentInfo;
     }
 
     private BigDecimal prorateBasicSalary(PaymentInfo paymentInfo){
         int numberOfDaysOfUnpaidAbsence = paymentInfo.getNumberOfDaysOfUnpaidAbsence();
-        MathContext tRounding = new MathContext(2, RoundingMode.HALF_EVEN)
-
+        MathContext tRounding = new MathContext(2, RoundingMode.HALF_EVEN);
         if (numberOfDaysOfUnpaidAbsence == 0)
             return paymentInfo.getBasicSalary();
-
         // if numberOfDaysOfUnpaidAbsence is not 0, remove the daily wage equivalent multiplied by the number of unpaid absences
         BigDecimal dailyWage = paymentInfo.getBasicSalary().divide(BigDecimal.valueOf(21), tRounding);  // To do ==> verify number of working days in the month
          return paymentInfo.getBasicSalary().subtract(dailyWage.multiply(BigDecimal.valueOf(numberOfDaysOfUnpaidAbsence)), tRounding);
@@ -97,19 +94,18 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     // To do ==> complete implementation
     //To do ===> prorate values retrieved from T511K where required
-    private BigDecimal calculateRecurringPayment(PaymentInfo paymentInfo){
-        String constant;
+    private Map<String, BigDecimal> insertRecurrentPaymentMap(Map<String, BigDecimal> earningMap, String band){
         //  To resolve the constant from employee band;
         Map<String, BigDecimal> recurrinPaymentMap = new HashMap<>();
-        recurrinPaymentMap.put(RecurringPayments.TRANSPORT_ALLOWANCE.getDescription(), t511KRepo.findAmountByConstant("ZFUC"));  // To do resolve employee transport allowance constant
-        recurrinPaymentMap.put(RecurringPayments.STEWARD_ALLOWANCE.getDescription(), t511KRepo.findAmountByConstant("ZFUC"));
-        recurrinPaymentMap.put(RecurringPayments.SECURITY_ALLOWANCE.getDescription(), t511KRepo.findAmountByConstant("ZFUC"));
-        recurrinPaymentMap.put(RecurringPayments.LUNCH_ALLOWANCE.getDescription(), t511KRepo.findAmountByConstant("ZFUC"));
-        recurrinPaymentMap.put(RecurringPayments.CAR_MAINTENANCE_ALLOWANCE.getDescription(), t511KRepo.findAmountByConstant("ZFUC"));
-        recurrinPaymentMap.put(RecurringPayments.DATA_ALLOWANCE.getDescription(), t511KRepo.findAmountByConstant("ZFUC"));
-        recurrinPaymentMap.put(RecurringPayments.FUEL_ALLOWANCE.getDescription(), t511KRepo.findAmountByConstant("ZFUC"));
-
-        return getTotal(recurrinPaymentMap);
+        recurrinPaymentMap.put(RecurringPayments.TRANSPORT_ALLOWANCE.getDescription(), t511KRepo.findAmountByConstant("ZTR"+ band));  // To do resolve employee transport allowance constant
+        recurrinPaymentMap.put(RecurringPayments.STEWARD_ALLOWANCE.getDescription(), t511KRepo.findAmountByConstant("ZST"+ band));
+        recurrinPaymentMap.put(RecurringPayments.SECURITY_ALLOWANCE.getDescription(), t511KRepo.findAmountByConstant("ZSE"+ band));
+        recurrinPaymentMap.put(RecurringPayments.LUNCH_ALLOWANCE.getDescription(), t511KRepo.findAmountByConstant("Z1022"));
+        recurrinPaymentMap.put(RecurringPayments.CAR_MAINTENANCE_ALLOWANCE.getDescription(), t511KRepo.findAmountByConstant("ZCA"+ band));
+        recurrinPaymentMap.put(RecurringPayments.DATA_ALLOWANCE.getDescription(), t511KRepo.findAmountByConstant("Z1021"));
+        recurrinPaymentMap.put(RecurringPayments.FUEL_ALLOWANCE.getDescription(), t511KRepo.findAmountByConstant("ZFU"+ band));
+        recurrinPaymentMap.put(RecurringPayments.DRIVER_ALLOWANCE.getDescription(), t511KRepo.findAmountByConstant("ZDR"+band));
+        return recurrinPaymentMap;
     }
 
     // To do ==> complete implementation
