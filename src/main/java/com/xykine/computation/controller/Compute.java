@@ -1,6 +1,6 @@
 package com.xykine.computation.controller;
 
-import com.xykine.computation.request.PaymentComputeRequest;
+import com.xykine.computation.request.PaymentInfoRequest;
 import com.xykine.computation.response.PaymentComputeResponse;
 import com.xykine.computation.service.ComputeService;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +17,7 @@ public class Compute {
     private final ComputeService computeService;
 
     @PostMapping("/payroll")
-    public PaymentComputeResponse computePayroll(@RequestBody PaymentComputeRequest paymentRequest) {
+    public PaymentComputeResponse computePayroll(@RequestBody PaymentInfoRequest paymentRequest) {
         return computeService.computePayroll(paymentRequest);
     }
 }

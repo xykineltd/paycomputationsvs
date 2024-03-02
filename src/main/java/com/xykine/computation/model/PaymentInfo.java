@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.util.Map;
 
 @Data
+// To do, align the names with admin-service
 public class PaymentInfo {
     private String employeeId;
     private String companyId;
