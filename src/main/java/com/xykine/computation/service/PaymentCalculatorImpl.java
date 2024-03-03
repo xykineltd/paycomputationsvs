@@ -1,12 +1,16 @@
 package com.xykine.computation.service;
 
+import com.xykine.computation.entity.Deductions;
 import com.xykine.computation.model.PaymentInfo;
-import com.xykine.computation.model.wagetypegroup.Deductions;
 import com.xykine.computation.model.wagetypegroup.Earnings;
 import com.xykine.computation.model.wagetypegroup.Others;
 import com.xykine.computation.model.wagetypegroup.RecurringPayments;
+import com.xykine.computation.repo.DeductionRepo;
+import com.xykine.computation.repo.PensionFundRepo;
 import com.xykine.computation.repo.T511KRepo;
 
+import com.xykine.computation.repo.TaxRepo;
+import com.xykine.computation.response.PaymentResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -14,6 +18,7 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 
@@ -21,12 +26,15 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PaymentCalculatorImpl implements PaymentCalculator{
 
-    public final T511KRepo t511KRepo;
+    private final T511KRepo t511KRepo;
+    private final TaxRepo taxRepo;
+    private final DeductionRepo deductionRepo;
+    private final PensionFundRepo pensionFundRepo;
 
     // To do ==> complete implementation
     @Override
     public PaymentInfo computeTotalEarning(PaymentInfo paymentInfo) {
-        String band = paymentInfo.getBand();
+        String band = paymentInfo.getBandCode();
         Map<String, BigDecimal> totalEarningMap = new HashMap<>();
         totalEarningMap.put(Earnings.BASIC_SALARY.getGroup(), prorateBasicSalary(paymentInfo));
         totalEarningMap.put(Earnings.HOURLY_PAID.getGroup(), BigDecimal.ZERO);
@@ -38,16 +46,19 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         return paymentInfo;
     }
 
-
-    // To do ==> complete implementation
     @Override
     public PaymentInfo computeTotalDeduction(PaymentInfo paymentInfo) {
         Map<String, BigDecimal> totalDeductionMap = new HashMap<>();
-        totalDeductionMap.put(Deductions.ADDITIONAL_DEDUCTIONS.getGroup(), BigDecimal.ZERO);
-        totalDeductionMap.put(Deductions.RECURRING_DEDUCTIONS.getGroup(), BigDecimal.ZERO);
-        totalDeductionMap.put(Deductions.MEMBERSHIP_FEES.getGroup(), BigDecimal.ZERO);
-        totalDeductionMap.put(Deductions.EXTERNAL_TRANSFER.getGroup(), BigDecimal.ZERO);
+        totalDeductionMap.put("Income Tax", calculateTax(paymentInfo));
+        totalDeductionMap.put("Pension Fund",calculatePensionFund(paymentInfo));
+        List<Deductions> deductions = deductionRepo.findDeductionByEmployeeId(paymentInfo.getId());
+        deductions.stream()
+                .filter(x -> x.getActive())
+                        .forEach(x -> {
+                            totalDeductionMap.put(x.getDescription(), x.getAmount());
+                        });
         totalDeductionMap.put("total deduction", getTotal(totalDeductionMap));
+        paymentInfo.setDeduction(totalDeductionMap);
         return paymentInfo;
     }
 
@@ -76,6 +87,12 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         return paymentInfo;
     }
 
+    @Override
+    public PaymentInfo computeAmountDue(PaymentInfo paymentInfo) {
+        paymentInfo.setTotalAmountDue(paymentInfo.getEarning().get("total earning").subtract(paymentInfo.getDeduction().get("total deduction")));
+        return paymentInfo;
+    }
+
     private BigDecimal prorateBasicSalary(PaymentInfo paymentInfo){
         int numberOfDaysOfUnpaidAbsence = paymentInfo.getNumberOfDaysOfUnpaidAbsence();
         MathContext tRounding = new MathContext(2, RoundingMode.HALF_EVEN);
@@ -85,6 +102,22 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         BigDecimal dailyWage = paymentInfo.getBasicSalary().divide(BigDecimal.valueOf(21), tRounding);  // To do ==> verify number of working days in the month
          return paymentInfo.getBasicSalary().subtract(dailyWage.multiply(BigDecimal.valueOf(numberOfDaysOfUnpaidAbsence)), tRounding);
     }
+
+    private BigDecimal calculateTax(PaymentInfo paymentInfo){
+        BigDecimal taxPercentage = taxRepo.findTaxByBand(paymentInfo.getBandCode()).getPercentage();
+        MathContext tRounding = new MathContext(2, RoundingMode.HALF_EVEN);
+        BigDecimal taxAmount = prorateBasicSalary(paymentInfo).multiply(taxPercentage, tRounding).divide(BigDecimal.valueOf(100));
+        return taxAmount;
+    }
+
+    private BigDecimal calculatePensionFund(PaymentInfo paymentInfo){
+        //String taxClass = paymentInfo.getTaxClass(); to be set from admin service
+        BigDecimal pensionPercentage = pensionFundRepo.findPensionFundByEmployeeId(paymentInfo.getId()).getPercentage();
+        MathContext tRounding = new MathContext(2, RoundingMode.HALF_EVEN);
+        BigDecimal taxAmount = prorateBasicSalary(paymentInfo).multiply(pensionPercentage, tRounding).divide(BigDecimal.valueOf(100));
+        return taxAmount;
+    }
+
 
     // To do ==> complete implementation
     private BigDecimal calculateAdditionalPayment(PaymentInfo paymentInfo){
@@ -96,16 +129,15 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     //To do ===> prorate values retrieved from T511K where required
     private Map<String, BigDecimal> insertRecurrentPaymentMap(Map<String, BigDecimal> earningMap, String band){
         //  To resolve the constant from employee band;
-        Map<String, BigDecimal> recurrinPaymentMap = new HashMap<>();
-        recurrinPaymentMap.put(RecurringPayments.TRANSPORT_ALLOWANCE.getDescription(), t511KRepo.findAmountByConstant("ZTR"+ band));  // To do resolve employee transport allowance constant
-        recurrinPaymentMap.put(RecurringPayments.STEWARD_ALLOWANCE.getDescription(), t511KRepo.findAmountByConstant("ZST"+ band));
-        recurrinPaymentMap.put(RecurringPayments.SECURITY_ALLOWANCE.getDescription(), t511KRepo.findAmountByConstant("ZSE"+ band));
-        recurrinPaymentMap.put(RecurringPayments.LUNCH_ALLOWANCE.getDescription(), t511KRepo.findAmountByConstant("Z1022"));
-        recurrinPaymentMap.put(RecurringPayments.CAR_MAINTENANCE_ALLOWANCE.getDescription(), t511KRepo.findAmountByConstant("ZCA"+ band));
-        recurrinPaymentMap.put(RecurringPayments.DATA_ALLOWANCE.getDescription(), t511KRepo.findAmountByConstant("Z1021"));
-        recurrinPaymentMap.put(RecurringPayments.FUEL_ALLOWANCE.getDescription(), t511KRepo.findAmountByConstant("ZFU"+ band));
-        recurrinPaymentMap.put(RecurringPayments.DRIVER_ALLOWANCE.getDescription(), t511KRepo.findAmountByConstant("ZDR"+band));
-        return recurrinPaymentMap;
+        earningMap.put(RecurringPayments.TRANSPORT_ALLOWANCE.getDescription(), t511KRepo.findRecordByConstant("ZTR"+ band).getAmount());  // To do resolve employee transport allowance constant
+        earningMap.put(RecurringPayments.STEWARD_ALLOWANCE.getDescription(), t511KRepo.findRecordByConstant("ZST"+ band).getAmount());
+        earningMap.put(RecurringPayments.SECURITY_ALLOWANCE.getDescription(), t511KRepo.findRecordByConstant("ZSE"+ band).getAmount());
+        earningMap.put(RecurringPayments.LUNCH_ALLOWANCE.getDescription(), t511KRepo.findRecordByConstant("Z1022").getAmount());
+        earningMap.put(RecurringPayments.CAR_MAINTENANCE_ALLOWANCE.getDescription(), t511KRepo.findRecordByConstant("ZCA"+ band).getAmount());
+        earningMap.put(RecurringPayments.DATA_ALLOWANCE.getDescription(), t511KRepo.findRecordByConstant("Z1021").getAmount());
+        earningMap.put(RecurringPayments.FUEL_ALLOWANCE.getDescription(), t511KRepo.findRecordByConstant("ZFU"+ band).getAmount());
+        earningMap.put(RecurringPayments.DRIVER_ALLOWANCE.getDescription(), t511KRepo.findRecordByConstant("ZDR"+band).getAmount());
+        return earningMap;
     }
 
     // To do ==> complete implementation
@@ -117,7 +149,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         BigDecimal total = BigDecimal.ZERO;
 
         for(Map.Entry<String, BigDecimal> entry : input.entrySet()) {
-            total.add(entry.getValue());
+            total = total.add(entry.getValue());
         }
         return total;
     }

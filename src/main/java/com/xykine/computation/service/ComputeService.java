@@ -1,5 +1,7 @@
 package com.xykine.computation.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.xykine.computation.model.PaymentInfo;
@@ -25,32 +27,33 @@ public class ComputeService {
 
     public PaymentComputeResponse computePayroll(PaymentInfoRequest paymentComputeRequest) {
 
-        List<PaymentInfo> rawInfo =  (List<PaymentInfo>)webClient
+        List rawInfo =  webClient
                 .post()
                 .uri("admin/paymentinfo/compute")
                 .body(BodyInserters.fromValue(paymentComputeRequest))
                 .retrieve().bodyToMono(List.class).block();
 
-        LOGGER.info("casted response {} ", rawInfo);
+        ObjectMapper mapper = new ObjectMapper();
+        List<PaymentInfo> paymentInfoList = mapper.convertValue(
+                rawInfo,
+                new TypeReference<List<PaymentInfo>>(){}
+        );
 
             // if api call error occurs
-            if (true) {
+            if (rawInfo == null) {
                 return  PaymentComputeResponse.builder()
-                        .message("error calling SAP api")
+                        .message("error calling Admin service api")
                         .success(false)
                         .report(null)
                         .build();
             }
 
-
-        List<PaymentInfo> paymentReport = generateReport(rawInfo);
+        List<PaymentInfo> paymentReport = generateReport(paymentInfoList);
         return  PaymentComputeResponse.builder()
                 .message("")
                 .success(true)
                 .report(paymentReport)
                 .build();
-
-
     }
 
     private  List<PaymentInfo> generateReport(List<PaymentInfo> rawInfo) {
@@ -58,7 +61,8 @@ public class ComputeService {
                 .stream()
                 .map(x -> paymentCalculator.computeTotalEarning(x))
                 .map(x -> paymentCalculator.computeTotalDeduction(x))
-                .map(x -> paymentCalculator.computeOthers(x))
+               // .map(x -> paymentCalculator.computeOthers(x))
+                .map(x -> paymentCalculator.computeAmountDue(x))
                 .collect(Collectors.toList());
     }
 }

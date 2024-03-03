@@ -3,13 +3,11 @@ package com.xykine.computation.model;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.Map;
 
 @Data
-// To do, align the names with admin-service
 public class PaymentInfo {
-    private String employeeId;
+    private String id;
     private String companyId;
     private String departmentId;
     private String fullName;
@@ -18,10 +16,17 @@ public class PaymentInfo {
     private Integer numberOfHours;
     private BigDecimal basicSalary;
     private BigDecimal hourlyRate;
-    private String band;
-    private Map<String, BigDecimal>  deduction;
+    private String bandCode;
+    private Map<String, BigDecimal> deduction;
     private Map<String, BigDecimal> earning;
     private Map<String, BigDecimal> others;
-    private LocalDate startDate;
-    private LocalDate endDate;
+    private BigDecimal totalAmountDue;
+    private Employee employee;
+    private String startDate;
+    private String endDate;
+    private String createdDate;
+    private String lastModifiedDate;
+    private String createdBy;
+    private String lastModifiedBy;
+    int version;
 }

@@ -7,5 +7,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.math.BigDecimal;
 
 public interface T511KRepo extends JpaRepository<T511K, String> {
-    BigDecimal findAmountByConstant(String aConstant);
+    T511K findRecordByConstant(String aConstant);
 }
