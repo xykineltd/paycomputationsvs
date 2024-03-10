@@ -1,183 +1,143 @@
 package com.xykine.computation;
 
-import com.xykine.computation.entity.Deductions;
-import com.xykine.computation.entity.PensionFund;
-import com.xykine.computation.entity.T511K;
-import com.xykine.computation.entity.Tax;
-import com.xykine.computation.repo.DeductionRepo;
-import com.xykine.computation.repo.PensionFundRepo;
-import com.xykine.computation.repo.T511KRepo;
-import com.xykine.computation.repo.TaxRepo;
+import com.xykine.computation.entity.*;
+import com.xykine.computation.model.TaxBearer;
+import com.xykine.computation.repo.*;
+import com.xykine.computation.session.SessionCalculationObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.Map;
 
 @SpringBootApplication
 public class ComputationApplication implements CommandLineRunner {
-
-	@Autowired
-	private T511KRepo t511KRepo;
 	@Autowired
 	private TaxRepo taxRepo;
 	@Autowired
 	private DeductionRepo deductionRepo;
 	@Autowired
 	private PensionFundRepo pensionFundRepo;
+	@Autowired
+	private AllowanceAndOtherPaymentsRepo allowanceAndOtherPaymentsRepo;
 	public static void main(String[] args) {
 		SpringApplication.run(ComputationApplication.class, args);
 	}
 
+	@Bean
+	public SessionCalculationObject employerBornTaxDetails(){
+		return new SessionCalculationObject();
+	}
+
 	@Override
 	public void run(String... args) throws Exception {
-		T511K fueAllowance = T511K.builder()
-				.constant("ZFUC")
-				.description("fuel allowance band C")
+
+		AllowanceAndOtherPayments fueAllowanceBandC = AllowanceAndOtherPayments.builder()
+				.id("ZFUC")
+				.bandCode("C")
+				.taxPercent(BigDecimal.valueOf(8.5))
+				.taxBearer(TaxBearer.EMPLOYEE)
+				.description("Fuel allowance")
 				.startDate(LocalDate.parse("2020-01-01"))
 				.endDate(LocalDate.parse("9999-12-31"))
 				.amount(BigDecimal.valueOf(37000.00))
+				.active(true)
 				.build();
+		allowanceAndOtherPaymentsRepo.save(fueAllowanceBandC);
 
-		T511K carAllowance = T511K.builder()
-				.constant("ZCAC")
-				.description("Car allowance Maintenance")
-				.startDate(LocalDate.parse("2020-01-01"))
-				.endDate(LocalDate.parse("9999-12-31"))
-				.amount(BigDecimal.valueOf(118538.34))
-				.build();
-
-		T511K driverAllowance = T511K.builder()
-				.constant("ZDRC")
-				.description("Driver allowance C")
-				.startDate(LocalDate.parse("2020-01-01"))
-				.endDate(LocalDate.parse("9999-12-31"))
-				.amount(BigDecimal.valueOf(92307.60))
-				.build();
-
-		T511K dataAllowance = T511K.builder()
-				.constant("Z1021")
-				.description("Data allowance")
-				.startDate(LocalDate.parse("2020-01-01"))
-				.endDate(LocalDate.parse("9999-12-31"))
-				.amount(BigDecimal.valueOf(3000.00))
-				.build();
-
-		T511K lunchAllowance = T511K.builder()
-				.constant("Z1022")
-				.description("Lunch allowance")
-				.startDate(LocalDate.parse("2020-01-01"))
-				.endDate(LocalDate.parse("9999-12-31"))
-				.amount(BigDecimal.valueOf(18416.67))
-				.build();
-
-		T511K transportAllowance = T511K.builder()
-				.constant("ZTRC")
-				.description("TData Allowant C")
-				.startDate(LocalDate.parse("2020-01-01"))
-				.endDate(LocalDate.parse("9999-12-31"))
-				.amount(BigDecimal.ZERO)
-				.build();
-
-		T511K securityAllowance = T511K.builder()
-				.constant("ZSEC")
-				.description("Security allowance band C")
+		AllowanceAndOtherPayments carMaintenanceAllowance = AllowanceAndOtherPayments.builder()
+				.id("ZCMC")
+				.bandCode("C")
+				.taxPercent(BigDecimal.valueOf(4.5))
+				.taxBearer(TaxBearer.EMPLOYEE)
+				.description("Car maintenance allowance")
 				.startDate(LocalDate.parse("2020-01-01"))
 				.endDate(LocalDate.parse("9999-12-31"))
 				.amount(BigDecimal.valueOf(45000.00))
+				.active(true)
 				.build();
+		allowanceAndOtherPaymentsRepo.save(carMaintenanceAllowance);
 
-		T511K stewardAllowance = T511K.builder()
-				.constant("ZSTC")
-				.description("Steward allowance band C")
+		AllowanceAndOtherPayments driverAllowanceBandC = AllowanceAndOtherPayments.builder()
+				.id("ZDRC")
+				.bandCode("C")
+				.description("Driver allowance")
 				.startDate(LocalDate.parse("2020-01-01"))
 				.endDate(LocalDate.parse("9999-12-31"))
-				.amount(BigDecimal.valueOf(41000.00))
-				.build();
-
-		t511KRepo.save(fueAllowance);
-		t511KRepo.save(carAllowance);
-		t511KRepo.save(driverAllowance);
-		t511KRepo.save(dataAllowance);
-		t511KRepo.save(lunchAllowance);
-		t511KRepo.save(transportAllowance);
-		t511KRepo.save(securityAllowance);
-		t511KRepo.save(stewardAllowance);
-
-		 fueAllowance = T511K.builder()
-				.constant("ZFUA")
-				.description("fuel allowance band A")
-				.startDate(LocalDate.parse("2020-01-01"))
-				.endDate(LocalDate.parse("9999-12-31"))
+				.taxPercent(BigDecimal.valueOf(4.5))
 				.amount(BigDecimal.ZERO)
+				.taxPercent(BigDecimal.ZERO)
+				.active(true)
 				.build();
+		allowanceAndOtherPaymentsRepo.save(driverAllowanceBandC);
 
-		 carAllowance = T511K.builder()
-				.constant("ZCAA")
-				.description("Car allowance Maintenance band A")
-				.startDate(LocalDate.parse("2020-01-01"))
-				.endDate(LocalDate.parse("9999-12-31"))
-				 .amount(BigDecimal.ZERO)
-				.build();
-
-		 driverAllowance = T511K.builder()
-				.constant("ZDRA")
-				.description("Driver allowance A")
-				.startDate(LocalDate.parse("2020-01-01"))
-				.endDate(LocalDate.parse("9999-12-31"))
-				 .amount(BigDecimal.ZERO)
-				.build();
-
-		 dataAllowance = T511K.builder()
-				.constant("Z1021")
+		AllowanceAndOtherPayments dataAllowanceAll = AllowanceAndOtherPayments.builder()
+				.id("Z1021")
+				.bandCode("ALL")
 				.description("Data allowance")
 				.startDate(LocalDate.parse("2020-01-01"))
 				.endDate(LocalDate.parse("9999-12-31"))
-				.amount(BigDecimal.valueOf(3000.00))
+				.amount(BigDecimal.valueOf(3000))
+				.taxPercent(BigDecimal.ZERO)
+				.active(true)
 				.build();
+		allowanceAndOtherPaymentsRepo.save(dataAllowanceAll);
 
-		 lunchAllowance = T511K.builder()
-				.constant("Z1022")
-				.description("Lunch allowance")
+		AllowanceAndOtherPayments lunchAllowanceAll = AllowanceAndOtherPayments.builder()
+				.id("Z1022")
+				.bandCode("ALL")
+				.description("Lunch Allowance")
 				.startDate(LocalDate.parse("2020-01-01"))
 				.endDate(LocalDate.parse("9999-12-31"))
 				.amount(BigDecimal.valueOf(18416.67))
+				.taxPercent(BigDecimal.ZERO)
+				.active(true)
 				.build();
+		allowanceAndOtherPaymentsRepo.save(lunchAllowanceAll);
 
-		 transportAllowance = T511K.builder()
-				.constant("ZTRA")
-				.description("TData Allowant C")
+		AllowanceAndOtherPayments transportAllowanceA = AllowanceAndOtherPayments.builder()
+				.id("ZTRA")
+				.bandCode("A")
+				.description("Transport allowance")
+				.taxPercent(BigDecimal.valueOf(4.5))
+				.taxBearer(TaxBearer.EMPLOYER)
 				.startDate(LocalDate.parse("2020-01-01"))
 				.endDate(LocalDate.parse("9999-12-31"))
-				.amount(BigDecimal.valueOf(1000.00))
+				.amount(BigDecimal.valueOf(10000))
+				.active(true)
 				.build();
+		allowanceAndOtherPaymentsRepo.save(transportAllowanceA);
 
-		 securityAllowance = T511K.builder()
-				.constant("ZSEA")
-				.description("Security allowance band A")
+		AllowanceAndOtherPayments securityAllowanceC = AllowanceAndOtherPayments.builder()
+				.id("ZSEC")
+				.bandCode("C")
+				.description("Security allowance")
+				.taxPercent(BigDecimal.valueOf(10.5))
+				.taxBearer(TaxBearer.EMPLOYER)
 				.startDate(LocalDate.parse("2020-01-01"))
 				.endDate(LocalDate.parse("9999-12-31"))
-				 .amount(BigDecimal.valueOf(18416.67))
+				.amount(BigDecimal.valueOf(45000))
+				.active(true)
 				.build();
+		allowanceAndOtherPaymentsRepo.save(securityAllowanceC);
 
-		 stewardAllowance = T511K.builder()
-				.constant("ZSTA")
-				.description("Steward allowance band A")
+		AllowanceAndOtherPayments stewardAllowance = AllowanceAndOtherPayments.builder()
+				.id("ZSTC")
+				.bandCode("C")
+				.description("Steward allowance")
+				.taxPercent(BigDecimal.valueOf(10.5))
+				.taxBearer(TaxBearer.EMPLOYEE)
 				.startDate(LocalDate.parse("2020-01-01"))
 				.endDate(LocalDate.parse("9999-12-31"))
-				 .amount(BigDecimal.valueOf(18416.67))
+				.amount(BigDecimal.valueOf(41000.00))
+				.active(true)
 				.build();
-
-		t511KRepo.save(fueAllowance);
-		t511KRepo.save(carAllowance);
-		t511KRepo.save(driverAllowance);
-		t511KRepo.save(dataAllowance);
-		t511KRepo.save(lunchAllowance);
-		t511KRepo.save(transportAllowance);
-		t511KRepo.save(securityAllowance);
-		t511KRepo.save(stewardAllowance);
+		allowanceAndOtherPaymentsRepo.save(stewardAllowance);
 
 		Tax taxClassA = Tax.builder()
 				.taxClass("A")
@@ -234,6 +194,7 @@ public class ComputationApplication implements CommandLineRunner {
 		deductionRepo.save(deductions1);
 		deductionRepo.save(deductions2);
 		deductionRepo.save(deductions3);
+		deductionRepo.save(deductions4);
 
 		PensionFund pensionFund1 = PensionFund.builder()
 				.employeeId("1")

@@ -2,6 +2,7 @@ package com.xykine.computation.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xykine.computation.session.SessionCalculationObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.xykine.computation.model.PaymentInfo;
@@ -23,6 +24,7 @@ public class ComputeService {
 
     private final WebClient webClient;
     private final PaymentCalculator paymentCalculator;
+
     private static final Logger LOGGER = LoggerFactory.getLogger(ComputeService.class);
 
     public PaymentComputeResponse computePayroll(PaymentInfoRequest paymentComputeRequest) {
