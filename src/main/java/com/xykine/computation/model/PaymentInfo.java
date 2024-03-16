@@ -7,26 +7,34 @@ import java.util.Map;
 
 @Data
 public class PaymentInfo {
-    private String id;
-    private String companyId;
-    private String departmentId;
-    private String fullName;
-    private String taxClass;
-    private Integer numberOfDaysOfUnpaidAbsence;
-    private Integer numberOfHours;
-    private BigDecimal basicSalary;
-    private BigDecimal hourlyRate;
-    private String bandCode;
+    private Long id;
+    private int numberOfDaysOfUnpaidAbsence;
+    private int numberOfHours;
     private Map<String, BigDecimal> deduction;
     private Map<String, BigDecimal> earning;
     private Map<String, BigDecimal> others;
-    private BigDecimal totalAmountDue;
-    private Employee employee;
     private String startDate;
     private String endDate;
+    private String bandCode;
+    private BigDecimal basicSalary;
+    private Employee employee;
+    private BigDecimal hourlyRate;
+    private Long companyID;
+
+    private String fullName;
+
+    private BigDecimal totalAmountDue;
+
+    private boolean isCompleted;
+
     private String createdDate;
+
+
     private String lastModifiedDate;
+
     private String createdBy;
+
     private String lastModifiedBy;
-    int version;
+
+    private int version;
 }

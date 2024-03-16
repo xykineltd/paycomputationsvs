@@ -5,6 +5,6 @@ spring:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     show-sql: true
   datasource:
-    url: jdbc:postgresql://localhost:5432/payroll
-    username: postgres
-    password: docker
+    url: jdbc:postgresql://198.211.112.81:5432/pantrydb
+    username: pantry
+    password: pantry

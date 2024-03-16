@@ -17,9 +17,9 @@ import java.time.Instant;
 @Data
 public class PensionFund {
     @Id
-    private String employeeId;
+    private Long employeeId;
     private String PFACode;
-    private Integer account;
+    private Long account;
     private BigDecimal percentage;
     private Instant createdOn;
 }

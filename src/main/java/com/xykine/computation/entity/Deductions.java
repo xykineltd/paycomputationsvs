@@ -21,7 +21,7 @@ public class Deductions {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String employeeId;
+    private Long employeeId;
     private String description;
     private BigDecimal amount;
     private String createdBy;

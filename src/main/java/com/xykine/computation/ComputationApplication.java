@@ -1,6 +1,7 @@
 package com.xykine.computation;
 
 import com.xykine.computation.entity.*;
+import com.xykine.computation.model.PaymentInfo;
 import com.xykine.computation.model.TaxBearer;
 import com.xykine.computation.repo.*;
 import com.xykine.computation.session.SessionCalculationObject;
@@ -12,7 +13,9 @@ import org.springframework.context.annotation.Bean;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @SpringBootApplication
@@ -155,7 +158,7 @@ public class ComputationApplication implements CommandLineRunner {
 		taxRepo.save(taxClassC);
 
 		Deductions deductions1 = Deductions.builder()
-				.employeeId("1")
+				.employeeId(1L)
 				.amount(BigDecimal.valueOf(59000))
 				.description("Loan from staff cooperative society")
 				.active(true)
@@ -164,7 +167,7 @@ public class ComputationApplication implements CommandLineRunner {
 				.build();
 
 		Deductions deductions2 = Deductions.builder()
-				.employeeId("1")
+				.employeeId(1L)
 				.amount(BigDecimal.valueOf(12000))
 				.description("Membership fee")
 				.active(true)
@@ -173,7 +176,7 @@ public class ComputationApplication implements CommandLineRunner {
 				.build();
 
 		Deductions deductions3 = Deductions.builder()
-				.employeeId("2")
+				.employeeId(2L)
 				.amount(BigDecimal.valueOf(140000))
 				.description("Car loan")
 				.active(true)
@@ -182,7 +185,7 @@ public class ComputationApplication implements CommandLineRunner {
 				.build();
 
 		Deductions deductions4 = Deductions.builder()
-				.employeeId("2")
+				.employeeId(2L)
 				.amount(BigDecimal.valueOf(20000))
 				.description("External transfer")
 				.active(true)
@@ -196,21 +199,25 @@ public class ComputationApplication implements CommandLineRunner {
 		deductionRepo.save(deductions3);
 		deductionRepo.save(deductions4);
 
-		PensionFund pensionFund1 = PensionFund.builder()
-				.employeeId("1")
-				.account(1234567)
-				.PFACode("STANBIC-IBTC")
-				.percentage(BigDecimal.valueOf(7.5))
-				.build();
+//		PensionFund pensionFund1 = PensionFund.builder()
+//				.employeeId(1L)
+//				.account(1234567)
+//				.PFACode("STANBIC-IBTC")
+//				.percentage(BigDecimal.valueOf(7.5))
+//				.build();
 
-		PensionFund pensionFund2 = PensionFund.builder()
-				.employeeId("2")
-				.account(4563637)
-				.PFACode("ZENITH-PENSIONS")
-				.percentage(BigDecimal.valueOf(7.5))
-				.build();
+		List<PensionFund> pensionFunds = new ArrayList<>(10);
+		for (long i = 1; i <= 10; i++) {
+			PensionFund pensionFund = PensionFund.builder()
+					.employeeId(i)
+					.account(i * 25)
+					.PFACode("ZENITH-PENSIONS")
+					.percentage(BigDecimal.valueOf(7.5))
+					.build();
 
-		pensionFundRepo.save(pensionFund1);
-		pensionFundRepo.save(pensionFund2);
+			pensionFunds.add(pensionFund);
+		}
+
+		pensionFundRepo.saveAll(pensionFunds);
 	}
 }

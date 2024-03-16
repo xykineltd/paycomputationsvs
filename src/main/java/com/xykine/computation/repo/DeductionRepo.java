@@ -5,6 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 
-public interface DeductionRepo extends JpaRepository<Deductions, String> {
-    List<Deductions> findDeductionByEmployeeId (String employeeId);
+public interface DeductionRepo extends JpaRepository<Deductions, Long> {
+    List<Deductions> findDeductionByEmployeeId (Long employeeId);
 }

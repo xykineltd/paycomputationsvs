@@ -7,7 +7,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.LocalDate;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -22,6 +23,6 @@ public class PaymentComputeResponse {
     private List<PaymentInfo> report;
     private Map<String, String> employerBornTaxDetail;
     private BigDecimal totalAmount;
-    private Instant start;
-    private Instant end;
+    private LocalDate start;
+    private LocalDate end;
 }
