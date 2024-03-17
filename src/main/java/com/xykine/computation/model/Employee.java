@@ -81,6 +81,7 @@ public record Employee(
         Long paymentInfoId,
         Long employeeLockID,
         boolean isEmployeeLocked,
+        Set<Allowance> allowances,
 
         @CreatedDate
         String createdDate,
@@ -186,7 +187,8 @@ public record Employee(
                 band,null,
                 null,
                 false,
-                null, // createdDate set to current time
+                null,
+                null,// createdDate set to current time
                 null, // lastModifiedDate not provided
                 null, // createdBy set to a default value or determined by context
                 null, // lastModifiedBy not provided

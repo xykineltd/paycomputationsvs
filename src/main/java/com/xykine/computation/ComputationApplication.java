@@ -207,7 +207,7 @@ public class ComputationApplication implements CommandLineRunner {
 //				.build();
 
 		List<PensionFund> pensionFunds = new ArrayList<>(10);
-		for (long i = 1; i <= 10; i++) {
+		for (long i = 1; i <= 5; i++) {
 			PensionFund pensionFund = PensionFund.builder()
 					.employeeId(i)
 					.account(i * 25)
