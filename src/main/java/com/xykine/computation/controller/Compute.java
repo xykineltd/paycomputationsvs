@@ -1,10 +1,12 @@
 package com.xykine.computation.controller;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 
 import com.xykine.computation.model.MapKeys;
+import com.xykine.computation.service.ReportPersistenceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -23,9 +25,10 @@ public class Compute {
 
     private final ComputeService computeService;
     private final SessionCalculationObject sessionCalculationObject;
+    private final ReportPersistenceService reportPersistenceService;
 
     @PostMapping("/payroll")
-    public PaymentComputeResponse computePayroll(@RequestBody PaymentInfoRequest paymentRequest) {
+    public PaymentComputeResponse computePayroll(@RequestBody PaymentInfoRequest paymentRequest) throws IOException, ClassNotFoundException {
         Map<String, BigDecimal> sessionSummary = new HashMap<>();
         sessionSummary.put(MapKeys.TOTAL_NET_PAY, BigDecimal.ZERO);
         sessionSummary.put(MapKeys.TOTAL_PAYEE_TAX, BigDecimal.ZERO);
@@ -38,6 +41,8 @@ public class Compute {
         paymentComputeResponse.setSummary(sessionCalculationObject.getSummary());
         paymentComputeResponse.setStart(paymentRequest.getStart().toString());
         paymentComputeResponse.setEnd(paymentRequest.getEnd().toString());
+
+        reportPersistenceService.serializeAndSaveReport(paymentComputeResponse);
 
         return paymentComputeResponse;
     }

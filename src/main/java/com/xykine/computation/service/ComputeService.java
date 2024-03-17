@@ -61,6 +61,9 @@ public class ComputeService {
     }
 
     private  List<PaymentInfo> generateReport(List<PaymentInfo> rawInfo) {
+
+        LOGGER.debug(" raw incoming info {} ", rawInfo);
+
         return rawInfo
                 .stream()
                 .filter(x -> x.getEmployee() != null)

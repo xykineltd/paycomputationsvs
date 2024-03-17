@@ -6,9 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -17,7 +16,8 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 
-public class PaymentComputeResponse {
+public class PaymentComputeResponse implements Serializable {
+    private static final long serialVersionUID = 1L;
     private boolean success;
     private String message;
     private List<PaymentInfo> report;

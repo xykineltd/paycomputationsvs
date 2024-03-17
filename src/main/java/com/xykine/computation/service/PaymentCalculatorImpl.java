@@ -8,10 +8,11 @@ import com.xykine.computation.repo.*;
 
 import com.xykine.computation.session.SessionCalculationObject;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.math.MathContext;
 import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.List;
@@ -26,6 +27,8 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     private final TaxRepo taxRepo;
     private final DeductionRepo deductionRepo;
     private final SessionCalculationObject sessionCalculationObject;
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(PaymentCalculatorImpl.class);
 
     // To do ==> complete implementation
     @Override
@@ -52,7 +55,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         BigDecimal nationalHousingFund = BigDecimal.valueOf(0.025).multiply(paymentInfo.getBasicSalary()).setScale(2, RoundingMode.CEILING);;
         nonTaxableIncomeExemptMap.put(MapKeys.NATIONAL_HOUSING_FUND, nationalHousingFund);
         BigDecimal grossIncomeForCRA  = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(employeePension).subtract(nationalHousingFund);
-        BigDecimal rawFXR = BigDecimal.valueOf(0.01).multiply(grossIncomeForCRA);
+        BigDecimal rawFXR = BigDecimal.valueOf(0.01).multiply(grossIncomeForCRA).setScale(2, RoundingMode.CEILING);
         if (rawFXR.compareTo(BigDecimal.valueOf(200000)) == -1) {
             nonTaxableIncomeExemptMap.put(MapKeys.FIXED_CONSOLIDATED_RELIEF_ALLOWANCE, rawFXR);
         } else {
@@ -111,6 +114,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     private Map<String, BigDecimal> insertRecurrentPaymentMap(Map<String, BigDecimal> earningMap, PaymentInfo paymentInfo){
         earningMap.put(MapKeys.BASIC_SALARY, paymentInfo.getBasicSalary());
         Set<Allowance> allowance = paymentInfo.getEmployee().allowances();
+        LOGGER.info("employee allowances :  {} ",  allowance);
         allowance.stream()
                 .filter(x -> x.isActive())
                 .forEach(x -> {
