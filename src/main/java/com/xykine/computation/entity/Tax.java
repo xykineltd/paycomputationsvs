@@ -16,8 +16,7 @@ import java.math.BigDecimal;
 @Data
 public class Tax {
     @Id
-    private String band;
     private String taxClass;
     private BigDecimal percentage;
-
+    private String description;
 }

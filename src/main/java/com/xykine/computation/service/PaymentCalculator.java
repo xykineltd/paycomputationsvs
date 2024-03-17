@@ -5,7 +5,9 @@ import com.xykine.computation.response.PaymentResponse;
 
 
 public interface PaymentCalculator {
-    PaymentInfo computeTotalEarning(PaymentInfo paymentInfo);
+    PaymentInfo computeGrossPay(PaymentInfo paymentInfo);
+    PaymentInfo computeNonTaxableIncomeExempt(PaymentInfo paymentInfo);
+    PaymentInfo computePayeeTax(PaymentInfo paymentInfo);
     PaymentInfo computeTotalDeduction(PaymentInfo paymentInfo);
-    PaymentInfo computeAmountDue(PaymentInfo paymentInfo);
+    PaymentInfo computeNetPay(PaymentInfo paymentInfo);
 }

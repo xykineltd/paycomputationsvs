@@ -10,7 +10,6 @@ import java.util.Map;
 @NoArgsConstructor
 public class SessionCalculationObject {
 
-    private Map employerBornTaxDetails;
-    private BigDecimal totalAmount;
+    private Map<String, BigDecimal> summary;
 
 }
