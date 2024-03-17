@@ -15,7 +15,7 @@ public class Report {
     private final ReportPersistenceService reportPersistenceService;
 
     @GetMapping("/startDate/{startDate}")
-    public PaymentComputeResponse computePayroll(@PathVariable String startDate) throws IOException, ClassNotFoundException {
+    public PaymentComputeResponse getReport(@PathVariable String startDate) throws IOException, ClassNotFoundException {
         return reportPersistenceService.getPayRollReport(startDate);
     }
 }
