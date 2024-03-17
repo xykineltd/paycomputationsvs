@@ -2,6 +2,7 @@ package com.xykine.computation.controller;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.Map;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,16 +25,19 @@ public class Compute {
 
     @PostMapping("/payroll")
     public PaymentComputeResponse computePayroll(@RequestBody PaymentInfoRequest paymentRequest) {
-
-        sessionCalculationObject.setEmployerBornTaxDetails(new HashMap<String, BigDecimal>());
-        sessionCalculationObject.setTotalAmount(BigDecimal.ZERO);
+        Map<String, BigDecimal> sessionSummary = new HashMap<>();
+        sessionSummary.put("Total Net Pay", BigDecimal.ZERO);
+        sessionSummary.put("Total Payee Tax", BigDecimal.ZERO);
+        sessionSummary.put("Total Pension Fund", BigDecimal.ZERO);
+        sessionSummary.put("Total Personal Deduction", BigDecimal.ZERO);
+        sessionCalculationObject.setSummary(sessionSummary);
 
         PaymentComputeResponse paymentComputeResponse = computeService.computePayroll(paymentRequest);
-        paymentComputeResponse.setEmployerBornTaxDetail(sessionCalculationObject.getEmployerBornTaxDetails());
-        paymentComputeResponse.setTotalAmount(sessionCalculationObject.getTotalAmount());
-        paymentComputeResponse.setStart(paymentRequest.getStart());
-        paymentComputeResponse.setEnd(paymentRequest.getEnd());
 
-        return computeService.computePayroll(paymentRequest);
+        paymentComputeResponse.setSummary(sessionCalculationObject.getSummary());
+        paymentComputeResponse.setStart(paymentRequest.getStart().toString());
+        paymentComputeResponse.setEnd(paymentRequest.getEnd().toString());
+
+        return paymentComputeResponse;
     }
 }

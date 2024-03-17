@@ -11,8 +11,9 @@ public class PaymentInfo {
     private int numberOfDaysOfUnpaidAbsence;
     private int numberOfHours;
     private Map<String, BigDecimal> deduction;
-    private Map<String, BigDecimal> earning;
-    private Map<String, BigDecimal> others;
+    private Map<String, BigDecimal> grossPay;
+    private Map<String, BigDecimal> taxRelief;
+    private Map<String, BigDecimal> payeeTax;
     private String startDate;
     private String endDate;
     private String bandCode;
@@ -23,7 +24,7 @@ public class PaymentInfo {
 
     private String fullName;
 
-    private BigDecimal totalAmountDue;
+    private BigDecimal netPay;
 
     private boolean isCompleted;
 

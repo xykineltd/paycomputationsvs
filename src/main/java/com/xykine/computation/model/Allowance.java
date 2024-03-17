@@ -3,6 +3,7 @@ package com.xykine.computation.model;
 import org.springframework.data.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 
 
 public record Allowance(
@@ -15,10 +16,10 @@ public record Allowance(
         boolean isActive,
 
         @CreatedDate
-        String createdDate,
+        Instant createdDate,
 
         @LastModifiedDate
-        String lastModifiedDate,
+        Instant lastModifiedDate,
 
         @CreatedBy
         String createdBy,
@@ -33,8 +34,8 @@ public record Allowance(
             String allowanceCode,
             String name,
             BigDecimal value,
-            String createdDate,
-            String lastModifiedDate
+            Instant createdDate,
+            Instant lastModifiedDate
     ) {
         return new Allowance(
                 null,

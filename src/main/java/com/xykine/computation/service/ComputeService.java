@@ -35,6 +35,8 @@ public class ComputeService {
                 .body(BodyInserters.fromValue(paymentComputeRequest))
                 .retrieve().bodyToMono(List.class).block();
 
+        LOGGER.info("Received data size {} ", rawInfo.size() );
+
         ObjectMapper mapper = new ObjectMapper();
         List<PaymentInfo> paymentInfoList = mapper.convertValue(
                 rawInfo,
@@ -61,10 +63,11 @@ public class ComputeService {
     private  List<PaymentInfo> generateReport(List<PaymentInfo> rawInfo) {
         return rawInfo
                 .stream()
-                .map(x -> paymentCalculator.computeTotalEarning(x))
+                .map(x -> paymentCalculator.computeGrossPay(x))
+                .map(x -> paymentCalculator.computeNonTaxableIncomeExempt(x))
+                .map(x -> paymentCalculator.computePayeeTax(x))
                 .map(x -> paymentCalculator.computeTotalDeduction(x))
-               // .map(x -> paymentCalculator.computeOthers(x))
-                .map(x -> paymentCalculator.computeAmountDue(x))
+                .map(x -> paymentCalculator.computeNetPay(x))
                 .collect(Collectors.toList());
     }
 }

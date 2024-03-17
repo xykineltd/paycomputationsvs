@@ -21,8 +21,7 @@ public class PaymentComputeResponse {
     private boolean success;
     private String message;
     private List<PaymentInfo> report;
-    private Map<String, String> employerBornTaxDetail;
-    private BigDecimal totalAmount;
-    private LocalDate start;
-    private LocalDate end;
+    private Map<String, BigDecimal> summary;
+    private String start;
+    private String end;
 }
