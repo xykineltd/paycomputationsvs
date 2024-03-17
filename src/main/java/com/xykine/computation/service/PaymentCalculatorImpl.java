@@ -38,6 +38,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         Map<String, BigDecimal> grossPayMap = new HashMap<>();
         grossPayMap = insertRecurrentPaymentMap(grossPayMap, paymentInfo);
         BigDecimal total = getTotal(grossPayMap);
+        System.out.println("total------->"+total);
         grossPayMap.put("Gross pay", total);
         paymentInfo.setGrossPay(grossPayMap);
         return paymentInfo;
@@ -127,13 +128,16 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     @Override
     public PaymentInfo computeNetPay(PaymentInfo paymentInfo) {
-        BigDecimal netPay = paymentInfo.getGrossPay().get("Gross Pay").subtract(paymentInfo.getDeduction().get("total deduction"));
-        paymentInfo.setNetPay(netPay);
+        System.out.println("paymentInfo.getGrossPay()==========>"+paymentInfo.getGrossPay());
 
-        BigDecimal totalNetPay = sessionCalculationObject.getSummary().get("Total Net Pay");
-        totalNetPay = totalNetPay.add(netPay);
-        sessionCalculationObject.getSummary().put("Total Net Pay", totalNetPay);
+        if(paymentInfo.getGrossPay().get("Gross Pay") != null) {
+            BigDecimal netPay = paymentInfo.getGrossPay().get("Gross Pay").subtract(paymentInfo.getDeduction().get("total deduction"));
+            paymentInfo.setNetPay(netPay);
 
+            BigDecimal totalNetPay = sessionCalculationObject.getSummary().get("Total Net Pay");
+            totalNetPay = totalNetPay.add(netPay);
+            sessionCalculationObject.getSummary().put("Total Net Pay", totalNetPay);
+        }
         return paymentInfo;
     }
 

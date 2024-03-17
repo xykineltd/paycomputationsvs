@@ -82,18 +82,42 @@ public class ComputationApplication implements CommandLineRunner {
 		taxRepo.save(taxClassE);
 		taxRepo.save(taxClassF);
 
-		List<PensionFund> pensionFunds = new ArrayList<>(10);
-		for (long i = 1; i <= 5; i++) {
-			PensionFund pensionFund = PensionFund.builder()
-					.employeeId(i)
-					.account(i * 25)
-					.PFACode("ZENITH-PENSIONS")
-					.percentage(BigDecimal.valueOf(7.5))
-					.build();
+//		List<PensionFund> pensionFunds = new ArrayList<>(10);
+//		for (long i = 1; i <= 5; i++) {
+//			PensionFund pensionFund = PensionFund.builder()
+//					.employeeId(i)
+//					.account(i * 25)
+//					.PFACode("ZENITH-PENSIONS")
+//					.percentage(BigDecimal.valueOf(7.5))
+//					.build();
+//
+//			pensionFunds.add(pensionFund);
+//		}
 
-			pensionFunds.add(pensionFund);
-		}
 
-		pensionFundRepo.saveAll(pensionFunds);
+		PensionFund pensionFund1 = PensionFund.builder()
+				.employeeId(14L)
+				.account(2345L)
+				.PFACode("ZENITH-PENSIONS")
+				.percentage(BigDecimal.valueOf(7.5))
+				.build();
+
+		PensionFund pensionFund2 = PensionFund.builder()
+				.employeeId(12L)
+				.account(23435L)
+				.PFACode("ZENITH-PENSIONS")
+				.percentage(BigDecimal.valueOf(7.5))
+				.build();
+
+		PensionFund pensionFund3 = PensionFund.builder()
+				.employeeId(13L)
+				.account(234335L)
+				.PFACode("ZENITH-PENSIONS")
+				.percentage(BigDecimal.valueOf(7.5))
+				.build();
+
+		pensionFundRepo.save(pensionFund1);
+		pensionFundRepo.save(pensionFund2);
+		pensionFundRepo.save(pensionFund3);
 	}
 }

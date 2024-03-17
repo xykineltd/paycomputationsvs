@@ -47,7 +47,7 @@ public record Employee(
         String postalCode,
 
         @NotNull(message = "The date of birth must be defined.")
-        LocalDate dob,
+        String dob,
 
         @NotBlank(message = "The phone must be defined.")
         String phone1,
@@ -69,9 +69,9 @@ public record Employee(
         String contractType,
 
         @NotNull(message = "The start date must be defined.")
-        LocalDate startDate,
+        String startDate,
 
-        LocalDate endDate,
+        String endDate,
         String position,
         String departmentID,
         String unitID,
@@ -91,9 +91,9 @@ public record Employee(
         String isDirty,
         String encodedImage,
         String isDisable,
-        LocalDate disableDate,
+        String disableDate,
         String isMedical,
-        LocalDate medicalDate,
+        String medicalDate,
         String locationID,
         String taxStateID,
         String taxStateName,
@@ -118,10 +118,10 @@ public record Employee(
         // hasUnpaid
 
         @CreatedDate
-        Instant createdDate,
+        String createdDate,
 
         @LastModifiedDate
-        Instant lastModifiedDate,
+        String lastModifiedDate,
 
         @CreatedBy
         String createdBy,
@@ -132,22 +132,17 @@ public record Employee(
         @Version
         int version
 ) {
-    public static List<EmployeeResponse> toEmployeeResponse(Iterable<Employee> employees) {
-        return StreamSupport
-                .stream(employees.spliterator(), false)
-                .map(EmployeeResponse::from)
-                .toList();
-    }
+
     public static Employee of(
             String firstName,
             String lastName,
             String employeeCode,
-            LocalDate dob,
+            String dob,
             String officialEmail,
             String gender,
-            LocalDate startDate,
-            Instant createdDate,
-            Instant lastModifiedDate
+            String startDate,
+            String createdDate,
+            String lastModifiedDate
 //                Set<Allowance> allowances
     ) {
         // Generate fullName from firstName and lastName

@@ -16,10 +16,10 @@ public record Allowance(
         boolean isActive,
 
         @CreatedDate
-        Instant createdDate,
+        String createdDate,
 
         @LastModifiedDate
-        Instant lastModifiedDate,
+        String lastModifiedDate,
 
         @CreatedBy
         String createdBy,
@@ -34,8 +34,8 @@ public record Allowance(
             String allowanceCode,
             String name,
             BigDecimal value,
-            Instant createdDate,
-            Instant lastModifiedDate
+            String createdDate,
+            String lastModifiedDate
     ) {
         return new Allowance(
                 null,
