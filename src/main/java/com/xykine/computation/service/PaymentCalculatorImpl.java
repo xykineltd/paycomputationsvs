@@ -26,7 +26,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     private final TaxRepo taxRepo;
     private final DeductionRepo deductionRepo;
     private final SessionCalculationObject sessionCalculationObject;
-    private final MathContext tRounding = new MathContext(2, RoundingMode.CEILING);
 
     // To do ==> complete implementation
     @Override
@@ -48,9 +47,9 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                         .map(x -> x.value())
                                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         basicHousingAndTransport = basicHousingAndTransport.add(paymentInfo.getBasicSalary());
-        BigDecimal employeePension = BigDecimal.valueOf(0.08).multiply(basicHousingAndTransport, tRounding);
+        BigDecimal employeePension = BigDecimal.valueOf(0.08).multiply(basicHousingAndTransport).setScale(2, RoundingMode.CEILING);;
         nonTaxableIncomeExemptMap.put(MapKeys.EMPLOYEE_PENSION, employeePension);
-        BigDecimal nationalHousingFund = BigDecimal.valueOf(0.025).multiply(paymentInfo.getBasicSalary(), tRounding);
+        BigDecimal nationalHousingFund = BigDecimal.valueOf(0.025).multiply(paymentInfo.getBasicSalary()).setScale(2, RoundingMode.CEILING);;
         nonTaxableIncomeExemptMap.put(MapKeys.NATIONAL_HOUSING_FUND, nationalHousingFund);
         BigDecimal grossIncomeForCRA  = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(employeePension).subtract(nationalHousingFund);
         BigDecimal rawFXR = BigDecimal.valueOf(0.01).multiply(grossIncomeForCRA);
@@ -72,12 +71,12 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         payeeTax.put(MapKeys.TAXABLE_INCOME, taxableIncome);
         String taxClass = getTaxClass(taxableIncome);
         BigDecimal taxPercent = taxRepo.findTaxByTaxClass(taxClass).getPercentage();
-        BigDecimal empPayeeTax = taxPercent.multiply(taxableIncome).divide(BigDecimal.valueOf(100), tRounding);
+        BigDecimal empPayeeTax = taxPercent.multiply(taxableIncome).divide(BigDecimal.valueOf(100)).setScale(2, RoundingMode.CEILING);;
         payeeTax.put(MapKeys.PAYEE_TAX, empPayeeTax);
         paymentInfo.setPayeeTax(payeeTax);
 
         BigDecimal totalPayeeTax = sessionCalculationObject.getSummary().get(MapKeys.TOTAL_PAYEE_TAX);
-        totalPayeeTax = totalPayeeTax.add(empPayeeTax, tRounding);
+        totalPayeeTax = totalPayeeTax.add(empPayeeTax).setScale(2, RoundingMode.CEILING);;
         sessionCalculationObject.getSummary().put(MapKeys.TOTAL_PAYEE_TAX, totalPayeeTax);
         return paymentInfo;
     }
@@ -140,8 +139,8 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         if (numberOfDaysOfUnpaidAbsence == 0)
             return paymentInfo.getBasicSalary();
         // if numberOfDaysOfUnpaidAbsence is not 0, remove the daily wage equivalent multiplied by the number of unpaid absences
-        BigDecimal dailyWage = paymentInfo.getBasicSalary().divide(BigDecimal.valueOf(21), tRounding);  // To do ==> verify number of working days in the month
-         return paymentInfo.getBasicSalary().subtract(dailyWage.multiply(BigDecimal.valueOf(numberOfDaysOfUnpaidAbsence)), tRounding);
+        BigDecimal dailyWage = paymentInfo.getBasicSalary().divide(BigDecimal.valueOf(21)).setScale(2, RoundingMode.CEILING);;  // To do ==> verify number of working days in the month
+         return paymentInfo.getBasicSalary().subtract(dailyWage.multiply(BigDecimal.valueOf(numberOfDaysOfUnpaidAbsence))).setScale(2, RoundingMode.CEILING);
     }
 
     private String getTaxClass(BigDecimal taxableIncome){
@@ -173,6 +172,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         for(Map.Entry<String, BigDecimal> entry : input.entrySet()) {
             total = total.add(entry.getValue());
         }
-        return total.round(tRounding);
+        return total.setScale(2, RoundingMode.CEILING);
     }
 }
