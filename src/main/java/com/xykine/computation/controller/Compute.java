@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.xykine.computation.model.MapKeys;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -26,10 +27,10 @@ public class Compute {
     @PostMapping("/payroll")
     public PaymentComputeResponse computePayroll(@RequestBody PaymentInfoRequest paymentRequest) {
         Map<String, BigDecimal> sessionSummary = new HashMap<>();
-        sessionSummary.put("Total Net Pay", BigDecimal.ZERO);
-        sessionSummary.put("Total Payee Tax", BigDecimal.ZERO);
-        sessionSummary.put("Total Pension Fund", BigDecimal.ZERO);
-        sessionSummary.put("Total Personal Deduction", BigDecimal.ZERO);
+        sessionSummary.put(MapKeys.TOTAL_NET_PAY, BigDecimal.ZERO);
+        sessionSummary.put(MapKeys.TOTAL_PAYEE_TAX, BigDecimal.ZERO);
+        sessionSummary.put(MapKeys.TOTAL_PENSION_FUND, BigDecimal.ZERO);
+        sessionSummary.put(MapKeys.TOTAL_PERSONAL_DEDUCTION, BigDecimal.ZERO);
         sessionCalculationObject.setSummary(sessionSummary);
 
         PaymentComputeResponse paymentComputeResponse = computeService.computePayroll(paymentRequest);

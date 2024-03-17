@@ -1,12 +1,9 @@
 package com.xykine.computation.service;
 
-import com.xykine.computation.entity.AllowanceAndOtherPayments;
 import com.xykine.computation.entity.Deductions;
-import com.xykine.computation.entity.Tax;
 import com.xykine.computation.model.Allowance;
+import com.xykine.computation.model.MapKeys;
 import com.xykine.computation.model.PaymentInfo;
-import com.xykine.computation.model.TaxBearer;
-import com.xykine.computation.model.wagetypegroup.Earnings;
 import com.xykine.computation.repo.*;
 
 import com.xykine.computation.session.SessionCalculationObject;
@@ -28,9 +25,8 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     private final TaxRepo taxRepo;
     private final DeductionRepo deductionRepo;
-    private final PensionFundRepo pensionFundRepo;
     private final SessionCalculationObject sessionCalculationObject;
-    private final MathContext tRounding = new MathContext(2, RoundingMode.HALF_EVEN);
+    private final MathContext tRounding = new MathContext(2, RoundingMode.CEILING);
 
     // To do ==> complete implementation
     @Override
@@ -38,8 +34,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         Map<String, BigDecimal> grossPayMap = new HashMap<>();
         grossPayMap = insertRecurrentPaymentMap(grossPayMap, paymentInfo);
         BigDecimal total = getTotal(grossPayMap);
-        System.out.println("total------->"+total);
-        grossPayMap.put("Gross pay", total);
+        grossPayMap.put(MapKeys.GROSS_PAY, total);
         paymentInfo.setGrossPay(grossPayMap);
         return paymentInfo;
     }
@@ -49,22 +44,23 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         Map<String, BigDecimal> nonTaxableIncomeExemptMap = new HashMap<>();
         BigDecimal basicHousingAndTransport = paymentInfo.getEmployee().allowances()
                 .stream()
-                .filter(x -> x.isActive() && x.name().contains("Housing") || x.name().contains("Transport"))
+                .filter(x -> x.isActive() && x.name().contains(MapKeys.HOUSING) || x.name().contains(MapKeys.TRANSPORT))
                         .map(x -> x.value())
                                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal employeePension = BigDecimal.valueOf(0.08).multiply(basicHousingAndTransport);
-        nonTaxableIncomeExemptMap.put("Employee pension", employeePension);
-        BigDecimal nationalHousingFund = BigDecimal.valueOf(0.025).multiply(paymentInfo.getBasicSalary());
-        nonTaxableIncomeExemptMap.put("National Housing Fund", nationalHousingFund);
-        BigDecimal grossIncomeForCRA  = paymentInfo.getGrossPay().get("Gross pay").subtract(employeePension).subtract(nationalHousingFund);
+        basicHousingAndTransport = basicHousingAndTransport.add(paymentInfo.getBasicSalary());
+        BigDecimal employeePension = BigDecimal.valueOf(0.08).multiply(basicHousingAndTransport, tRounding);
+        nonTaxableIncomeExemptMap.put(MapKeys.EMPLOYEE_PENSION, employeePension);
+        BigDecimal nationalHousingFund = BigDecimal.valueOf(0.025).multiply(paymentInfo.getBasicSalary(), tRounding);
+        nonTaxableIncomeExemptMap.put(MapKeys.NATIONAL_HOUSING_FUND, nationalHousingFund);
+        BigDecimal grossIncomeForCRA  = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(employeePension).subtract(nationalHousingFund);
         BigDecimal rawFXR = BigDecimal.valueOf(0.01).multiply(grossIncomeForCRA);
         if (rawFXR.compareTo(BigDecimal.valueOf(200000)) == -1) {
-            nonTaxableIncomeExemptMap.put("Fixed Consolidated Relief Allowance", rawFXR);
+            nonTaxableIncomeExemptMap.put(MapKeys.FIXED_CONSOLIDATED_RELIEF_ALLOWANCE, rawFXR);
         } else {
-            nonTaxableIncomeExemptMap.put("Fixed Consolidated Relief Allowance", BigDecimal.valueOf(200000));
+            nonTaxableIncomeExemptMap.put(MapKeys.FIXED_CONSOLIDATED_RELIEF_ALLOWANCE, BigDecimal.valueOf(200000));
         }
         BigDecimal total = getTotal(nonTaxableIncomeExemptMap);
-        nonTaxableIncomeExemptMap.put("Total Tax Relief", total);
+        nonTaxableIncomeExemptMap.put(MapKeys.TOTAL_TAX_RELIEF, total);
         paymentInfo.setTaxRelief(nonTaxableIncomeExemptMap);
         return paymentInfo;
     }
@@ -72,25 +68,25 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     @Override
     public PaymentInfo computePayeeTax(PaymentInfo paymentInfo) {
         Map<String, BigDecimal> payeeTax = new HashMap<>();
-        BigDecimal taxableIncome = paymentInfo.getGrossPay().get("Gross pay").subtract(paymentInfo.getTaxRelief().get("Total Tax Relief"));
-        payeeTax.put("Taxable Income", taxableIncome);
+        BigDecimal taxableIncome = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(paymentInfo.getTaxRelief().get(MapKeys.TOTAL_TAX_RELIEF));
+        payeeTax.put(MapKeys.TAXABLE_INCOME, taxableIncome);
         String taxClass = getTaxClass(taxableIncome);
         BigDecimal taxPercent = taxRepo.findTaxByTaxClass(taxClass).getPercentage();
-        BigDecimal empPayeeTax = taxPercent.multiply(taxableIncome).divide(BigDecimal.valueOf(100));
-        payeeTax.put("Payee Tax", empPayeeTax);
+        BigDecimal empPayeeTax = taxPercent.multiply(taxableIncome).divide(BigDecimal.valueOf(100), tRounding);
+        payeeTax.put(MapKeys.PAYEE_TAX, empPayeeTax);
         paymentInfo.setPayeeTax(payeeTax);
 
-        BigDecimal totalPayeeTax = sessionCalculationObject.getSummary().get("Total Payee Tax");
-        totalPayeeTax = totalPayeeTax.add(empPayeeTax);
-        sessionCalculationObject.getSummary().put("Total Payee Tax", totalPayeeTax);
+        BigDecimal totalPayeeTax = sessionCalculationObject.getSummary().get(MapKeys.TOTAL_PAYEE_TAX);
+        totalPayeeTax = totalPayeeTax.add(empPayeeTax, tRounding);
+        sessionCalculationObject.getSummary().put(MapKeys.TOTAL_PAYEE_TAX, totalPayeeTax);
         return paymentInfo;
     }
 
     @Override
     public PaymentInfo computeTotalDeduction(PaymentInfo paymentInfo) {
         Map<String, BigDecimal> deductionMap = new HashMap<>();
-        deductionMap.put("Pension Fund", paymentInfo.getTaxRelief().get("Employee pension"));
-        deductionMap.put("Payee Tax", paymentInfo.getPayeeTax().get("Payee Tax"));
+        deductionMap.put(MapKeys.PENSION_FUND, paymentInfo.getTaxRelief().get(MapKeys.EMPLOYEE_PENSION));
+        deductionMap.put(MapKeys.PAYEE_TAX, paymentInfo.getPayeeTax().get(MapKeys.PAYEE_TAX));
         List<Deductions> personalDeduction = deductionRepo.findDeductionByEmployeeId(paymentInfo.getId());
 
         personalDeduction.stream()
@@ -98,23 +94,23 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                         .forEach(x -> {
                             deductionMap.put(x.getDescription(), x.getAmount());
 
-                            BigDecimal totalPersonalDeduction = sessionCalculationObject.getSummary().get("Total Personal Deduction");
+                            BigDecimal totalPersonalDeduction = sessionCalculationObject.getSummary().get(MapKeys.TOTAL_PERSONAL_DEDUCTION);
                             totalPersonalDeduction = totalPersonalDeduction.add(x.getAmount());
-                            sessionCalculationObject.getSummary().put("Total Personal Deduction", totalPersonalDeduction);
+                            sessionCalculationObject.getSummary().put(MapKeys.TOTAL_PERSONAL_DEDUCTION, totalPersonalDeduction);
                         });
 
-        deductionMap.put("Total Deduction", getTotal(deductionMap));
+        deductionMap.put(MapKeys.TOTAL_DEDUCTION, getTotal(deductionMap));
         paymentInfo.setDeduction(deductionMap);
 
-        BigDecimal totalPensionFund = sessionCalculationObject.getSummary().get("Total Pension Fund");
-        totalPensionFund = totalPensionFund.add(paymentInfo.getTaxRelief().get("Employee pension"));
-        sessionCalculationObject.getSummary().put("Total Pension Fund", totalPensionFund);
+        BigDecimal totalPensionFund = sessionCalculationObject.getSummary().get(MapKeys.TOTAL_PENSION_FUND);
+        totalPensionFund = totalPensionFund.add(paymentInfo.getTaxRelief().get(MapKeys.EMPLOYEE_PENSION));
+        sessionCalculationObject.getSummary().put(MapKeys.TOTAL_PENSION_FUND, totalPensionFund);
 
         return paymentInfo;
     }
 
     private Map<String, BigDecimal> insertRecurrentPaymentMap(Map<String, BigDecimal> earningMap, PaymentInfo paymentInfo){
-        earningMap.put("Basic salary", paymentInfo.getBasicSalary());
+        earningMap.put(MapKeys.BASIC_SALARY, paymentInfo.getBasicSalary());
         Set<Allowance> allowance = paymentInfo.getEmployee().allowances();
         allowance.stream()
                 .filter(x -> x.isActive())
@@ -128,15 +124,13 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     @Override
     public PaymentInfo computeNetPay(PaymentInfo paymentInfo) {
-        System.out.println("paymentInfo.getGrossPay()==========>"+paymentInfo.getGrossPay());
-
-        if(paymentInfo.getGrossPay().get("Gross Pay") != null) {
-            BigDecimal netPay = paymentInfo.getGrossPay().get("Gross Pay").subtract(paymentInfo.getDeduction().get("total deduction"));
+        if(paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY) != null) {
+            BigDecimal netPay = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(paymentInfo.getDeduction().get(MapKeys.TOTAL_DEDUCTION));
             paymentInfo.setNetPay(netPay);
 
-            BigDecimal totalNetPay = sessionCalculationObject.getSummary().get("Total Net Pay");
+            BigDecimal totalNetPay = sessionCalculationObject.getSummary().get(MapKeys.TOTAL_NET_PAY);
             totalNetPay = totalNetPay.add(netPay);
-            sessionCalculationObject.getSummary().put("Total Net Pay", totalNetPay);
+            sessionCalculationObject.getSummary().put(MapKeys.TOTAL_NET_PAY, totalNetPay);
         }
         return paymentInfo;
     }
@@ -179,6 +173,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         for(Map.Entry<String, BigDecimal> entry : input.entrySet()) {
             total = total.add(entry.getValue());
         }
-        return total;
+        return total.round(tRounding);
     }
 }

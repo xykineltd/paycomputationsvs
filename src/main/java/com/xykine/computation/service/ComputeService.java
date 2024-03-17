@@ -63,6 +63,7 @@ public class ComputeService {
     private  List<PaymentInfo> generateReport(List<PaymentInfo> rawInfo) {
         return rawInfo
                 .stream()
+                .filter(x -> x.getEmployee() != null)
                 .map(x -> paymentCalculator.computeGrossPay(x))
                 .map(x -> paymentCalculator.computeNonTaxableIncomeExempt(x))
                 .map(x -> paymentCalculator.computePayeeTax(x))
