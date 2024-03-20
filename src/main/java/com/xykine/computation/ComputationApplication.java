@@ -96,21 +96,21 @@ public class ComputationApplication implements CommandLineRunner {
 
 
 		PensionFund pensionFund1 = PensionFund.builder()
-				.employeeId(14L)
+				.employeeId(1L)
 				.account(2345L)
 				.PFACode("ZENITH-PENSIONS")
 				.percentage(BigDecimal.valueOf(7.5))
 				.build();
 
 		PensionFund pensionFund2 = PensionFund.builder()
-				.employeeId(12L)
+				.employeeId(2L)
 				.account(23435L)
 				.PFACode("ZENITH-PENSIONS")
 				.percentage(BigDecimal.valueOf(7.5))
 				.build();
 
 		PensionFund pensionFund3 = PensionFund.builder()
-				.employeeId(13L)
+				.employeeId(3L)
 				.account(234335L)
 				.PFACode("ZENITH-PENSIONS")
 				.percentage(BigDecimal.valueOf(7.5))

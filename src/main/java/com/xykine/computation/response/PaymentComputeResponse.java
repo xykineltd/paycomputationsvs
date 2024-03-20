@@ -24,4 +24,7 @@ public class PaymentComputeResponse implements Serializable {
     private Map<String, BigDecimal> summary;
     private String start;
     private String end;
+    private boolean payrollSimulation;
+    private boolean payrollApproved;
+    private String createdDate;
 }

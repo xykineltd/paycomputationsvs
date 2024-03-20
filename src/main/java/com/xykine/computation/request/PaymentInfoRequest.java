@@ -14,4 +14,5 @@ public class PaymentInfoRequest {
     Set<Long> employeeId;
     LocalDate start;
     LocalDate end;
+    boolean payrollSimulation;
 }

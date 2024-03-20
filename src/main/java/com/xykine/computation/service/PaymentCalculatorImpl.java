@@ -4,6 +4,7 @@ import com.xykine.computation.entity.Deductions;
 import com.xykine.computation.model.Allowance;
 import com.xykine.computation.model.MapKeys;
 import com.xykine.computation.model.PaymentInfo;
+import com.xykine.computation.model.PaymentSettings;
 import com.xykine.computation.repo.*;
 
 import com.xykine.computation.session.SessionCalculationObject;
@@ -18,6 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -44,10 +46,11 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     @Override
     public PaymentInfo computeNonTaxableIncomeExempt(PaymentInfo paymentInfo) {
         Map<String, BigDecimal> nonTaxableIncomeExemptMap = new HashMap<>();
-        BigDecimal basicHousingAndTransport = paymentInfo.getEmployee().allowances()
+//        BigDecimal basicHousingAndTransport = paymentInfo.getEmployee().allowances()
+        BigDecimal basicHousingAndTransport = getAllowanceForEmployee(paymentInfo)
                 .stream()
-                .filter(x -> x.isActive() && x.name().contains(MapKeys.HOUSING) || x.name().contains(MapKeys.TRANSPORT))
-                        .map(x -> x.value())
+                .filter(x -> x.isActive() && x.getName().contains(MapKeys.HOUSING) || x.getName().contains(MapKeys.TRANSPORT))
+                        .map(PaymentSettings::getValue)
                                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         basicHousingAndTransport = basicHousingAndTransport.add(paymentInfo.getBasicSalary());
         BigDecimal employeePension = BigDecimal.valueOf(0.08).multiply(basicHousingAndTransport).setScale(2, RoundingMode.CEILING);;
@@ -89,15 +92,17 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         Map<String, BigDecimal> deductionMap = new HashMap<>();
         deductionMap.put(MapKeys.PENSION_FUND, paymentInfo.getTaxRelief().get(MapKeys.EMPLOYEE_PENSION));
         deductionMap.put(MapKeys.PAYEE_TAX, paymentInfo.getPayeeTax().get(MapKeys.PAYEE_TAX));
-        List<Deductions> personalDeduction = deductionRepo.findDeductionByEmployeeId(paymentInfo.getId());
 
-        personalDeduction.stream()
-                .filter(x -> x.getActive())
+//        List<Deductions> personalDeduction = deductionRepo.findDeductionByEmployeeId(paymentInfo.getId());
+
+        var deductions = getDeductionsForEmployee(paymentInfo);
+        deductions.stream()
+                .filter(PaymentSettings::isActive)
                         .forEach(x -> {
-                            deductionMap.put(x.getDescription(), x.getAmount());
+                            deductionMap.put(x.getName(), x.getValue());
 
                             BigDecimal totalPersonalDeduction = sessionCalculationObject.getSummary().get(MapKeys.TOTAL_PERSONAL_DEDUCTION);
-                            totalPersonalDeduction = totalPersonalDeduction.add(x.getAmount());
+                            totalPersonalDeduction = totalPersonalDeduction.add(x.getValue());
                             sessionCalculationObject.getSummary().put(MapKeys.TOTAL_PERSONAL_DEDUCTION, totalPersonalDeduction);
                         });
 
@@ -113,12 +118,13 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     private Map<String, BigDecimal> insertRecurrentPaymentMap(Map<String, BigDecimal> earningMap, PaymentInfo paymentInfo){
         earningMap.put(MapKeys.BASIC_SALARY, paymentInfo.getBasicSalary());
-        Set<Allowance> allowance = paymentInfo.getEmployee().allowances();
+        var allowance = getAllowanceForEmployee(paymentInfo);
+//        Set<Allowance> allowance = paymentInfo.getEmployee().allowances();
         LOGGER.info("employee allowances :  {} ",  allowance);
         allowance.stream()
-                .filter(x -> x.isActive())
+                .filter(PaymentSettings::isActive)
                 .forEach(x -> {
-                    earningMap.put(x.name(), x.value());
+                    earningMap.put(x.getName(), x.getValue());
                 });
         return earningMap;
     }
@@ -177,5 +183,15 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
             total = total.add(entry.getValue());
         }
         return total.setScale(2, RoundingMode.CEILING);
+    }
+
+    private Set<PaymentSettings> getAllowanceForEmployee (PaymentInfo paymentInfo) {
+        var paymentSettings = paymentInfo.getEmployee().getPaymentSettings();
+        return paymentSettings.stream().filter(setting -> setting.getType().equals("Gross pay")).collect(Collectors.toSet());
+    }
+
+    private Set<PaymentSettings> getDeductionsForEmployee (PaymentInfo paymentInfo) {
+        var paymentSettings = paymentInfo.getEmployee().getPaymentSettings();
+        return paymentSettings.stream().filter(setting -> !setting.getType().equals("Gross pay")).collect(Collectors.toSet());
     }
 }

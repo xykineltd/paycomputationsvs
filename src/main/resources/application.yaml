@@ -1,9 +1,9 @@
 spring:
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     database-platform: org.hibernate.dialect.PostgreSQLDialect
-    show-sql: true
+    show-sql: false
   datasource:
     url: jdbc:postgresql://104.190.200.18:5432/payrolldb
     username: xykine

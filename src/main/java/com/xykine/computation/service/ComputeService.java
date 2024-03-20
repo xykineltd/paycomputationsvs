@@ -36,6 +36,7 @@ public class ComputeService {
                 .retrieve().bodyToMono(List.class).block();
 
         LOGGER.info("Received data size {} ", rawInfo.size() );
+        LOGGER.info("Received data {} ", rawInfo );
 
         ObjectMapper mapper = new ObjectMapper();
         List<PaymentInfo> paymentInfoList = mapper.convertValue(

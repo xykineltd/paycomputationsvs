@@ -41,6 +41,7 @@ public class Compute {
         paymentComputeResponse.setSummary(sessionCalculationObject.getSummary());
         paymentComputeResponse.setStart(paymentRequest.getStart().toString());
         paymentComputeResponse.setEnd(paymentRequest.getEnd().toString());
+        paymentComputeResponse.setPayrollSimulation(paymentRequest.isPayrollSimulation());
 
         reportPersistenceService.serializeAndSaveReport(paymentComputeResponse);
 

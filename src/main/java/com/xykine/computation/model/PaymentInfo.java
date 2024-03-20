@@ -2,11 +2,12 @@ package com.xykine.computation.model;
 
 import lombok.Data;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Map;
 
 @Data
-public class PaymentInfo {
+public class PaymentInfo implements Serializable {
     private Long id;
     private int numberOfDaysOfUnpaidAbsence;
     private int numberOfHours;
