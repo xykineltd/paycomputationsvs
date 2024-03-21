@@ -13,6 +13,7 @@ public class PaymentSettings implements Serializable {
         private String name;
         private BigDecimal value;
         private boolean active;
+        private boolean pensionable;
         private String createdDate;
         private String lastModifiedDate;
         private String createdBy;

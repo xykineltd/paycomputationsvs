@@ -2,6 +2,7 @@ package com.xykine.computation.controller;
 
 import com.xykine.computation.request.UpdateReportRequest;
 import com.xykine.computation.response.PaymentComputeResponse;
+import com.xykine.computation.response.ReportResponse;
 import com.xykine.computation.service.ReportPersistenceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -16,8 +17,8 @@ public class Report {
 
     private final ReportPersistenceService reportPersistenceService;
 
-    @GetMapping("/all")
-    public List<PaymentComputeResponse> getReports() {
+    @GetMapping()
+    public List<ReportResponse> getReports() {
         return reportPersistenceService.getPayRollReports();
     }
 

@@ -187,11 +187,11 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     private Set<PaymentSettings> getAllowanceForEmployee (PaymentInfo paymentInfo) {
         var paymentSettings = paymentInfo.getEmployee().getPaymentSettings();
-        return paymentSettings.stream().filter(setting -> setting.getType().equals("Gross pay")).collect(Collectors.toSet());
+        return paymentSettings.stream().filter(setting -> setting.getType().equals("Gross Pay")).collect(Collectors.toSet());
     }
 
     private Set<PaymentSettings> getDeductionsForEmployee (PaymentInfo paymentInfo) {
         var paymentSettings = paymentInfo.getEmployee().getPaymentSettings();
-        return paymentSettings.stream().filter(setting -> !setting.getType().equals("Gross pay")).collect(Collectors.toSet());
+        return paymentSettings.stream().filter(setting -> !setting.getType().equals("Gross Pay")).collect(Collectors.toSet());
     }
 }

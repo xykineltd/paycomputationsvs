@@ -1,5 +1,7 @@
 package com.xykine.computation.entity;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -8,6 +10,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @NoArgsConstructor
@@ -22,7 +25,7 @@ public class PayrollReport {
     private LocalDate startDate;
     private LocalDate endDate;
     private boolean payrollSimulation;
-    private byte[] report;
     private boolean payrollApproved;
-    private Instant createdDate;
+    private LocalDateTime createdDate;
+    private byte[] report;
 }

@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -18,6 +19,7 @@ import java.util.Map;
 
 public class PaymentComputeResponse implements Serializable {
     private static final long serialVersionUID = 1L;
+    private Long id;
     private boolean success;
     private String message;
     private List<PaymentInfo> report;

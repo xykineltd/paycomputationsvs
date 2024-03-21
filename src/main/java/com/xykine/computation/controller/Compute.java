@@ -2,6 +2,7 @@ package com.xykine.computation.controller;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -42,6 +43,7 @@ public class Compute {
         paymentComputeResponse.setStart(paymentRequest.getStart().toString());
         paymentComputeResponse.setEnd(paymentRequest.getEnd().toString());
         paymentComputeResponse.setPayrollSimulation(paymentRequest.isPayrollSimulation());
+        paymentComputeResponse.setCreatedDate(LocalDate.now().toString());
 
         reportPersistenceService.serializeAndSaveReport(paymentComputeResponse);
 
