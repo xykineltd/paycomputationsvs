@@ -18,3 +18,10 @@ services:
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@xykine.com
       PGADMIN_DEFAULT_PASSWORD: xykine
+
+
+  polar-redis:
+    image: "redis:7.0"
+    container_name: "xykine-redis"
+    ports:
+      - 6379:6379
