@@ -2,12 +2,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
     show-sql: true
-  datasource:
-    url: jdbc:postgresql://104.190.200.18:5432/payrolldb
-    username: xykine
-    password: Xy@1Payroll
 
   data:
     redis:
@@ -15,3 +10,6 @@ spring:
       host: localhost
       port: 6379
       timeout: 1s
+
+    mongodb:
+      uri : ${ SPRING_DATA_MONGODB_URI }

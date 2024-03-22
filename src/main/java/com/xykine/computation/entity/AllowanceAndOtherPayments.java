@@ -1,11 +1,12 @@
 package com.xykine.computation.entity;
 
 import com.xykine.computation.model.TaxBearer;
-import jakarta.persistence.Id;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -14,6 +15,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 @Data
+@Document
 public class AllowanceAndOtherPayments {
     @Id
     private String id;

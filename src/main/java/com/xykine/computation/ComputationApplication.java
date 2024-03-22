@@ -5,6 +5,7 @@ import com.xykine.computation.model.PaymentInfo;
 import com.xykine.computation.model.TaxBearer;
 import com.xykine.computation.repo.*;
 import com.xykine.computation.session.SessionCalculationObject;
+import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -13,11 +14,7 @@ import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+
 
 
 @EnableCaching
@@ -99,21 +96,21 @@ public class ComputationApplication implements CommandLineRunner {
 
 
 		PensionFund pensionFund1 = PensionFund.builder()
-				.employeeId(1L)
+				.employeeId(new ObjectId().toHexString())
 				.account(2345L)
 				.PFACode("ZENITH-PENSIONS")
 				.percentage(BigDecimal.valueOf(7.5))
 				.build();
 
 		PensionFund pensionFund2 = PensionFund.builder()
-				.employeeId(2L)
+				.employeeId(new ObjectId().toHexString())
 				.account(23435L)
 				.PFACode("ZENITH-PENSIONS")
 				.percentage(BigDecimal.valueOf(7.5))
 				.build();
 
 		PensionFund pensionFund3 = PensionFund.builder()
-				.employeeId(3L)
+				.employeeId(new ObjectId().toHexString())
 				.account(234335L)
 				.PFACode("ZENITH-PENSIONS")
 				.percentage(BigDecimal.valueOf(7.5))

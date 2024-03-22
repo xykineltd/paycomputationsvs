@@ -1,9 +1,8 @@
 package com.xykine.computation.repo;
 
 import com.xykine.computation.entity.PensionFund;
-import com.xykine.computation.entity.Tax;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.mongodb.repository.MongoRepository;
 
-public interface PensionFundRepo extends JpaRepository<PensionFund, Long> {
+public interface PensionFundRepo extends MongoRepository<PensionFund,String> {
     PensionFund findPensionFundByEmployeeId(Long employeeId);
 }
