@@ -66,7 +66,8 @@ public class ComputeService {
         int size = rawInfo.size();
         List<PaymentInfo> job1 = new ArrayList<>();
         List<PaymentInfo> job2 = new ArrayList<>();
-          job1.addAll(rawInfo.subList(0, size/2));
+
+        job1.addAll(rawInfo.subList(0, size/2));
         job2.addAll(rawInfo.subList(size/2, size));
 
         Executor executor = Executors.newFixedThreadPool(10);
