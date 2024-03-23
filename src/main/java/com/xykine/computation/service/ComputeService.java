@@ -65,7 +65,7 @@ public class ComputeService {
         Executor executor = Executors.newFixedThreadPool(10);
         CompletableFuture<List<PaymentInfo>> processReportFuture = CompletableFuture.supplyAsync(() -> {
           return  rawInfo.stream()
-                    .filter(x -> x.getEmployee() != null)
+                    .filter(x -> x.getEmployeeID() != null)
                     .map(x -> paymentCalculator.computeGrossPay(x))
                     .map(x -> paymentCalculator.computeNonTaxableIncomeExempt(x))
                     .map(x -> paymentCalculator.prorateEarnings(x))

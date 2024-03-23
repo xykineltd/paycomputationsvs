@@ -200,12 +200,12 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     }
 
     private Set<PaymentSettings> getAllowanceForEmployee (PaymentInfo paymentInfo) {
-        var paymentSettings = paymentInfo.getEmployee().getPaymentSettings();
+        var paymentSettings = paymentInfo.getPaymentSettings();
         return paymentSettings.stream().filter(setting -> setting.getType().equalsIgnoreCase("Allowance")).collect(Collectors.toSet());
     }
 
     private Set<PaymentSettings> getDeductionsForEmployee (PaymentInfo paymentInfo) {
-        var paymentSettings = paymentInfo.getEmployee().getPaymentSettings();
+        var paymentSettings = paymentInfo.getPaymentSettings();
         return paymentSettings.stream().filter(setting -> !setting.getType().equalsIgnoreCase("ALLOWANCE")).collect(Collectors.toSet());
     }
 }

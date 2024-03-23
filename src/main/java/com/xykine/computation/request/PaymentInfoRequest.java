@@ -9,9 +9,9 @@ import java.util.Set;
 
 @Data
 public class PaymentInfoRequest {
-    Long companyId;
-    Set<Long> departmentId;
-    Set<Long> employeeId;
+    String companyId;
+    Set<String> departmentId;
+    Set<String> employeeId;
     LocalDate start;
     LocalDate end;
     boolean payrollSimulation;

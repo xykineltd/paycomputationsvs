@@ -5,10 +5,11 @@ import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Map;
+import java.util.Set;
 
 @Data
 public class PaymentInfo implements Serializable {
-    private Long id;
+    private String id;
     private int numberOfDaysOfUnpaidAbsence;
     private int numberOfHours;
     private Map<String, BigDecimal> deduction;
@@ -22,15 +23,18 @@ public class PaymentInfo implements Serializable {
     private String bandCode;
     private BigDecimal basicSalary;
     private BigDecimal totalAmountDue;
-    private Employee employee;
+    private String employeeID;
     private BigDecimal hourlyRate;
-    private Long companyID;
+    private String companyID;
+
+    private Set<PaymentSettings> paymentSettings;
 
     private String fullName;
 
     private BigDecimal netPay;
 
-    private boolean isCompleted;
+    private boolean completed;
+    private boolean employeeIsLock;
 
     private String createdDate;
 
