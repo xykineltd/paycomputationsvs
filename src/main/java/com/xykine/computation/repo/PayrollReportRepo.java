@@ -13,15 +13,3 @@ public interface PayrollReportRepo extends MongoRepository<PayrollReport,String>
      void deletePayrollReportByStartDate(LocalDate startDate);
      void deletePayrollReportsByPayrollSimulation(Boolean simulation);
 }
-
-
-//[{
-//        payrollPeriod: getFormattedPayrolPeriod(report?.start, report?.end),
-//        PayDate: "N/A",
-//        totalGrossPay: getTotalGrossPay(report),
-//        status: report.payrollApproved ? "Completed" : "Pending",
-//        isSimulated: report?.payrollSimulation,
-//        isApproved: report?.payrollApproved,
-//        startDate: report?.start
-//        createdDate: report?.start
-//        }]

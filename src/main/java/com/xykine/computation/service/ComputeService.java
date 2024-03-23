@@ -2,7 +2,6 @@ package com.xykine.computation.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.xykine.computation.session.SessionCalculationObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.xykine.computation.model.PaymentInfo;
@@ -15,6 +14,7 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.List;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -36,7 +36,7 @@ public class ComputeService {
                 .retrieve().bodyToMono(List.class).block();
 
         LOGGER.info("Received data size {} ", rawInfo.size() );
-        LOGGER.info("Received data {} ", rawInfo );
+        //LOGGER.info("Received data {} ", rawInfo );
 
         ObjectMapper mapper = new ObjectMapper();
         List<PaymentInfo> paymentInfoList = mapper.convertValue(
@@ -61,18 +61,25 @@ public class ComputeService {
                 .build();
     }
 
-    private  List<PaymentInfo> generateReport(List<PaymentInfo> rawInfo) {
-
-        LOGGER.debug(" raw incoming info {} ", rawInfo);
-
-        return rawInfo
-                .stream()
-                .filter(x -> x.getEmployee() != null)
-                .map(x -> paymentCalculator.computeGrossPay(x))
-                .map(x -> paymentCalculator.computeNonTaxableIncomeExempt(x))
-                .map(x -> paymentCalculator.computePayeeTax(x))
-                .map(x -> paymentCalculator.computeTotalDeduction(x))
-                .map(x -> paymentCalculator.computeNetPay(x))
-                .collect(Collectors.toList());
+    public List<PaymentInfo> generateReport(List<PaymentInfo> rawInfo){
+        Executor executor = Executors.newFixedThreadPool(10);
+        CompletableFuture<List<PaymentInfo>> processReportFuture = CompletableFuture.supplyAsync(() -> {
+          return  rawInfo.stream()
+                    .filter(x -> x.getEmployee() != null)
+                    .map(x -> paymentCalculator.computeGrossPay(x))
+                    .map(x -> paymentCalculator.computeNonTaxableIncomeExempt(x))
+                    .map(x -> paymentCalculator.prorateEarnings(x))
+                    .map(x -> paymentCalculator.computePayeeTax(x))
+                    .map(x -> paymentCalculator.computeTotalDeduction(x))
+                    .map(x -> paymentCalculator.computeNetPay(x))
+                    .collect(Collectors.toList());
+        }, executor).thenApply(result -> {
+            return result;
+        });
+        try {
+            return processReportFuture.get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

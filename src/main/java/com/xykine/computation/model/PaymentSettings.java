@@ -19,6 +19,7 @@ public class PaymentSettings implements Serializable {
         private String createdBy;
         private String lastModifiedBy;
         private int version;
+        private boolean prorated;
 
         // Constructors, methods, etc. (Lombok will generate these)
 }

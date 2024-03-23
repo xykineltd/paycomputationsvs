@@ -1,14 +1,12 @@
 package com.xykine.computation.controller;
 
 import java.io.IOException;
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.Map;
-
-import com.xykine.computation.model.MapKeys;
-import com.xykine.computation.service.ReportPersistenceService;
+import com.xykine.computation.repo.ComputationConstantsRepo;
+import com.xykine.computation.repo.TaxRepo;
+import com.xykine.computation.service.ReportPersistenceServiceImpl;
+import com.xykine.computation.utils.OperationUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,28 +23,25 @@ import com.xykine.computation.session.SessionCalculationObject;
 public class Compute {
 
     private final ComputeService computeService;
-    private final SessionCalculationObject sessionCalculationObject;
-    private final ReportPersistenceService reportPersistenceService;
+    private final ReportPersistenceServiceImpl reportPersistenceService;
+    private final ComputationConstantsRepo computationConstantsRepo;
+    private final TaxRepo taxRepo;
+    @Autowired
+    private SessionCalculationObject sessionCalculationObject;
 
     @PostMapping("/payroll")
     public PaymentComputeResponse computePayroll(@RequestBody PaymentInfoRequest paymentRequest) throws IOException, ClassNotFoundException {
-        Map<String, BigDecimal> sessionSummary = new HashMap<>();
-        sessionSummary.put(MapKeys.TOTAL_NET_PAY, BigDecimal.ZERO);
-        sessionSummary.put(MapKeys.TOTAL_PAYEE_TAX, BigDecimal.ZERO);
-        sessionSummary.put(MapKeys.TOTAL_PENSION_FUND, BigDecimal.ZERO);
-        sessionSummary.put(MapKeys.TOTAL_PERSONAL_DEDUCTION, BigDecimal.ZERO);
-        sessionCalculationObject.setSummary(sessionSummary);
+
+        sessionCalculationObject = OperationUtils.doPreflight(sessionCalculationObject, computationConstantsRepo, taxRepo);
 
         PaymentComputeResponse paymentComputeResponse = computeService.computePayroll(paymentRequest);
-
         paymentComputeResponse.setSummary(sessionCalculationObject.getSummary());
         paymentComputeResponse.setStart(paymentRequest.getStart().toString());
         paymentComputeResponse.setEnd(paymentRequest.getEnd().toString());
-        paymentComputeResponse.setPayrollSimulation(paymentRequest.isPayrollSimulation());
-        paymentComputeResponse.setCreatedDate(LocalDate.now().toString());
-
         reportPersistenceService.serializeAndSaveReport(paymentComputeResponse);
 
         return paymentComputeResponse;
     }
+
+
 }

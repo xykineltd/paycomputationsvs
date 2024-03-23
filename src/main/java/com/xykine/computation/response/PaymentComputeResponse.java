@@ -8,7 +8,6 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -27,6 +26,4 @@ public class PaymentComputeResponse implements Serializable {
     private String start;
     private String end;
     private boolean payrollSimulation;
-    private boolean payrollApproved;
-    private String createdDate;
 }

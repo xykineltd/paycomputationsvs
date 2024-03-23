@@ -8,24 +8,19 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.math.BigDecimal;
-import java.time.Instant;
-
+import java.time.LocalDateTime;
 
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @Data
 @Document
-public class Deductions {
+public class ComputationConstants {
     @Id
-//    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private String id;
-    private Long employeeId;
     private String description;
-    private BigDecimal amount;
-    private String createdBy;
-    private String approvedBy;
-    private Boolean active;
-    Instant startDate;
-    Instant endDate;
+    private BigDecimal value;
+    private LocalDateTime createdDate;
+    private LocalDateTime modifiedDate;
+
 }

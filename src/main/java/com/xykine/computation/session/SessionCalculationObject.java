@@ -11,5 +11,6 @@ import java.util.Map;
 public class SessionCalculationObject {
 
     private Map<String, BigDecimal> summary;
+    private Map<String, BigDecimal> computationConstants;
 
 }
