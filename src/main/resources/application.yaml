@@ -1,8 +1,6 @@
 spring:
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
 
   data:
     redis:
@@ -12,4 +10,5 @@ spring:
       timeout: 1s
 
     mongodb:
-      uri : ${ SPRING_DATA_MONGODB_URI }
+      uri: mongodb://admin:docker@localhost/admin?tls=false&authSource=admin
+
