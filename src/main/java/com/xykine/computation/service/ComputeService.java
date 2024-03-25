@@ -94,7 +94,6 @@ public class ComputeService {
 
     private List<PaymentInfo> processReport(List<PaymentInfo> job){
         return  job.stream()
-                .filter(x -> x.getEmployeeID() != null)
                 .map(x -> paymentCalculator.computeGrossPay(x))
                 .map(x -> paymentCalculator.computeNonTaxableIncomeExempt(x))
                 .map(x -> paymentCalculator.prorateEarnings(x))

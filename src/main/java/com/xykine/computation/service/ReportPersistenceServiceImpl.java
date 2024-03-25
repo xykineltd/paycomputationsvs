@@ -42,7 +42,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
 
     @Transactional
-    public ReportResponse serializeAndSaveReport(PaymentComputeResponse paymentComputeResponse, Long companyId)
+    public ReportResponse serializeAndSaveReport(PaymentComputeResponse paymentComputeResponse, String companyId)
             throws IOException, ClassNotFoundException {
         //if isSimulated remove old one and save new one, we don't want many simulated reports
         if(paymentComputeResponse.isPayrollSimulation()) {
@@ -102,7 +102,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         return response;
     }
 
-    private void saveReportDetails(PaymentComputeResponse paymentComputeResponse, Long companyId) {
+    private void saveReportDetails(PaymentComputeResponse paymentComputeResponse, String companyId) {
         List<PaymentInfo> paymentInfoList = paymentComputeResponse.getReport();
         CompletableFuture<Void> jobFuture = CompletableFuture.supplyAsync(() -> {
             paymentInfoList.stream().forEach(x -> {

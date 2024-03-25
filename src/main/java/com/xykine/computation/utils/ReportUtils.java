@@ -35,6 +35,7 @@ public class ReportUtils {
     public static ReportResponse transform(PayrollReportSummary payrollReportSummary){
         PayComputeSummaryResponse summary =  SerializationUtils.deserialize(payrollReportSummary.getReport());
         return ReportResponse.builder()
+                .reportId(payrollReportSummary.getId().toString())
                 .companyId(payrollReportSummary.getCompanyId())
                 .payrollApproved(payrollReportSummary.isPayrollApproved())
                 .startDate(payrollReportSummary.getStartDate().toString())

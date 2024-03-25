@@ -14,7 +14,6 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PayComputeSummaryResponse implements Serializable {
-    private boolean success;
     private String message;
     private Map<String, BigDecimal> summary;
 }

@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ReportResponse {
+    String reportId;
     String companyId;
     String employeeId;
     String departmentId;

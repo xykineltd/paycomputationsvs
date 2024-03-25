@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 public interface ReportPersistenceService {
-    ReportResponse serializeAndSaveReport(PaymentComputeResponse paymentComputeResponse, Long companyId) throws IOException, ClassNotFoundException;
+    ReportResponse serializeAndSaveReport(PaymentComputeResponse paymentComputeResponse, String companyId) throws IOException, ClassNotFoundException;
     ReportResponse getPayRollReport(String startData);
     List<ReportResponse> getPayRollReports();
     PayrollReportSummary updateReport(UpdateReportRequest updateReportRequest);
