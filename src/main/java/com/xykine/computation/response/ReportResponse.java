@@ -10,9 +10,14 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ReportResponse {
-    PaymentComputeResponse report;
+    String companyId;
+    String employeeId;
+    String departmentId;
+    PayComputeDetailResponse detail;
+    PayComputeSummaryResponse summary;
     boolean payrollApproved;
     String createdDate;
     String startDate;
     String endDate;
+    boolean payrollSimulated;
 }

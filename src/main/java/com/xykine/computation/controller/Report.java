@@ -1,13 +1,16 @@
 package com.xykine.computation.controller;
 
-import com.xykine.computation.entity.PayrollReport;
+import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.request.UpdateReportRequest;
 import com.xykine.computation.response.ReportResponse;
 import com.xykine.computation.service.ReportPersistenceService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/reports")
@@ -28,9 +31,18 @@ public class Report {
 
     @PutMapping("/approve")
     public boolean updateReport(@RequestBody UpdateReportRequest request) {
-        PayrollReport payrollReport = reportPersistenceService.updateReport(request);
+        PayrollReportSummary payrollReport = reportPersistenceService.updateReport(request);
         if (payrollReport.isPayrollApproved() != request.isPayrollApproved())
             return false;
         return true;
+    }
+
+    @GetMapping("/paymentDetails")
+    public ResponseEntity<Map<String, Object>> getPaymentDetails(
+            @RequestParam(required = true) String id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "3") int size) {
+        Map<String, Object> response = reportPersistenceService.getPaymentDetails(id, page, size);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

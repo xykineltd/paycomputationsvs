@@ -39,6 +39,7 @@ public class ComputeService {
         LOGGER.info("Received data size {} ", rawInfo.size() );
         //LOGGER.info("Received data {} ", rawInfo );
 
+        LOGGER.info("Received data size {} ", rawInfo.get(0));
         ObjectMapper mapper = new ObjectMapper();
         List<PaymentInfo> paymentInfoList = mapper.convertValue(
                 rawInfo,

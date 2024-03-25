@@ -1,8 +1,13 @@
 package com.xykine.computation.controller;
 
 import java.io.IOException;
+import java.util.UUID;
+
+import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.repo.ComputationConstantsRepo;
 import com.xykine.computation.repo.TaxRepo;
+import com.xykine.computation.response.PayComputeSummaryResponse;
+import com.xykine.computation.response.ReportResponse;
 import com.xykine.computation.service.ReportPersistenceServiceImpl;
 import com.xykine.computation.utils.OperationUtils;
 import lombok.RequiredArgsConstructor;
@@ -30,17 +35,16 @@ public class Compute {
     private SessionCalculationObject sessionCalculationObject;
 
     @PostMapping("/payroll")
-    public PaymentComputeResponse computePayroll(@RequestBody PaymentInfoRequest paymentRequest) throws IOException, ClassNotFoundException {
+    public ReportResponse computePayroll(@RequestBody PaymentInfoRequest paymentRequest) throws IOException, ClassNotFoundException {
 
         sessionCalculationObject = OperationUtils.doPreflight(sessionCalculationObject, computationConstantsRepo, taxRepo);
-
         PaymentComputeResponse paymentComputeResponse = computeService.computePayroll(paymentRequest);
+        paymentComputeResponse.setId(UUID.randomUUID());
         paymentComputeResponse.setSummary(sessionCalculationObject.getSummary());
         paymentComputeResponse.setStart(paymentRequest.getStart().toString());
         paymentComputeResponse.setEnd(paymentRequest.getEnd().toString());
-        reportPersistenceService.serializeAndSaveReport(paymentComputeResponse);
+        return reportPersistenceService.serializeAndSaveReport(paymentComputeResponse, paymentRequest.getCompanyId());
 
-        return paymentComputeResponse;
     }
 
 
