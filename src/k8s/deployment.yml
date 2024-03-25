@@ -33,3 +33,5 @@ spec:
               value: mongodb+srv://xykinehrs:I4jY8L79v5m1EK20@xykinehrsdb-05d564e8.mongo.ondigitalocean.com/xykinehrsdb?tls=true&authSource=admin&replicaSet=xykinehrsdb
             - name: SPRING_DATA_MONGODB_DATABASE
               value: xykinehrsdb
+            - name: SPRING_REDIS_HOST
+              value: xykine-redis
