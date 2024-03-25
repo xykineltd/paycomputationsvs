@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: paycomputation-service
+  labels:
+    app: paycomputation-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: paycomputation-service
+  template:
+    metadata:
+      labels:
+        app: paycomputation-service
+    spec:
+      containers:
+        - name: paycomputation-service
+          image: kacytunde/paycomputation-service
+          imagePullPolicy: Always
+          lifecycle:
+            preStop:
+              exec:
+                command: [ "sh", "-c", "sleep 5" ]
+          ports:
+            - containerPort: 9002
+          env:
+            - name: BPL_JVM_THREAD_COUNT
+              value: "100"
+            - name: SPRING_CLOUD_CONFIG_URI
+              value: http://config-service
+            - name: SPRING_DATA_MONGODB_URI
+              value: mongodb+srv://xykinehrs:I4jY8L79v5m1EK20@xykinehrsdb-05d564e8.mongo.ondigitalocean.com/xykinehrsdb?tls=true&authSource=admin&replicaSet=xykinehrsdb
+            - name: SPRING_DATA_MONGODB_DATABASE
+              value: xykinehrsdb

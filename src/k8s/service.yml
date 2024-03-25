@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: paycomputation-service
+  labels:
+    app: paycomputation-service
+spec:
+  type: ClusterIP
+  selector:
+    app: paycomputation-service
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 9002

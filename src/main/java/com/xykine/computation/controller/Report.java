@@ -10,13 +10,13 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/reports")
+@RequestMapping("/compute/reports")
 @RequiredArgsConstructor
 public class Report {
 
     private final ReportPersistenceService reportPersistenceService;
 
-    @GetMapping("/get-all")
+    @GetMapping()
     public List<ReportResponse> getReports() {
         return reportPersistenceService.getPayRollReports();
     }

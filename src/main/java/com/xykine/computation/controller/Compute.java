@@ -18,7 +18,7 @@ import com.xykine.computation.service.ComputeService;
 import com.xykine.computation.session.SessionCalculationObject;
 
 @RestController
-@RequestMapping("/compute")
+@RequestMapping("/compute/payrolls")
 @RequiredArgsConstructor
 public class Compute {
 
@@ -29,7 +29,7 @@ public class Compute {
     @Autowired
     private SessionCalculationObject sessionCalculationObject;
 
-    @PostMapping("/payroll")
+    @PostMapping
     public PaymentComputeResponse computePayroll(@RequestBody PaymentInfoRequest paymentRequest) throws IOException, ClassNotFoundException {
 
         sessionCalculationObject = OperationUtils.doPreflight(sessionCalculationObject, computationConstantsRepo, taxRepo);
