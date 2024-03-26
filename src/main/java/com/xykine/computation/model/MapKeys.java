@@ -5,6 +5,7 @@ public class MapKeys {
     public static final String EMPLOYEE_PENSION = "Employee Pension";
     public static final String NATIONAL_HOUSING_FUND = "National Housing Fund";
     public static final String FIXED_CONSOLIDATED_RELIEF_ALLOWANCE = "Fixed Consolidated Relief Allowance";
+    public static final String VARIABLE_CONSOLIDATED_RELIEF_ALLOWANCE = "Variable Consolidated Relief Allowance";
     public static final String TOTAL_TAX_RELIEF = "Total Tax Relief";
     public static final String TAXABLE_INCOME = "Taxable Income";
     public static final String PAYEE_TAX = "Payee Tax";

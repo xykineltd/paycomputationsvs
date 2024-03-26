@@ -64,12 +64,17 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         BigDecimal rawFXR = ComputationUtils
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("craFraction")
                         .multiply(grossIncomeForCRA));
-
-        if (rawFXR.compareTo(sessionCalculationObject.getComputationConstants().get("craCutOff")) == -1) {
+        if (rawFXR.compareTo(sessionCalculationObject.getComputationConstants().get("craCutOff")) == 1) {
             nonTaxableIncomeExemptMap.put(MapKeys.FIXED_CONSOLIDATED_RELIEF_ALLOWANCE, ComputationUtils.prorate(rawFXR, numberOfUnpaidDays));
         } else {
             nonTaxableIncomeExemptMap.put(MapKeys.FIXED_CONSOLIDATED_RELIEF_ALLOWANCE, ComputationUtils.prorate(BigDecimal.valueOf(200000), numberOfUnpaidDays));
         }
+
+        BigDecimal variableCRA = ComputationUtils
+                .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("variableCRAFraction")
+                        .multiply(grossIncomeForCRA));
+        nonTaxableIncomeExemptMap.put(MapKeys.VARIABLE_CONSOLIDATED_RELIEF_ALLOWANCE, ComputationUtils
+                .roundToTwoDecimalPlaces(ComputationUtils.prorate(variableCRA, numberOfUnpaidDays)));
 
         BigDecimal total = getTotal(nonTaxableIncomeExemptMap);
         nonTaxableIncomeExemptMap.put(MapKeys.TOTAL_TAX_RELIEF, total);
@@ -168,15 +173,13 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     private BigDecimal getTax(BigDecimal taxableIncome){
         Double taxableIncomeDouble = taxableIncome.doubleValue();
+        taxableIncomeDouble = taxableIncomeDouble * 12;
 
-        if (taxableIncomeDouble <= 200000.0) {
+        if (taxableIncomeDouble <= 300000.0) {
             return sessionCalculationObject.getComputationConstants().get("TaxClassA");
         }
-        if (taxableIncomeDouble > 200000.0 && taxableIncomeDouble >= 600000.0 ) {
+        if (taxableIncomeDouble > 300000.0 && taxableIncomeDouble >= 600000.0 ) {
             return sessionCalculationObject.getComputationConstants().get("TaxClassB");
-        }
-        if (taxableIncomeDouble > 200000.0 && taxableIncomeDouble >= 600000.0 ) {
-            return sessionCalculationObject.getComputationConstants().get("TaxClassC");
         }
         if (taxableIncomeDouble > 600000.0 && taxableIncomeDouble >= 1100000.0 ) {
             return sessionCalculationObject.getComputationConstants().get("TaxClassD");

@@ -63,7 +63,7 @@ public class ComputeService {
                 .build();
     }
 
-    public List<PaymentInfo> generateReport(List<PaymentInfo> rawInfo){
+    public List<PaymentInfo> generateReport(List<PaymentInfo> rawInfo) {
         int size = rawInfo.size();
         List<PaymentInfo> job1 = new ArrayList<>();
         List<PaymentInfo> job2 = new ArrayList<>();
