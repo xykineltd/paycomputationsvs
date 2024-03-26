@@ -80,6 +80,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     }
     @Transactional
     public PayrollReportSummary updateReport(UpdateReportRequest request) {
+        System.out.println("request -->" +  request);
         var existingReport = payrollReportSummaryRepo.findPayrollReportSummaryByStartDateAndPayrollSimulation(LocalDate.parse(request.getStartDate()), false);
         existingReport.setPayrollApproved(request.isPayrollApproved());
         return payrollReportSummaryRepo.save(existingReport);
@@ -113,7 +114,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                         .id(UUID.randomUUID().toString())
                         .summaryId(paymentComputeResponse.getId().toString())
                         .companyId(companyId.toString())
-                        .departmentId(x.getDepartmentId())
+                        .departmentId(x.getDepartmentID())
                         .startDate(paymentComputeResponse.getStart())
                         .endDate((paymentComputeResponse.getEnd()))
                         .report(ReportUtils.serializeResponse(payComputeDetailResponse))
