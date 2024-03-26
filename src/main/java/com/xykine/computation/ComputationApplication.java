@@ -98,8 +98,13 @@ public class ComputationApplication implements CommandLineRunner {
 				.build();
 		ComputationConstants craFraction = ComputationConstants.builder()
 				.id("craFraction")
-				.description("Used to calculate consolidated tax relief")
+				.description("Used to calculate fixed consolidated tax relief")
 				.value(BigDecimal.valueOf(0.01))
+				.build();
+		ComputationConstants variableCRAFraction = ComputationConstants.builder()
+				.id("variableCRAFraction")
+				.description("Used to calculate variable consolidated tax relief")
+				.value(BigDecimal.valueOf(0.20))
 				.build();
 		ComputationConstants craCutOff = ComputationConstants.builder()
 				.id("craCutOff")
@@ -110,5 +115,6 @@ public class ComputationApplication implements CommandLineRunner {
 		computationConstantsRepo.save(nationalHousingFund);
 		computationConstantsRepo.save(craFraction);
 		computationConstantsRepo.save(craCutOff);
+		computationConstantsRepo.save(variableCRAFraction);
 	}
 }
