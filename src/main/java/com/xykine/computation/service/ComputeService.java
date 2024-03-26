@@ -39,6 +39,7 @@ public class ComputeService {
         LOGGER.info("Received data size {} ", rawInfo.size() );
         //LOGGER.info("Received data {} ", rawInfo );
 
+        LOGGER.info("Received data size {} ", rawInfo.get(0));
         ObjectMapper mapper = new ObjectMapper();
         List<PaymentInfo> paymentInfoList = mapper.convertValue(
                 rawInfo,
@@ -93,7 +94,6 @@ public class ComputeService {
 
     private List<PaymentInfo> processReport(List<PaymentInfo> job){
         return  job.stream()
-                .filter(x -> x.getEmployeeID() != null)
                 .map(x -> paymentCalculator.computeGrossPay(x))
                 .map(x -> paymentCalculator.computeNonTaxableIncomeExempt(x))
                 .map(x -> paymentCalculator.prorateEarnings(x))

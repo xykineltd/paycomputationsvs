@@ -10,6 +10,7 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -18,7 +19,7 @@ import java.util.Map;
 
 public class PaymentComputeResponse implements Serializable {
     private static final long serialVersionUID = 1L;
-    private Long id;
+    private UUID id;
     private boolean success;
     private String message;
     private List<PaymentInfo> report;
