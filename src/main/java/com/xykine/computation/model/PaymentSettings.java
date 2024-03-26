@@ -7,8 +7,8 @@ import java.math.BigDecimal;
 
 @Data
 public class PaymentSettings implements Serializable {
-        private Long paymentSettingID;
-        private Long employeeID;
+        private String paymentSettingID;
+        private String employeeID;
         private String type;
         private String name;
         private BigDecimal value;

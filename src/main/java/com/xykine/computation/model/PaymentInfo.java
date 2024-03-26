@@ -12,7 +12,7 @@ public class PaymentInfo implements Serializable {
     private String id;
     private int numberOfDaysOfUnpaidAbsence;
     private int numberOfHours;
-    private String departmentId;
+    private String departmentID;
     private Map<String, BigDecimal> deduction;
     private Map<String, BigDecimal> grossPay;
     private Map<String, BigDecimal> taxRelief;

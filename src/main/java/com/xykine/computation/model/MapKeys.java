@@ -14,7 +14,7 @@ public class MapKeys {
     public static final String BASIC_SALARY = "Basic Salary";
     public static final String TOTAL_NET_PAY = "Total Net Pay";
     public static final String HOUSING = "Housing";
-    public static final String TRANSPORT = "Transport";
+    public static final String TRANSPORT = "Transportation";
     public static final String PENSION_FUND = "Pension Fund";
     public static final String TOTAL_PENSION_FUND = "Total Pension Fund";
 }
