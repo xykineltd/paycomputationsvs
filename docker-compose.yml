@@ -25,8 +25,8 @@ services:
       - mongo
     ports:
       - "8888:8081"
-  polar-redis:
-    image: "redis:7.0"
-    container_name: "xykine-redis"
-    ports:
-      - 6379:6379
+#  polar-redis:
+#    image: "redis:7.0"
+#    container_name: "xykine-redis"
+#    ports:
+#      - 6379:6379

@@ -12,6 +12,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 
@@ -21,6 +22,7 @@ import java.math.BigDecimal;
 
 @EnableCaching
 @SpringBootApplication
+@ConfigurationPropertiesScan
 public class ComputationApplication implements CommandLineRunner {
 	@Autowired
 	private TaxRepo taxRepo;
