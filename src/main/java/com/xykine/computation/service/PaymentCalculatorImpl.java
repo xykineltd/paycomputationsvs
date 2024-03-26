@@ -44,20 +44,34 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
         BigDecimal pensionFund = getAllowanceForEmployee(paymentInfo)
                 .stream()
+                .map(d -> {
+                    LOGGER.info("x.getName()" + d.getName());
+                    LOGGER.info("x.getName().contains(MapKeys.TRANSPORT)" + d.getName().contains(MapKeys.TRANSPORT));
+                    LOGGER.info("x.getName().contains(MapKeys.HOUSING)" + d.getName().contains(MapKeys.HOUSING));
+                    return d;
+                })
                 .filter(x -> x.isPensionable() || x.getName().contains(MapKeys.TRANSPORT) || x.getName().contains(MapKeys.HOUSING))
                         .map(PaymentSettings::getValue)
                                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+        LOGGER.info("pensionFund 1--->" + pensionFund);
+        LOGGER.info("pensionFund allow--->" + getAllowanceForEmployee(paymentInfo));
+
         pensionFund = pensionFund.add(paymentInfo.getBasicSalary());
 
         BigDecimal employeePension = ComputationUtils
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("pensionFundPercent")
                         .multiply(pensionFund));
+
         nonTaxableIncomeExemptMap.put(MapKeys.EMPLOYEE_PENSION, ComputationUtils.prorate(employeePension, numberOfUnpaidDays));
+        LOGGER.info("employeePension--->" + employeePension);
+        LOGGER.info("pensionFund 2--->" + pensionFund);
 
         BigDecimal nationalHousingFund = ComputationUtils
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("nationalHousingFundPercent")
                         .multiply(paymentInfo.getBasicSalary()));
         nonTaxableIncomeExemptMap.put(MapKeys.NATIONAL_HOUSING_FUND, ComputationUtils.prorate(nationalHousingFund, numberOfUnpaidDays));
+
+        LOGGER.info("nationalHousingFund--->" + nationalHousingFund);
 
         BigDecimal grossIncomeForCRA  = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(employeePension).subtract(nationalHousingFund);
 
@@ -70,15 +84,22 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
             nonTaxableIncomeExemptMap.put(MapKeys.FIXED_CONSOLIDATED_RELIEF_ALLOWANCE, ComputationUtils.prorate(BigDecimal.valueOf(200000), numberOfUnpaidDays));
         }
 
+        LOGGER.info("rawFXR--->" + rawFXR);
+
+
         BigDecimal variableCRA = ComputationUtils
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("variableCRAFraction")
                         .multiply(grossIncomeForCRA));
         nonTaxableIncomeExemptMap.put(MapKeys.VARIABLE_CONSOLIDATED_RELIEF_ALLOWANCE, ComputationUtils
                 .roundToTwoDecimalPlaces(ComputationUtils.prorate(variableCRA, numberOfUnpaidDays)));
 
+        LOGGER.info("variableCRA--->" + variableCRA);
+
         BigDecimal total = getTotal(nonTaxableIncomeExemptMap);
         nonTaxableIncomeExemptMap.put(MapKeys.TOTAL_TAX_RELIEF, total);
         paymentInfo.setTaxRelief(nonTaxableIncomeExemptMap);
+        LOGGER.info("total--->" + total);
+
         return paymentInfo;
     }
 
@@ -204,11 +225,12 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     private Set<PaymentSettings> getAllowanceForEmployee (PaymentInfo paymentInfo) {
         var paymentSettings = paymentInfo.getPaymentSettings();
-        return paymentSettings.stream().filter(setting -> setting.getType().equalsIgnoreCase("Allowance")).collect(Collectors.toSet());
+        LOGGER.info("paymentSettings---->" + paymentSettings);
+        return paymentSettings.stream().filter(setting -> setting.getType().equalsIgnoreCase(MapKeys.ALLOWANCE)).collect(Collectors.toSet());
     }
 
     private Set<PaymentSettings> getDeductionsForEmployee (PaymentInfo paymentInfo) {
         var paymentSettings = paymentInfo.getPaymentSettings();
-        return paymentSettings.stream().filter(setting -> !setting.getType().equalsIgnoreCase("ALLOWANCE")).collect(Collectors.toSet());
+        return paymentSettings.stream().filter(setting -> setting.getType().equalsIgnoreCase(MapKeys.DEDUCTION)).collect(Collectors.toSet());
     }
 }
