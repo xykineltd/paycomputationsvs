@@ -44,34 +44,24 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
         BigDecimal pensionFund = getAllowanceForEmployee(paymentInfo)
                 .stream()
-                .map(d -> {
-                    LOGGER.info("x.getName()" + d.getName());
-                    LOGGER.info("x.getName().contains(MapKeys.TRANSPORT)" + d.getName().contains(MapKeys.TRANSPORT));
-                    LOGGER.info("x.getName().contains(MapKeys.HOUSING)" + d.getName().contains(MapKeys.HOUSING));
-                    return d;
-                })
                 .filter(x -> x.isPensionable() || x.getName().contains(MapKeys.TRANSPORT) || x.getName().contains(MapKeys.HOUSING))
                         .map(PaymentSettings::getValue)
                                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        LOGGER.info("pensionFund 1--->" + pensionFund);
-        LOGGER.info("pensionFund allow--->" + getAllowanceForEmployee(paymentInfo));
+
 
         pensionFund = pensionFund.add(paymentInfo.getBasicSalary());
+
 
         BigDecimal employeePension = ComputationUtils
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("pensionFundPercent")
                         .multiply(pensionFund));
 
         nonTaxableIncomeExemptMap.put(MapKeys.EMPLOYEE_PENSION, ComputationUtils.prorate(employeePension, numberOfUnpaidDays));
-        LOGGER.info("employeePension--->" + employeePension);
-        LOGGER.info("pensionFund 2--->" + pensionFund);
 
         BigDecimal nationalHousingFund = ComputationUtils
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("nationalHousingFundPercent")
                         .multiply(paymentInfo.getBasicSalary()));
         nonTaxableIncomeExemptMap.put(MapKeys.NATIONAL_HOUSING_FUND, ComputationUtils.prorate(nationalHousingFund, numberOfUnpaidDays));
-
-        LOGGER.info("nationalHousingFund--->" + nationalHousingFund);
 
         BigDecimal grossIncomeForCRA  = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(employeePension).subtract(nationalHousingFund);
 
@@ -84,8 +74,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
             nonTaxableIncomeExemptMap.put(MapKeys.FIXED_CONSOLIDATED_RELIEF_ALLOWANCE, ComputationUtils.prorate(BigDecimal.valueOf(200000), numberOfUnpaidDays));
         }
 
-        LOGGER.info("rawFXR--->" + rawFXR);
-
 
         BigDecimal variableCRA = ComputationUtils
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("variableCRAFraction")
@@ -93,13 +81,9 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         nonTaxableIncomeExemptMap.put(MapKeys.VARIABLE_CONSOLIDATED_RELIEF_ALLOWANCE, ComputationUtils
                 .roundToTwoDecimalPlaces(ComputationUtils.prorate(variableCRA, numberOfUnpaidDays)));
 
-        LOGGER.info("variableCRA--->" + variableCRA);
-
         BigDecimal total = getTotal(nonTaxableIncomeExemptMap);
         nonTaxableIncomeExemptMap.put(MapKeys.TOTAL_TAX_RELIEF, total);
         paymentInfo.setTaxRelief(nonTaxableIncomeExemptMap);
-        LOGGER.info("total--->" + total);
-
         return paymentInfo;
     }
 
@@ -124,9 +108,8 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         BigDecimal taxableIncome = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(paymentInfo.getTaxRelief().get(MapKeys.TOTAL_TAX_RELIEF));
         payeeTax.put(MapKeys.TAXABLE_INCOME, taxableIncome);
 
-        BigDecimal taxPercent = getTax(taxableIncome);
 
-        BigDecimal empPayeeTax = ComputationUtils.roundToTwoDecimalPlaces(taxPercent.multiply(taxableIncome).divide(BigDecimal.valueOf(100)));;
+        BigDecimal empPayeeTax = ComputationUtils.getTaxAmount(taxableIncome, sessionCalculationObject);
         payeeTax.put(MapKeys.PAYEE_TAX, empPayeeTax);
         paymentInfo.setPayeeTax(payeeTax);
 
@@ -191,29 +174,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         return paymentInfo;
     }
 
-
-    private BigDecimal getTax(BigDecimal taxableIncome){
-        Double taxableIncomeDouble = taxableIncome.doubleValue();
-        taxableIncomeDouble = taxableIncomeDouble * 12;
-
-        if (taxableIncomeDouble <= 300000.0) {
-            return sessionCalculationObject.getComputationConstants().get("TaxClassA");
-        }
-        if (taxableIncomeDouble > 300000.0 && taxableIncomeDouble >= 600000.0 ) {
-            return sessionCalculationObject.getComputationConstants().get("TaxClassB");
-        }
-        if (taxableIncomeDouble > 600000.0 && taxableIncomeDouble >= 1100000.0 ) {
-            return sessionCalculationObject.getComputationConstants().get("TaxClassD");
-        }
-        if (taxableIncomeDouble > 1100000.0 && taxableIncomeDouble >= 1600000.0 ) {
-            return sessionCalculationObject.getComputationConstants().get("TaxClassE");
-        }
-        if (taxableIncomeDouble > 1600000.0 && taxableIncomeDouble >= 3200000.0 ) {
-            return sessionCalculationObject.getComputationConstants().get("TaxClassF");
-        }
-        return BigDecimal.ZERO;
-    }
-
     private BigDecimal getTotal(Map<String, BigDecimal> input){
         BigDecimal total = BigDecimal.ZERO;
 
@@ -225,7 +185,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     private Set<PaymentSettings> getAllowanceForEmployee (PaymentInfo paymentInfo) {
         var paymentSettings = paymentInfo.getPaymentSettings();
-        LOGGER.info("paymentSettings---->" + paymentSettings);
         return paymentSettings.stream().filter(setting -> setting.getType().equalsIgnoreCase(MapKeys.ALLOWANCE)).collect(Collectors.toSet());
     }
 
