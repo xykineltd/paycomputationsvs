@@ -47,7 +47,16 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 .filter(x -> x.isPensionable() || x.getName().contains(MapKeys.TRANSPORT) || x.getName().contains(MapKeys.HOUSING))
                         .map(PaymentSettings::getValue)
                                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        Set<PaymentSettings> tList = getAllowanceForEmployee(paymentInfo);
+
+        for (PaymentSettings a : tList) {
+            System.out.println("contains transport" + a.getName().contains("TRANSPORT"));
+            System.out.println("contains housing" + a.getName().contains(MapKeys.HOUSING));
+        }
+
         pensionFund = pensionFund.add(paymentInfo.getBasicSalary());
+
 
         BigDecimal employeePension = ComputationUtils
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("pensionFundPercent")
@@ -103,9 +112,8 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         BigDecimal taxableIncome = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(paymentInfo.getTaxRelief().get(MapKeys.TOTAL_TAX_RELIEF));
         payeeTax.put(MapKeys.TAXABLE_INCOME, taxableIncome);
 
-        BigDecimal taxPercent = getTax(taxableIncome);
 
-        BigDecimal empPayeeTax = ComputationUtils.roundToTwoDecimalPlaces(taxPercent.multiply(taxableIncome).divide(BigDecimal.valueOf(100)));;
+        BigDecimal empPayeeTax = ComputationUtils.getTaxAmount(taxableIncome, sessionCalculationObject);
         payeeTax.put(MapKeys.PAYEE_TAX, empPayeeTax);
         paymentInfo.setPayeeTax(payeeTax);
 
@@ -168,29 +176,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
             sessionCalculationObject.getSummary().put(MapKeys.TOTAL_NET_PAY, totalNetPay);
         }
         return paymentInfo;
-    }
-
-
-    private BigDecimal getTax(BigDecimal taxableIncome){
-        Double taxableIncomeDouble = taxableIncome.doubleValue();
-        taxableIncomeDouble = taxableIncomeDouble * 12;
-
-        if (taxableIncomeDouble <= 300000.0) {
-            return sessionCalculationObject.getComputationConstants().get("TaxClassA");
-        }
-        if (taxableIncomeDouble > 300000.0 && taxableIncomeDouble >= 600000.0 ) {
-            return sessionCalculationObject.getComputationConstants().get("TaxClassB");
-        }
-        if (taxableIncomeDouble > 600000.0 && taxableIncomeDouble >= 1100000.0 ) {
-            return sessionCalculationObject.getComputationConstants().get("TaxClassD");
-        }
-        if (taxableIncomeDouble > 1100000.0 && taxableIncomeDouble >= 1600000.0 ) {
-            return sessionCalculationObject.getComputationConstants().get("TaxClassE");
-        }
-        if (taxableIncomeDouble > 1600000.0 && taxableIncomeDouble >= 3200000.0 ) {
-            return sessionCalculationObject.getComputationConstants().get("TaxClassF");
-        }
-        return BigDecimal.ZERO;
     }
 
     private BigDecimal getTotal(Map<String, BigDecimal> input){
