@@ -18,6 +18,7 @@ public class PaymentInfo implements Serializable {
     private Map<String, BigDecimal> taxRelief;
     private Map<String, BigDecimal> payeeTax;
     private Map<String, BigDecimal> earning;
+    private Map<String, BigDecimal> nhf;
     private Map<String, BigDecimal> others;
     private String startDate;
     private String endDate;

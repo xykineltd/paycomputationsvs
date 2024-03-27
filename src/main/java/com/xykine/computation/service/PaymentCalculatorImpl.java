@@ -40,6 +40,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     @Override
     public PaymentInfo computeNonTaxableIncomeExempt(PaymentInfo paymentInfo) {
         Map<String, BigDecimal> nonTaxableIncomeExemptMap = new HashMap<>();
+        Map<String, BigDecimal> nhf = new HashMap<>();
         int numberOfUnpaidDays = paymentInfo.getNumberOfDaysOfUnpaidAbsence();
 
         BigDecimal pensionFund = getAllowanceForEmployee(paymentInfo)
@@ -51,7 +52,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
         pensionFund = pensionFund.add(paymentInfo.getBasicSalary());
 
-
         BigDecimal employeePension = ComputationUtils
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("pensionFundPercent")
                         .multiply(pensionFund));
@@ -61,7 +61,11 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         BigDecimal nationalHousingFund = ComputationUtils
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("nationalHousingFundPercent")
                         .multiply(paymentInfo.getBasicSalary()));
+
+        var nhfValue = ComputationUtils.prorate(nationalHousingFund, numberOfUnpaidDays);
         nonTaxableIncomeExemptMap.put(MapKeys.NATIONAL_HOUSING_FUND, ComputationUtils.prorate(nationalHousingFund, numberOfUnpaidDays));
+        nhf.put(MapKeys.NATIONAL_HOUSING_FUND, nhfValue);
+        paymentInfo.setNhf(nhf);
 
         BigDecimal grossIncomeForCRA  = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(employeePension).subtract(nationalHousingFund);
 
@@ -125,6 +129,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
         deductionMap.put(MapKeys.PENSION_FUND, paymentInfo.getTaxRelief().get(MapKeys.EMPLOYEE_PENSION));
         deductionMap.put(MapKeys.PAYEE_TAX, paymentInfo.getPayeeTax().get(MapKeys.PAYEE_TAX));
+        deductionMap.put(MapKeys.NATIONAL_HOUSING_FUND, paymentInfo.getNhf().get(MapKeys.NATIONAL_HOUSING_FUND));
 
         var deductions = getDeductionsForEmployee(paymentInfo);
         deductions.stream()
@@ -150,7 +155,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     private Map<String, BigDecimal> insertRecurrentPaymentMap(Map<String, BigDecimal> earningMap, PaymentInfo paymentInfo){
         earningMap.put(MapKeys.BASIC_SALARY, paymentInfo.getBasicSalary());
         var allowance = getAllowanceForEmployee(paymentInfo);
-        //LOGGER.info("employee allowances :  {} ",  allowance);
         allowance.stream()
                 .filter(PaymentSettings::isActive)
                 .forEach(x -> {
@@ -158,7 +162,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 });
         return earningMap;
     }
-
 
 
     @Override
@@ -170,6 +173,23 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
             BigDecimal totalNetPay = sessionCalculationObject.getSummary().get(MapKeys.TOTAL_NET_PAY);
             totalNetPay = totalNetPay.add(netPay);
             sessionCalculationObject.getSummary().put(MapKeys.TOTAL_NET_PAY, totalNetPay);
+
+            //Add gross pay to summary
+            BigDecimal totalGrossPay = sessionCalculationObject.getSummary().get(MapKeys.TOTAL_GROSS_PAY);
+            totalGrossPay = totalGrossPay.add(paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY));
+            sessionCalculationObject.getSummary().put(MapKeys.TOTAL_GROSS_PAY, totalGrossPay);
+        }
+        return paymentInfo;
+    }
+
+    @Override
+    public PaymentInfo computeTotalNHF(PaymentInfo paymentInfo) {
+        if(paymentInfo.getNhf().get(MapKeys.NATIONAL_HOUSING_FUND) != null) {
+            BigDecimal totalNHF = sessionCalculationObject.getSummary().get(MapKeys.TOTAL_NHF);
+            BigDecimal nhf = paymentInfo.getNhf().get(MapKeys.NATIONAL_HOUSING_FUND);
+
+            totalNHF = totalNHF.add(nhf);
+            sessionCalculationObject.getSummary().put(MapKeys.TOTAL_NHF, totalNHF);
         }
         return paymentInfo;
     }

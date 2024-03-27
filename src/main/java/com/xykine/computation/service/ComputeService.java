@@ -100,6 +100,7 @@ public class ComputeService {
                 .map(x -> paymentCalculator.computePayeeTax(x))
                 .map(x -> paymentCalculator.computeTotalDeduction(x))
                 .map(x -> paymentCalculator.computeNetPay(x))
+                .map(x -> paymentCalculator.computeTotalNHF(x))
                 .collect(Collectors.toList());
     }
 }

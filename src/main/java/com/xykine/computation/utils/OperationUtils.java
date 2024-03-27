@@ -17,8 +17,10 @@ public class OperationUtils {
         Map<String, BigDecimal> computationConstants = new HashMap<>();
 
         sessionSummary.put(MapKeys.TOTAL_NET_PAY, BigDecimal.ZERO);
+        sessionSummary.put(MapKeys.TOTAL_GROSS_PAY, BigDecimal.ZERO);
         sessionSummary.put(MapKeys.TOTAL_PAYEE_TAX, BigDecimal.ZERO);
         sessionSummary.put(MapKeys.TOTAL_PENSION_FUND, BigDecimal.ZERO);
+        sessionSummary.put(MapKeys.TOTAL_NHF, BigDecimal.ZERO);
         sessionSummary.put(MapKeys.TOTAL_PERSONAL_DEDUCTION, BigDecimal.ZERO);
         sessionCalculationObject.setSummary(sessionSummary);
 
