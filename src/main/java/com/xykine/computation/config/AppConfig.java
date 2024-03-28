@@ -14,8 +14,8 @@ public class AppConfig {
         var mediaType = MediaType.APPLICATION_JSON_VALUE;
         return webClientBuilder
 //                .baseUrl("http://xykinehrs.com/")
-                .baseUrl("http://localhost:9001/")
-//                .baseUrl("http://localhost:8081/")
+//                .baseUrl("http://localhost:9001/")
+                .baseUrl("http://localhost:8081/")
                 .defaultHeader("Accept", mediaType)
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .build();

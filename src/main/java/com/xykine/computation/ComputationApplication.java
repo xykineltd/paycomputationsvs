@@ -91,6 +91,11 @@ public class ComputationApplication implements CommandLineRunner {
 				.description(" The percentage of basic salary and other relevant allowances that goes into employee´s pension")
 				.value(BigDecimal.valueOf(0.08))
 				.build();
+		ComputationConstants employerPensionContributionPercent = ComputationConstants.builder()
+				.id("employerPensionContributionPercent")
+				.description("Employer pension contribution percentage")
+				.value(BigDecimal.valueOf(0.10))
+				.build();
 		ComputationConstants nationalHousingFund = ComputationConstants.builder()
 				.id("nationalHousingFundPercent")
 				.description("The percentage of basic salary for national housing fund")
@@ -116,5 +121,6 @@ public class ComputationApplication implements CommandLineRunner {
 		computationConstantsRepo.save(craFraction);
 		computationConstantsRepo.save(craCutOff);
 		computationConstantsRepo.save(variableCRAFraction);
+		computationConstantsRepo.save(employerPensionContributionPercent);
 	}
 }

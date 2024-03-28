@@ -2,7 +2,9 @@ package com.xykine.computation.model;
 
 public class MapKeys {
     public static final String GROSS_PAY = "Gross Pay";
-    public static final String EMPLOYEE_PENSION = "Employee Pension";
+    public static final String EMPLOYEE_PENSION_CONTRIBUTION = "Employee Pension Contribution";
+    public static final String EMPLOYER_PENSION_CONTRIBUTION = "Employer Pension Contribution";
+    public static final String TOTAL_PENSION_FOR_EMPLOYEE = "Total Employee Pension";
     public static final String NATIONAL_HOUSING_FUND = "National Housing Fund";
     public static final String FIXED_CONSOLIDATED_RELIEF_ALLOWANCE = "Fixed Consolidated Relief Allowance";
     public static final String VARIABLE_CONSOLIDATED_RELIEF_ALLOWANCE = "Variable Consolidated Relief Allowance";
@@ -19,7 +21,9 @@ public class MapKeys {
     public static final String HOUSING = "HOUSING";
     public static final String TRANSPORT = "TRANSPORT";
     public static final String PENSION_FUND = "Pension Fund";
-    public static final String TOTAL_PENSION_FUND = "Total Pension Fund";
+    public static final String TOTAL_EMPLOYEE_PENSION_CONTRIBUTION = "Total Employee Pension Contribution";
+    public static final String TOTAL_EMPLOYER_PENSION_CONTRIBUTION = "Total Employer Pension Contribution";
+    public static final String TOTAL_PENSION_FOR_EMPLOYEES = "Total Employess Pension";
     public static final String DEDUCTION = "Deduction";
     public static final String ALLOWANCE = "Allowance";
 }

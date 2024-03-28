@@ -41,28 +41,47 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     public PaymentInfo computeNonTaxableIncomeExempt(PaymentInfo paymentInfo) {
         Map<String, BigDecimal> nonTaxableIncomeExemptMap = new HashMap<>();
         Map<String, BigDecimal> nhf = new HashMap<>();
+        Map<String, BigDecimal> pension = new HashMap<>();
+
         int numberOfUnpaidDays = paymentInfo.getNumberOfDaysOfUnpaidAbsence();
 
-        BigDecimal pensionFund = getAllowanceForEmployee(paymentInfo)
+        BigDecimal employeePensionFund = getAllowanceForEmployee(paymentInfo)
                 .stream()
                 .filter(x -> x.isPensionable() || x.getName().contains(MapKeys.TRANSPORT) || x.getName().contains(MapKeys.HOUSING))
                         .map(PaymentSettings::getValue)
-                                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                                .reduce(paymentInfo.getBasicSalary(), BigDecimal::add);
 
-
-        pensionFund = pensionFund.add(paymentInfo.getBasicSalary());
+        //employeePensionFund = employeePensionFund.add(paymentInfo.getBasicSalary());
 
         BigDecimal employeePension = ComputationUtils
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("pensionFundPercent")
-                        .multiply(pensionFund));
+                        .multiply(employeePensionFund));
 
-        nonTaxableIncomeExemptMap.put(MapKeys.EMPLOYEE_PENSION, ComputationUtils.prorate(employeePension, numberOfUnpaidDays));
+        nonTaxableIncomeExemptMap.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION, ComputationUtils.prorate(employeePension, numberOfUnpaidDays));
+        pension.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION, ComputationUtils.prorate(employeePension, numberOfUnpaidDays));
+
+        BigDecimal employerPensionContribution = getAllowanceForEmployee(paymentInfo)
+                .stream()
+                .filter(x -> x.getName().contains(MapKeys.TRANSPORT) || x.getName().contains(MapKeys.HOUSING))
+                .map(PaymentSettings::getValue)
+                .reduce(paymentInfo.getBasicSalary(), BigDecimal::add);
+
+        employerPensionContribution = ComputationUtils
+                .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("employerPensionContributionPercent")
+                        .multiply(employerPensionContribution));
+
+        pension.put(MapKeys.EMPLOYER_PENSION_CONTRIBUTION, ComputationUtils.prorate(employerPensionContribution, numberOfUnpaidDays));
+        pension.put(MapKeys.TOTAL_PENSION_FOR_EMPLOYEE, getTotal(pension));
+
+        BigDecimal totalEmployerPensionContribution = sessionCalculationObject.getSummary().get(MapKeys.TOTAL_EMPLOYER_PENSION_CONTRIBUTION);
+        totalEmployerPensionContribution = totalEmployerPensionContribution.add(ComputationUtils.prorate(employerPensionContribution, numberOfUnpaidDays));
+        sessionCalculationObject.getSummary().put(MapKeys.TOTAL_EMPLOYER_PENSION_CONTRIBUTION, totalEmployerPensionContribution);
 
         BigDecimal nationalHousingFund = ComputationUtils
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("nationalHousingFundPercent")
                         .multiply(paymentInfo.getBasicSalary()));
 
-        var nhfValue = ComputationUtils.prorate(nationalHousingFund, numberOfUnpaidDays);
+        BigDecimal nhfValue = ComputationUtils.prorate(nationalHousingFund, numberOfUnpaidDays);
         nonTaxableIncomeExemptMap.put(MapKeys.NATIONAL_HOUSING_FUND, ComputationUtils.prorate(nationalHousingFund, numberOfUnpaidDays));
         nhf.put(MapKeys.NATIONAL_HOUSING_FUND, nhfValue);
         paymentInfo.setNhf(nhf);
@@ -88,6 +107,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         BigDecimal total = getTotal(nonTaxableIncomeExemptMap);
         nonTaxableIncomeExemptMap.put(MapKeys.TOTAL_TAX_RELIEF, total);
         paymentInfo.setTaxRelief(nonTaxableIncomeExemptMap);
+        paymentInfo.setPension(pension);
         return paymentInfo;
     }
 
@@ -112,7 +132,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         BigDecimal taxableIncome = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(paymentInfo.getTaxRelief().get(MapKeys.TOTAL_TAX_RELIEF));
         payeeTax.put(MapKeys.TAXABLE_INCOME, taxableIncome);
 
-
         BigDecimal empPayeeTax = ComputationUtils.getTaxAmount(taxableIncome, sessionCalculationObject);
         payeeTax.put(MapKeys.PAYEE_TAX, empPayeeTax);
         paymentInfo.setPayeeTax(payeeTax);
@@ -127,7 +146,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     public PaymentInfo computeTotalDeduction(PaymentInfo paymentInfo) {
         Map<String, BigDecimal> deductionMap = new HashMap<>();
 
-        deductionMap.put(MapKeys.PENSION_FUND, paymentInfo.getTaxRelief().get(MapKeys.EMPLOYEE_PENSION));
+        deductionMap.put(MapKeys.PENSION_FUND, paymentInfo.getTaxRelief().get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION));
         deductionMap.put(MapKeys.PAYEE_TAX, paymentInfo.getPayeeTax().get(MapKeys.PAYEE_TAX));
         deductionMap.put(MapKeys.NATIONAL_HOUSING_FUND, paymentInfo.getNhf().get(MapKeys.NATIONAL_HOUSING_FUND));
 
@@ -145,9 +164,9 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         deductionMap.put(MapKeys.TOTAL_DEDUCTION, getTotal(deductionMap));
         paymentInfo.setDeduction(deductionMap);
 
-        BigDecimal totalPensionFund = sessionCalculationObject.getSummary().get(MapKeys.TOTAL_PENSION_FUND);
-        totalPensionFund = totalPensionFund.add(paymentInfo.getTaxRelief().get(MapKeys.EMPLOYEE_PENSION));
-        sessionCalculationObject.getSummary().put(MapKeys.TOTAL_PENSION_FUND, totalPensionFund);
+        BigDecimal totalPensionFund = sessionCalculationObject.getSummary().get(MapKeys.TOTAL_EMPLOYEE_PENSION_CONTRIBUTION);
+        totalPensionFund = totalPensionFund.add(paymentInfo.getTaxRelief().get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION));
+        sessionCalculationObject.getSummary().put(MapKeys.TOTAL_EMPLOYEE_PENSION_CONTRIBUTION, totalPensionFund);
 
         return paymentInfo;
     }
