@@ -1,12 +1,14 @@
 package com.xykine.computation.service;
 
-import com.xykine.computation.entity.PayrollReport;
 import com.xykine.computation.entity.PayrollReportDetail;
 import com.xykine.computation.entity.PayrollReportSummary;
+import com.xykine.computation.entity.simulate.PayrollReportDetailSimulate;
+import com.xykine.computation.entity.simulate.PayrollReportSummarySimulate;
 import com.xykine.computation.model.PaymentInfo;
 import com.xykine.computation.repo.PayrollReportDetailRepo;
-import com.xykine.computation.repo.PayrollReportRepo;
 import com.xykine.computation.repo.PayrollReportSummaryRepo;
+import com.xykine.computation.repo.simulate.PayrollReportDetailSimulateRepo;
+import com.xykine.computation.repo.simulate.PayrollReportSummarySimulateRepo;
 import com.xykine.computation.request.UpdateReportRequest;
 import com.xykine.computation.response.PayComputeDetailResponse;
 import com.xykine.computation.response.PayComputeSummaryResponse;
@@ -37,53 +39,114 @@ import java.util.stream.Collectors;
 public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
     private final PayrollReportSummaryRepo payrollReportSummaryRepo;
+    private final PayrollReportSummarySimulateRepo payrollReportSummaryRepoSimulate;
     private final PayrollReportDetailRepo payrollReportDetailRepo;
+    private final PayrollReportDetailSimulateRepo payrollReportDetailRepoSimulate;
     private static final Logger LOGGER = LoggerFactory.getLogger(PaymentCalculatorImpl.class);
 
 
     @Transactional
     public ReportResponse serializeAndSaveReport(PaymentComputeResponse paymentComputeResponse, String companyId)
-            throws IOException, ClassNotFoundException {
-        //if isSimulated remove old one and save new one, we don't want many simulated reports
-        if(paymentComputeResponse.isPayrollSimulation()) {
-            payrollReportDetailRepo.deletePayrollReportsByPayrollSimulation(true);
-            payrollReportSummaryRepo.deletePPayrollReportSummaryByPayrollSimulation(true);
+            throws IOException {
+        try {
+            if(paymentComputeResponse.isPayrollSimulation()) {
+                //delete and replace
+                payrollReportDetailRepoSimulate.deleteAll();
+                var details = payrollReportDetailRepoSimulate.findAll();
+                LOGGER.info("details size {}", details.size());
+                payrollReportSummaryRepoSimulate.deleteAll();
+                LOGGER.info("Simulated report with start date: " + paymentComputeResponse.getStart() + " will be saved.");
+                return getReportResponseSimulate(paymentComputeResponse, companyId, paymentComputeResponse.getStart());
+            } else {
+                return getPayRollReport(paymentComputeResponse.getStart());
+            }
+        } catch (RuntimeException e) {
+
+            var startDate = paymentComputeResponse.getStart();
+            LOGGER.info("Report with the start date " + startDate + " does not exist. A new report will be saved.");
+            return getReportResponse(paymentComputeResponse, companyId, startDate);
         }
+    }
 
-        LOGGER.info(" report id ==> {}", paymentComputeResponse.getId());
-
+    private ReportResponse getReportResponse(PaymentComputeResponse paymentComputeResponse, String companyId, String startDate) {
         PayComputeSummaryResponse payComputeSummaryResponse = PayComputeSummaryResponse.builder()
                 .summary(paymentComputeResponse.getSummary())
                 .build();
         PayrollReportSummary payrollReportSummary = PayrollReportSummary.builder()
                 .id(paymentComputeResponse.getId())
-                .companyId(companyId.toString())
-                .startDate(LocalDate.parse(paymentComputeResponse.getStart()))
+                .companyId(companyId)
+                .startDate(LocalDate.parse(startDate))
                 .endDate(LocalDate.parse(paymentComputeResponse.getEnd()))
                 .report(ReportUtils.serializeResponse(payComputeSummaryResponse))
                 .createdDate(LocalDateTime.now())
+                .payrollSimulation(paymentComputeResponse.isPayrollSimulation())
                 .build();
         payrollReportSummaryRepo.save(payrollReportSummary);
         saveReportDetails(paymentComputeResponse, companyId);
         return getPayRollReport(paymentComputeResponse.getStart());
     }
 
+    private ReportResponse getReportResponseSimulate(PaymentComputeResponse paymentComputeResponse, String companyId, String startDate) {
+        PayComputeSummaryResponse payComputeSummaryResponse = PayComputeSummaryResponse.builder()
+                .summary(paymentComputeResponse.getSummary())
+                .build();
+        PayrollReportSummarySimulate payrollReportSummary = PayrollReportSummarySimulate.builder()
+                .id(paymentComputeResponse.getId())
+                .companyId(companyId)
+                .startDate(LocalDate.parse(startDate))
+                .endDate(LocalDate.parse(paymentComputeResponse.getEnd()))
+                .report(ReportUtils.serializeResponse(payComputeSummaryResponse))
+                .createdDate(LocalDateTime.now())
+                .payrollSimulation(paymentComputeResponse.isPayrollSimulation())
+                .build();
+        payrollReportSummaryRepoSimulate.save(payrollReportSummary);
+        saveReportDetailsSimulate(paymentComputeResponse, companyId);
+        return getPayRollReportSimulate(paymentComputeResponse.getStart());
+    }
+
     public ReportResponse getPayRollReport(String starDate){
        PayrollReportSummary payrollReportSummary = payrollReportSummaryRepo.findPayrollReportSummaryByStartDateAndPayrollSimulation(LocalDate.parse(starDate), false);
+       if(payrollReportSummary == null){
+           throw new RuntimeException("Report with the date: " + starDate + " was not found");
+       }
        return ReportUtils.transform(payrollReportSummary);
     }
 
+    public ReportResponse getPayRollReportSimulate(String starDate){
+        PayrollReportSummarySimulate payrollReportSummary = payrollReportSummaryRepoSimulate.findPayrollReportSummaryByStartDate(LocalDate.parse(starDate));
+
+        if(payrollReportSummary == null){
+            //return empty
+            return new ReportResponse();
+        }
+        return ReportUtils.transform(payrollReportSummary);
+    }
+
     public List<ReportResponse> getPayRollReports(){
-            return  payrollReportSummaryRepo.findAllByOrderByCreatedDateAsc().stream()
-                    .map(r -> ReportUtils.transform(r))
-                    .collect(Collectors.toList());
+        List<ReportResponse> summary = getPayRollReportSimulates();
+        var reports = payrollReportSummaryRepo.findAllByOrderByCreatedDateAsc().stream()
+                .map(ReportUtils::transform).toList();
+        summary.addAll(reports);
+        return summary;
+    }
+
+    private List<ReportResponse> getPayRollReportSimulates(){
+        return  payrollReportSummaryRepoSimulate.findAllByOrderByCreatedDateAsc().stream()
+                .map(ReportUtils::transform)
+                .collect(Collectors.toList());
     }
     @Transactional
-    public PayrollReportSummary updateReport(UpdateReportRequest request) {
-        System.out.println("request -->" +  request);
-        var existingReport = payrollReportSummaryRepo.findPayrollReportSummaryByStartDateAndPayrollSimulation(LocalDate.parse(request.getStartDate()), false);
-        existingReport.setPayrollApproved(request.isPayrollApproved());
-        return payrollReportSummaryRepo.save(existingReport);
+    public PayrollReportSummary approveReport(UpdateReportRequest request) {
+        var existingSummaryReport = payrollReportSummaryRepo.findPayrollReportSummaryByStartDateAndPayrollSimulation(LocalDate.parse(request.getStartDate()), false);
+        existingSummaryReport.setPayrollApproved(request.isPayrollApproved());
+        payrollReportSummaryRepo.save(existingSummaryReport);
+        return  existingSummaryReport;
+    }
+
+    public boolean deleteReport(UpdateReportRequest request) {
+            payrollReportSummaryRepo.deletePayrollReportSummaryByStartDate(LocalDate.parse(request.getStartDate()));
+            payrollReportDetailRepo.deletePayrollReportDetailByStartDate(LocalDate.parse(request.getStartDate()));
+            return true;
     }
 
     @Override
@@ -119,6 +182,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                         .endDate((paymentComputeResponse.getEnd()))
                         .report(ReportUtils.serializeResponse(payComputeDetailResponse))
                         .createdDate(LocalDateTime.now())
+                        .payrollSimulation(paymentComputeResponse.isPayrollSimulation())
                         .build();
                 payrollReportDetailRepo.save(payrollReportDetail);
                 //LOGGER.info("saving in repo ==> {}", payrollReportDetail);
@@ -127,9 +191,37 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         });
         try {
             jobFuture.get();
-        } catch (InterruptedException e) {
+        } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
-        } catch (ExecutionException e) {
+        }
+    }
+
+    private void saveReportDetailsSimulate(PaymentComputeResponse paymentComputeResponse, String companyId) {
+        List<PaymentInfo> paymentInfoList = paymentComputeResponse.getReport();
+        CompletableFuture<Void> jobFuture = CompletableFuture.supplyAsync(() -> {
+            paymentInfoList.forEach(x -> {
+                PayComputeDetailResponse payComputeDetailResponse = PayComputeDetailResponse.builder()
+                        .report(x)
+                        .build();
+                PayrollReportDetailSimulate payrollReportDetail = PayrollReportDetailSimulate.builder()
+                        .id(UUID.randomUUID().toString())
+                        .summaryId(paymentComputeResponse.getId().toString())
+                        .companyId(companyId.toString())
+                        .departmentId(x.getDepartmentID())
+                        .startDate(paymentComputeResponse.getStart())
+                        .endDate((paymentComputeResponse.getEnd()))
+                        .report(ReportUtils.serializeResponse(payComputeDetailResponse))
+                        .createdDate(LocalDateTime.now())
+                        .payrollSimulation(paymentComputeResponse.isPayrollSimulation())
+                        .build();
+
+                payrollReportDetailRepoSimulate.save(payrollReportDetail);
+            });
+            return null;
+        });
+        try {
+            jobFuture.get();
+        } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
         }
     }

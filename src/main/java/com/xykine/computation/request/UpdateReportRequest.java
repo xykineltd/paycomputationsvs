@@ -6,4 +6,5 @@ import lombok.Data;
 public class UpdateReportRequest {
     String startDate;
     boolean payrollApproved;
+    boolean cancelPayroll;
 }

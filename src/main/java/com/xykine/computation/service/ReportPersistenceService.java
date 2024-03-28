@@ -14,6 +14,7 @@ public interface ReportPersistenceService {
     ReportResponse serializeAndSaveReport(PaymentComputeResponse paymentComputeResponse, String companyId) throws IOException, ClassNotFoundException;
     ReportResponse getPayRollReport(String startData);
     List<ReportResponse> getPayRollReports();
-    PayrollReportSummary updateReport(UpdateReportRequest updateReportRequest);
+    PayrollReportSummary approveReport(UpdateReportRequest updateReportRequest);
+    boolean deleteReport(UpdateReportRequest updateReportRequest);
     Map<String, Object> getPaymentDetails(String id, int page, int size);
 }

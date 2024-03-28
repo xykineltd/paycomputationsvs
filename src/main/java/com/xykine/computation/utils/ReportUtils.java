@@ -3,6 +3,7 @@ package com.xykine.computation.utils;
 import com.xykine.computation.entity.PayrollReport;
 import com.xykine.computation.entity.PayrollReportDetail;
 import com.xykine.computation.entity.PayrollReportSummary;
+import com.xykine.computation.entity.simulate.PayrollReportSummarySimulate;
 import com.xykine.computation.response.PayComputeDetailResponse;
 import com.xykine.computation.response.PayComputeSummaryResponse;
 import com.xykine.computation.response.PaymentComputeResponse;
@@ -33,6 +34,21 @@ public class ReportUtils {
     }
 
     public static ReportResponse transform(PayrollReportSummary payrollReportSummary){
+        PayComputeSummaryResponse summary =  SerializationUtils.deserialize(payrollReportSummary.getReport());
+        return ReportResponse.builder()
+                .reportId(payrollReportSummary.getId().toString())
+                .companyId(payrollReportSummary.getCompanyId())
+                .payrollApproved(payrollReportSummary.isPayrollApproved())
+                .startDate(payrollReportSummary.getStartDate().toString())
+                .endDate(payrollReportSummary.getEndDate().toString())
+                .createdDate(String.valueOf(payrollReportSummary.getCreatedDate()))
+                .payrollApproved(payrollReportSummary.isPayrollApproved())
+                .payrollSimulated(payrollReportSummary.isPayrollSimulation())
+                .summary(summary)
+                .build();
+    }
+
+    public static ReportResponse transform(PayrollReportSummarySimulate payrollReportSummary){
         PayComputeSummaryResponse summary =  SerializationUtils.deserialize(payrollReportSummary.getReport());
         return ReportResponse.builder()
                 .reportId(payrollReportSummary.getId().toString())

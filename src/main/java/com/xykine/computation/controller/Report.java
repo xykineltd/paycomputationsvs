@@ -30,11 +30,16 @@ public class Report {
     }
 
     @PutMapping("/approve")
-    public boolean updateReport(@RequestBody UpdateReportRequest request) {
-        PayrollReportSummary payrollReport = reportPersistenceService.updateReport(request);
+    public boolean approveReport(@RequestBody UpdateReportRequest request) {
+        PayrollReportSummary payrollReport = reportPersistenceService.approveReport(request);
         if (payrollReport.isPayrollApproved() != request.isPayrollApproved())
             return false;
         return true;
+    }
+
+    @PutMapping("/cancel")
+    public boolean deleteReport(@RequestBody UpdateReportRequest request) {
+        return reportPersistenceService.deleteReport(request);
     }
 
     @GetMapping("/paymentDetails")

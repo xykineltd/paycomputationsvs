@@ -36,15 +36,19 @@ public class ComputeService {
                 .body(BodyInserters.fromValue(paymentComputeRequest))
                 .retrieve().bodyToMono(List.class).block();
 
-        LOGGER.info("Received data size {} ", rawInfo.size() );
-        //LOGGER.info("Received data {} ", rawInfo );
 
-        LOGGER.info("Received data size {} ", rawInfo.get(0));
-        ObjectMapper mapper = new ObjectMapper();
-        List<PaymentInfo> paymentInfoList = mapper.convertValue(
-                rawInfo,
-                new TypeReference<List<PaymentInfo>>(){}
-        );
+            LOGGER.info("Received data size {} ", rawInfo.size());
+            //LOGGER.info("Received data {} ", rawInfo );
+        if(rawInfo.size() > 0) {
+            LOGGER.info("Received data size {} ", rawInfo.get(0));
+        }
+            ObjectMapper mapper = new ObjectMapper();
+            List<PaymentInfo> paymentInfoList = mapper.convertValue(
+                    rawInfo,
+                    new TypeReference<List<PaymentInfo>>() {
+                    }
+            );
+
 
         // if api call error occurs
         if (rawInfo == null) {

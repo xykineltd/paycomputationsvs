@@ -13,5 +13,5 @@ public interface PayrollReportSummaryRepo extends MongoRepository<PayrollReportS
     PayrollReportSummary findPayrollReportSummaryByStartDateAndPayrollSimulation(LocalDate startDate, boolean simulation);
     List<PayrollReportSummary> findAllByOrderByCreatedDateAsc();
     void deletePayrollReportSummaryByStartDate(LocalDate startDate);
-    void deletePPayrollReportSummaryByPayrollSimulation(Boolean simulation);
+    void deletePayrollReportSummaryByPayrollSimulation(Boolean simulation);
 }
