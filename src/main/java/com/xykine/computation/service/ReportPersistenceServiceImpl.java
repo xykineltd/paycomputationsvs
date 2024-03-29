@@ -52,8 +52,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             if(paymentComputeResponse.isPayrollSimulation()) {
                 //delete and replace
                 payrollReportDetailRepoSimulate.deleteAll();
-                var details = payrollReportDetailRepoSimulate.findAll();
-                LOGGER.info("details size {}", details.size());
+                //var details = payrollReportDetailRepoSimulate.findAll();
+                //LOGGER.info("details size {}", details.size());
                 payrollReportSummaryRepoSimulate.deleteAll();
                 LOGGER.info("Simulated report with start date: " + paymentComputeResponse.getStart() + " will be saved.");
                 return getReportResponseSimulate(paymentComputeResponse, companyId, paymentComputeResponse.getStart());
@@ -154,8 +154,13 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         List<PayrollReportDetail> payrollDetails = new ArrayList<>();
         Pageable paging = PageRequest.of(page, size);
         Page<PayrollReportDetail> payrollReportDetailPage = payrollReportDetailRepo.findPayrollReportDetailBySummaryId(id, paging);
-        payrollDetails = payrollReportDetailPage.getContent();
 
+        // if report detail is empty then check the simulated report detail table. No need for different endpoint.
+        if (payrollReportDetailPage.isEmpty()) {
+            payrollReportDetailPage = payrollReportDetailRepoSimulate.findPayrollReportDetailBySummaryId(id, paging);
+        }
+
+        payrollDetails = payrollReportDetailPage.getContent();
         List<ReportResponse> reportResponses = ReportUtils.transform(payrollDetails);
 
         Map<String, Object> response = new HashMap<>();
