@@ -36,11 +36,10 @@ public class ComputeService {
                 .body(BodyInserters.fromValue(paymentComputeRequest))
                 .retrieve().bodyToMono(List.class).block();
 
-
             LOGGER.info("Received data size {} ", rawInfo.size());
-            //LOGGER.info("Received data {} ", rawInfo );
-        if(rawInfo.size() > 0) {
-            LOGGER.info("Received data size {} ", rawInfo.get(0));
+
+            if(rawInfo.size() > 0) {
+            LOGGER.debug("First data received {} ", rawInfo.get(0));
         }
             ObjectMapper mapper = new ObjectMapper();
             List<PaymentInfo> paymentInfoList = mapper.convertValue(
@@ -49,8 +48,6 @@ public class ComputeService {
                     }
             );
 
-
-        // if api call error occurs
         if (rawInfo == null) {
             return  PaymentComputeResponse.builder()
                     .message("error calling Admin service api")

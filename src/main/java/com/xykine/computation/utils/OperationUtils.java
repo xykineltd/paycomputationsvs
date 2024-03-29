@@ -8,12 +8,13 @@ import com.xykine.computation.session.SessionCalculationObject;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class OperationUtils {
 
     public static SessionCalculationObject doPreflight(SessionCalculationObject sessionCalculationObject, ComputationConstantsRepo computationConstantsRepo, TaxRepo taxRepo){
 
-        Map<String, BigDecimal> sessionSummary = new HashMap<>();
+        ConcurrentHashMap<String, BigDecimal> sessionSummary = new ConcurrentHashMap<>();
         Map<String, BigDecimal> computationConstants = new HashMap<>();
 
         sessionSummary.put(MapKeys.TOTAL_NET_PAY, BigDecimal.ZERO);

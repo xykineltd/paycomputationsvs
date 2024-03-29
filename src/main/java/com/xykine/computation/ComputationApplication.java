@@ -1,24 +1,17 @@
 package com.xykine.computation;
 
 import com.xykine.computation.entity.*;
-import com.xykine.computation.model.PaymentInfo;
-import com.xykine.computation.model.TaxBearer;
 import com.xykine.computation.repo.*;
 import com.xykine.computation.session.SessionCalculationObject;
-import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 
 import java.math.BigDecimal;
-
-
 
 @EnableCaching
 @SpringBootApplication

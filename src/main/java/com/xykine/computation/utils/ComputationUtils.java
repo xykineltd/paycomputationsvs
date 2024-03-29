@@ -23,6 +23,12 @@ public class ComputationUtils {
         return input.setScale(2, RoundingMode.CEILING);
     }
 
+    public static synchronized void updateReportSummary(SessionCalculationObject sessionCalculationObject, String key, BigDecimal value){
+        BigDecimal currentValue = sessionCalculationObject.getSummary().get(key);
+        currentValue = currentValue.add(value);
+        sessionCalculationObject.getSummary().put(key, currentValue);
+    }
+
     public static BigDecimal getTaxAmount(BigDecimal taxableIncome, SessionCalculationObject sessionCalculationObject){
         BigDecimal taxAmount = sessionCalculationObject.getComputationConstants().get("TaxClassA").multiply(BigDecimal.valueOf(300000)).divide(BigDecimal.valueOf(100));
         taxableIncome = taxableIncome.multiply(BigDecimal.valueOf(12));
