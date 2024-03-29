@@ -9,6 +9,9 @@ spring:
   jpa:
     hibernate:
 
+  codec:
+    max-in-memory-size: 500000KB
+
   data:
     redis:
       connect-timeout: 2s
@@ -24,3 +27,4 @@ spring:
 admin:
   service:
     url: http://localhost:8081/
+    maxBufferSize: 500000
