@@ -73,9 +73,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         pension.put(MapKeys.EMPLOYER_PENSION_CONTRIBUTION, ComputationUtils.prorate(employerPensionContribution, numberOfUnpaidDays));
         pension.put(MapKeys.TOTAL_PENSION_FOR_EMPLOYEE, getTotal(pension));
 
-        BigDecimal totalEmployerPensionContribution = sessionCalculationObject.getSummary().get(MapKeys.TOTAL_EMPLOYER_PENSION_CONTRIBUTION);
-        totalEmployerPensionContribution = totalEmployerPensionContribution.add(ComputationUtils.prorate(employerPensionContribution, numberOfUnpaidDays));
-        sessionCalculationObject.getSummary().put(MapKeys.TOTAL_EMPLOYER_PENSION_CONTRIBUTION, totalEmployerPensionContribution);
+        ComputationUtils.updateReportSummary(sessionCalculationObject, MapKeys.TOTAL_EMPLOYER_PENSION_CONTRIBUTION, ComputationUtils.prorate(employerPensionContribution, numberOfUnpaidDays));
 
         BigDecimal nationalHousingFund = ComputationUtils
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("nationalHousingFundPercent")
@@ -136,9 +134,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         payeeTax.put(MapKeys.PAYEE_TAX, empPayeeTax);
         paymentInfo.setPayeeTax(payeeTax);
 
-        BigDecimal totalPayeeTax = sessionCalculationObject.getSummary().get(MapKeys.TOTAL_PAYEE_TAX);
-        totalPayeeTax = ComputationUtils.roundToTwoDecimalPlaces(totalPayeeTax.add(empPayeeTax));;
-        sessionCalculationObject.getSummary().put(MapKeys.TOTAL_PAYEE_TAX, totalPayeeTax);
+        ComputationUtils.updateReportSummary(sessionCalculationObject, MapKeys.TOTAL_PAYEE_TAX, empPayeeTax);
         return paymentInfo;
     }
 
@@ -155,19 +151,13 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 .filter(PaymentSettings::isActive)
                         .forEach(x -> {
                             deductionMap.put(x.getName(), x.getValue());
-
-                            BigDecimal totalPersonalDeduction = sessionCalculationObject.getSummary().get(MapKeys.TOTAL_PERSONAL_DEDUCTION);
-                            totalPersonalDeduction = totalPersonalDeduction.add(x.getValue());
-                            sessionCalculationObject.getSummary().put(MapKeys.TOTAL_PERSONAL_DEDUCTION, totalPersonalDeduction);
+                            ComputationUtils.updateReportSummary(sessionCalculationObject, MapKeys.TOTAL_PERSONAL_DEDUCTION, x.getValue());
                         });
 
         deductionMap.put(MapKeys.TOTAL_DEDUCTION, getTotal(deductionMap));
         paymentInfo.setDeduction(deductionMap);
 
-        BigDecimal totalPensionFund = sessionCalculationObject.getSummary().get(MapKeys.TOTAL_EMPLOYEE_PENSION_CONTRIBUTION);
-        totalPensionFund = totalPensionFund.add(paymentInfo.getTaxRelief().get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION));
-        sessionCalculationObject.getSummary().put(MapKeys.TOTAL_EMPLOYEE_PENSION_CONTRIBUTION, totalPensionFund);
-
+        ComputationUtils.updateReportSummary(sessionCalculationObject, MapKeys.TOTAL_EMPLOYEE_PENSION_CONTRIBUTION, paymentInfo.getTaxRelief().get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION));
         return paymentInfo;
     }
 
@@ -189,14 +179,10 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
             BigDecimal netPay = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(paymentInfo.getDeduction().get(MapKeys.TOTAL_DEDUCTION));
             paymentInfo.setNetPay(netPay);
 
-            BigDecimal totalNetPay = sessionCalculationObject.getSummary().get(MapKeys.TOTAL_NET_PAY);
-            totalNetPay = totalNetPay.add(netPay);
-            sessionCalculationObject.getSummary().put(MapKeys.TOTAL_NET_PAY, totalNetPay);
-
+            //Add net pay to summary
+            ComputationUtils.updateReportSummary(sessionCalculationObject, MapKeys.TOTAL_NET_PAY, netPay);
             //Add gross pay to summary
-            BigDecimal totalGrossPay = sessionCalculationObject.getSummary().get(MapKeys.TOTAL_GROSS_PAY);
-            totalGrossPay = totalGrossPay.add(paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY));
-            sessionCalculationObject.getSummary().put(MapKeys.TOTAL_GROSS_PAY, totalGrossPay);
+            ComputationUtils.updateReportSummary(sessionCalculationObject, MapKeys.TOTAL_GROSS_PAY, paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY));
         }
         return paymentInfo;
     }
@@ -204,11 +190,8 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     @Override
     public PaymentInfo computeTotalNHF(PaymentInfo paymentInfo) {
         if(paymentInfo.getNhf().get(MapKeys.NATIONAL_HOUSING_FUND) != null) {
-            BigDecimal totalNHF = sessionCalculationObject.getSummary().get(MapKeys.TOTAL_NHF);
             BigDecimal nhf = paymentInfo.getNhf().get(MapKeys.NATIONAL_HOUSING_FUND);
-
-            totalNHF = totalNHF.add(nhf);
-            sessionCalculationObject.getSummary().put(MapKeys.TOTAL_NHF, totalNHF);
+            ComputationUtils.updateReportSummary(sessionCalculationObject, MapKeys.TOTAL_NHF, nhf);
         }
         return paymentInfo;
     }

@@ -5,12 +5,13 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Data
 @NoArgsConstructor
 public class SessionCalculationObject {
 
-    private Map<String, BigDecimal> summary;
+    private ConcurrentHashMap<String, BigDecimal> summary;
     private Map<String, BigDecimal> computationConstants;
 
 }

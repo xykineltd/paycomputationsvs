@@ -1,12 +1,9 @@
 package com.xykine.computation.utils;
 
-import com.xykine.computation.entity.PayrollReport;
 import com.xykine.computation.entity.PayrollReportDetail;
 import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.entity.simulate.PayrollReportSummarySimulate;
-import com.xykine.computation.response.PayComputeDetailResponse;
 import com.xykine.computation.response.PayComputeSummaryResponse;
-import com.xykine.computation.response.PaymentComputeResponse;
 import com.xykine.computation.response.ReportResponse;
 import org.apache.commons.lang3.SerializationUtils;
 
