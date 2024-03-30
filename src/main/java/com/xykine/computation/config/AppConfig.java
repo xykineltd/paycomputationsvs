@@ -21,6 +21,9 @@ public class AppConfig {
     WebClient webClient(WebClient.Builder webClientBuilder) {
         var mediaType = MediaType.APPLICATION_JSON_VALUE;
         return webClientBuilder
+//                .baseUrl("http://xykinehrs.com/")
+//                .baseUrl("http://localhost:9001/")
+                .baseUrl("http://localhost:9001/")
                 .baseUrl(adminServiceUrl)
                 .exchangeStrategies(ExchangeStrategies
                         .builder()
