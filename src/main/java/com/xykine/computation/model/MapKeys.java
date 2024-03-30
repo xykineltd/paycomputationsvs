@@ -25,5 +25,5 @@ public class MapKeys {
     public static final String TOTAL_EMPLOYER_PENSION_CONTRIBUTION = "Total Employer Pension Contribution";
     public static final String TOTAL_PENSION_FOR_EMPLOYEES = "Total Employess Pension";
     public static final String DEDUCTION = "Deduction";
-    public static final String ALLOWANCE = "Allowance";
+    public static final String PAYMENT = "Payment";
 }
