@@ -5,6 +5,7 @@ import com.xykine.computation.model.PaymentInfo;
 import com.xykine.computation.model.PaymentSettings;
 
 
+import com.xykine.computation.model.enums.PaymentTypeEnum;
 import com.xykine.computation.session.SessionCalculationObject;
 import com.xykine.computation.utils.ComputationUtils;
 import lombok.RequiredArgsConstructor;
@@ -47,7 +48,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
         BigDecimal employeePensionFund = getAllowanceForEmployee(paymentInfo)
                 .stream()
-                .filter(x -> x.isPensionable() || x.getName().contains(MapKeys.TRANSPORT) || x.getName().contains(MapKeys.HOUSING))
+                .filter(x -> x.isPensionable() || x.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_HOUSING) || x.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_TRANSPORT))
                         .map(PaymentSettings::getValue)
                                 .reduce(paymentInfo.getBasicSalary(), BigDecimal::add);
 
@@ -62,7 +63,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
         BigDecimal employerPensionContribution = getAllowanceForEmployee(paymentInfo)
                 .stream()
-                .filter(x -> x.getName().contains(MapKeys.TRANSPORT) || x.getName().contains(MapKeys.HOUSING))
+                .filter(x -> x.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_HOUSING) || x.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_TRANSPORT))
                 .map(PaymentSettings::getValue)
                 .reduce(paymentInfo.getBasicSalary(), BigDecimal::add);
 
@@ -207,11 +208,14 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     private Set<PaymentSettings> getAllowanceForEmployee (PaymentInfo paymentInfo) {
         var paymentSettings = paymentInfo.getPaymentSettings();
-        return paymentSettings.stream().filter(setting -> setting.getType().equalsIgnoreCase(MapKeys.ALLOWANCE)).collect(Collectors.toSet());
+        return paymentSettings
+                .stream()
+                .filter(setting -> setting.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL) || setting.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_TRANSPORT) || setting.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_HOUSING))
+                .collect(Collectors.toSet());
     }
 
     private Set<PaymentSettings> getDeductionsForEmployee (PaymentInfo paymentInfo) {
         var paymentSettings = paymentInfo.getPaymentSettings();
-        return paymentSettings.stream().filter(setting -> setting.getType().equalsIgnoreCase(MapKeys.DEDUCTION)).collect(Collectors.toSet());
+        return paymentSettings.stream().filter(setting -> setting.getType().equals(PaymentTypeEnum.DEDUCTION_MONTHLY)).collect(Collectors.toSet());
     }
 }

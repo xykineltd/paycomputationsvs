@@ -48,24 +48,22 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     @Transactional
     public ReportResponse serializeAndSaveReport(PaymentComputeResponse paymentComputeResponse, String companyId)
             throws IOException {
+        ReportResponse reportResponse = null;
         try {
             if(paymentComputeResponse.isPayrollSimulation()) {
                 //delete and replace
                 payrollReportDetailRepoSimulate.deleteAll();
-                //var details = payrollReportDetailRepoSimulate.findAll();
-                //LOGGER.info("details size {}", details.size());
                 payrollReportSummaryRepoSimulate.deleteAll();
                 LOGGER.info("Simulated report with start date: " + paymentComputeResponse.getStart() + " will be saved.");
-                return getReportResponseSimulate(paymentComputeResponse, companyId, paymentComputeResponse.getStart());
+                reportResponse = getReportResponseSimulate(paymentComputeResponse, companyId, paymentComputeResponse.getStart());
             } else {
-                return getPayRollReport(paymentComputeResponse.getStart());
+                reportResponse = getReportResponse(paymentComputeResponse, companyId, paymentComputeResponse.getStart());
             }
         } catch (RuntimeException e) {
-
             var startDate = paymentComputeResponse.getStart();
             LOGGER.info("Report with the start date " + startDate + " does not exist. A new report will be saved.");
-            return getReportResponse(paymentComputeResponse, companyId, startDate);
         }
+        return reportResponse;
     }
 
     private ReportResponse getReportResponse(PaymentComputeResponse paymentComputeResponse, String companyId, String startDate) {
@@ -83,7 +81,15 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 .build();
         payrollReportSummaryRepo.save(payrollReportSummary);
         saveReportDetails(paymentComputeResponse, companyId);
-        return getPayRollReport(paymentComputeResponse.getStart());
+        return getPayRollReport(paymentComputeResponse.getId());
+    }
+
+    public ReportResponse getPayRollReport(UUID id){
+        PayrollReportSummary payrollReportSummary = payrollReportSummaryRepo.findPayrollReportSummaryById(id);
+        if(payrollReportSummary == null){
+            throw new RuntimeException("Report with id: " + id + " was not found");
+        }
+        return ReportUtils.transform(payrollReportSummary);
     }
 
     private ReportResponse getReportResponseSimulate(PaymentComputeResponse paymentComputeResponse, String companyId, String startDate) {

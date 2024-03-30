@@ -1,5 +1,6 @@
 package com.xykine.computation.model;
 
+import com.xykine.computation.model.enums.PaymentTypeEnum;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -9,7 +10,7 @@ import java.math.BigDecimal;
 public class PaymentSettings implements Serializable {
         private String paymentSettingID;
         private String employeeID;
-        private String type;
+        private PaymentTypeEnum type;
         private String name;
         private BigDecimal value;
         private boolean active;
@@ -20,6 +21,4 @@ public class PaymentSettings implements Serializable {
         private String lastModifiedBy;
         private int version;
         private boolean prorated;
-
-        // Constructors, methods, etc. (Lombok will generate these)
 }
