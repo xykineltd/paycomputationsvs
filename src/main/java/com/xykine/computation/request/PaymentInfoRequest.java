@@ -1,5 +1,6 @@
 package com.xykine.computation.request;
 
+import lombok.Builder;
 import lombok.Data;
 
 import java.time.Instant;

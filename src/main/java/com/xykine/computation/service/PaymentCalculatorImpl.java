@@ -4,7 +4,6 @@ import com.xykine.computation.model.MapKeys;
 import com.xykine.computation.model.PaymentInfo;
 import com.xykine.computation.model.PaymentSettings;
 
-
 import com.xykine.computation.model.enums.PaymentTypeEnum;
 import com.xykine.computation.session.SessionCalculationObject;
 import com.xykine.computation.utils.ComputationUtils;
@@ -51,8 +50,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 .filter(x -> x.isPensionable() || x.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_HOUSING) || x.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_TRANSPORT))
                         .map(PaymentSettings::getValue)
                                 .reduce(paymentInfo.getBasicSalary(), BigDecimal::add);
-
-        //employeePensionFund = employeePensionFund.add(paymentInfo.getBasicSalary());
 
         BigDecimal employeePension = ComputationUtils
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("pensionFundPercent")

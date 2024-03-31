@@ -1,0 +1,24 @@
+version: '3'
+
+services:
+  mongo:
+    image: mongo
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=docker
+      - MONGO_INITDB_DATABASE=test
+    ports:
+      - "27017:27017"
+
+  admin-service-mock:
+    image: kacytunde/admin-service-mock:v1
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mongo
+
+  polar-redis:
+    image: "redis:7.0"
+    container_name: "xykine-redis"
+    ports:
+      - 6379:6379

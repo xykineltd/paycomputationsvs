@@ -3,12 +3,11 @@ package com.xykine.computation.controller;
 import java.io.IOException;
 import java.util.UUID;
 
-import com.xykine.computation.entity.PayrollReportSummary;
+
 import com.xykine.computation.repo.ComputationConstantsRepo;
 import com.xykine.computation.repo.TaxRepo;
-import com.xykine.computation.response.PayComputeSummaryResponse;
 import com.xykine.computation.response.ReportResponse;
-import com.xykine.computation.service.ReportPersistenceServiceImpl;
+import com.xykine.computation.service.ReportPersistenceService;
 import com.xykine.computation.utils.OperationUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +27,7 @@ import com.xykine.computation.session.SessionCalculationObject;
 public class Compute {
 
     private final ComputeService computeService;
-    private final ReportPersistenceServiceImpl reportPersistenceService;
+    private final ReportPersistenceService reportPersistenceService;
     private final ComputationConstantsRepo computationConstantsRepo;
     private final TaxRepo taxRepo;
     @Autowired

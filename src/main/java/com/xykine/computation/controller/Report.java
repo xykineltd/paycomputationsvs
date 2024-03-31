@@ -43,7 +43,7 @@ public class Report {
     }
 
     @GetMapping("/paymentDetails")
-    public ResponseEntity<Map<String, Object>> getPaymentDetails(
+    public ResponseEntity<?> getPaymentDetails(
             @RequestParam(required = true) String id,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "3") int size) {

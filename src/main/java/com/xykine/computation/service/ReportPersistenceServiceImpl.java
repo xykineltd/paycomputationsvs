@@ -48,6 +48,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     @Transactional
     public ReportResponse serializeAndSaveReport(PaymentComputeResponse paymentComputeResponse, String companyId)
             throws IOException {
+        long starttime = System.currentTimeMillis();
         ReportResponse reportResponse = null;
         try {
             if(paymentComputeResponse.isPayrollSimulation()) {
@@ -60,9 +61,10 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 reportResponse = getReportResponse(paymentComputeResponse, companyId, paymentComputeResponse.getStart());
             }
         } catch (RuntimeException e) {
-            var startDate = paymentComputeResponse.getStart();
-            LOGGER.info("Report with the start date " + startDate + " does not exist. A new report will be saved.");
+            LOGGER.info(" exception {} ", e.toString());
         }
+        long endtime = System.currentTimeMillis();
+        LOGGER.info(" Process time ===> {} ms", endtime -starttime );
         return reportResponse;
     }
 
@@ -186,6 +188,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                         .build();
                 PayrollReportDetail payrollReportDetail = PayrollReportDetail.builder()
                         .id(UUID.randomUUID().toString())
+                        .employeeId(x.getEmployeeID())
                         .summaryId(paymentComputeResponse.getId().toString())
                         .companyId(companyId.toString())
                         .departmentId(x.getDepartmentID())
@@ -216,6 +219,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                         .build();
                 PayrollReportDetailSimulate payrollReportDetail = PayrollReportDetailSimulate.builder()
                         .id(UUID.randomUUID().toString())
+                        .employeeId(x.getEmployeeID())
                         .summaryId(paymentComputeResponse.getId().toString())
                         .companyId(companyId.toString())
                         .departmentId(x.getDepartmentID())
