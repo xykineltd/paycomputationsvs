@@ -44,7 +44,7 @@ public class Report {
 
     @GetMapping("/paymentDetails")
     public ResponseEntity<Map<String, Object>> getPaymentDetails(
-            @RequestParam(required = true) String id,
+            @RequestParam() String id,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "3") int size) {
         Map<String, Object> response = reportPersistenceService.getPaymentDetails(id, page, size);

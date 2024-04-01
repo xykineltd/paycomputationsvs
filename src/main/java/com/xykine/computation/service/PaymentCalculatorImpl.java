@@ -163,7 +163,8 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     }
 
     private Map<String, BigDecimal> insertRecurrentPaymentMap(Map<String, BigDecimal> earningMap, PaymentInfo paymentInfo){
-        earningMap.put(MapKeys.BASIC_SALARY, paymentInfo.getBasicSalary());
+//        earningMap.put(MapKeys.BASIC_SALARY, paymentInfo.getBasicSalary());
+        earningMap.put(MapKeys.BASIC_SALARY, getBasicSalaryForEmployee(paymentInfo.getPaymentSettings()).getValue());
         var allowance = getAllowanceForEmployee(paymentInfo);
         allowance.stream()
                 .filter(PaymentSettings::isActive)
@@ -201,6 +202,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         BigDecimal total = BigDecimal.ZERO;
 
         for(Map.Entry<String, BigDecimal> entry : input.entrySet()) {
+            System.out.println("entry--->"+ entry);
             total = total.add(entry.getValue());
         }
         return ComputationUtils.roundToTwoDecimalPlaces(total);
@@ -212,6 +214,14 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 .stream()
                 .filter(setting -> setting.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL) || setting.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_TRANSPORT) || setting.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_HOUSING))
                 .collect(Collectors.toSet());
+    }
+
+    private PaymentSettings getBasicSalaryForEmployee (PaymentInfo paymentInfo) {
+        var paymentSettings = paymentInfo.getPaymentSettings();
+        return paymentSettings
+                .stream()
+                .filter(setting -> setting.getType().equals(PaymentTypeEnum.BASIC_SALARY_ANNUAL))
+                .findFirst().orElseGet(PaymentSettings::new);
     }
 
     private Set<PaymentSettings> getDeductionsForEmployee (PaymentInfo paymentInfo) {

@@ -57,6 +57,10 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 LOGGER.info("Simulated report with start date: " + paymentComputeResponse.getStart() + " will be saved.");
                 reportResponse = getReportResponseSimulate(paymentComputeResponse, companyId, paymentComputeResponse.getStart());
             } else {
+
+                //delete and replace
+                payrollReportDetailRepo.deleteAll();
+                payrollReportSummaryRepo.deleteAll();
                 reportResponse = getReportResponse(paymentComputeResponse, companyId, paymentComputeResponse.getStart());
             }
         } catch (RuntimeException e) {
@@ -186,6 +190,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                         .build();
                 PayrollReportDetail payrollReportDetail = PayrollReportDetail.builder()
                         .id(UUID.randomUUID().toString())
+                        .employeeId(x.getEmployeeID())
                         .summaryId(paymentComputeResponse.getId().toString())
                         .companyId(companyId.toString())
                         .departmentId(x.getDepartmentID())
@@ -216,6 +221,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                         .build();
                 PayrollReportDetailSimulate payrollReportDetail = PayrollReportDetailSimulate.builder()
                         .id(UUID.randomUUID().toString())
+                        .employeeId(x.getEmployeeID())
                         .summaryId(paymentComputeResponse.getId().toString())
                         .companyId(companyId.toString())
                         .departmentId(x.getDepartmentID())
