@@ -42,7 +42,6 @@ public class Report {
         return reportPersistenceService.deleteReport(request);
     }
 
-    @GetMapping("/paymentDetails")
     public ResponseEntity<Map<String, Object>> getPaymentDetails(
             @RequestParam() String id,
             @RequestParam(defaultValue = "0") int page,

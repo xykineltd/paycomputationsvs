@@ -25,6 +25,7 @@ public class AppConfig {
                 .baseUrl("http://localhost:9001/")
 //                .baseUrl("http://localhost:9001/")
 //                .baseUrl(adminServiceUrl)
+                .baseUrl(adminServiceUrl)
                 .exchangeStrategies(ExchangeStrategies
                         .builder()
                         .codecs(codecs -> codecs
