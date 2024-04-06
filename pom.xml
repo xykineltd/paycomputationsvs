@@ -31,10 +31,11 @@
 	</repositories>
 
 	<dependencies>
-		<!-- payment settings model  -->	<dependency>
-		<groupId>com.xykine.models</groupId>
-		<artifactId>payment-setting</artifactId>
-		<version>${payment.settings.version}</version>
+		<!-- payment settings model  -->
+		<dependency>
+		    <groupId>com.xykine.models</groupId>
+		    <artifactId>payment-setting</artifactId>
+			<version>${payment.settings.version}</version>
 	</dependency>
 
 
@@ -81,6 +82,7 @@
 			<artifactId>reactor-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+
 	</dependencies>
 
 	<build>
