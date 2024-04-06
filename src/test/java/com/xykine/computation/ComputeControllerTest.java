@@ -40,9 +40,6 @@ public class ComputeControllerTest {
     private  ComputationConstantsRepo computationConstantsRepo;
     @Autowired
     private  TaxRepo taxRepo;
-
-    private static Process process;
-
     @LocalServerPort
     private int port;
 
@@ -91,7 +88,7 @@ public class ComputeControllerTest {
         PaymentInfo paymentInfo =  reportResponses.get(0).getDetail().getReport();
 
         assertThat(paymentInfo).isNotNull().satisfies((x) -> {
-           x.getNetPay().equals(BigDecimal.valueOf(370101.66 ));
+           x.getNetPay().equals(BigDecimal.valueOf(370101.66));
         });
         // Assert Gross Pay
         Map<String, BigDecimal> grossPay = paymentInfo.getGrossPay();
@@ -110,14 +107,12 @@ public class ComputeControllerTest {
             x.get("National Housing Fund").equals(BigDecimal.valueOf(5208.34));
             x.get("Total Tax Relief").equals(BigDecimal.valueOf(146083.35));
         });
-
         // Assert Payee Tax
         Map<String, BigDecimal> payeeTax = paymentInfo.getPayeeTax();
         assertThat(payeeTax).isNotNull().satisfies((x) -> {
             x.get("Taxable Income").equals(BigDecimal.valueOf(343499.99));
             x.get("Payee Tax").equals(BigDecimal.valueOf(65106.67));
         });
-
         // Assert Pension
         Map<String, BigDecimal> pension  = paymentInfo.getPension();
         assertThat(pension).isNotNull().satisfies((x) -> {

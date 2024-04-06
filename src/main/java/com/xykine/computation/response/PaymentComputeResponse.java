@@ -1,6 +1,5 @@
 package com.xykine.computation.response;
 
-import com.xykine.computation.model.PaymentInfo;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

@@ -1,10 +1,5 @@
 package com.xykine.computation.service;
 
-import com.xykine.computation.model.MapKeys;
-import com.xykine.computation.model.PaymentInfo;
-import com.xykine.computation.model.PaymentSettings;
-
-import com.xykine.computation.model.enums.PaymentTypeEnum;
 import com.xykine.computation.session.SessionCalculationObject;
 import com.xykine.computation.utils.ComputationUtils;
 import lombok.RequiredArgsConstructor;

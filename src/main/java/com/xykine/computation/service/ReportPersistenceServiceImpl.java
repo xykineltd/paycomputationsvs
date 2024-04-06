@@ -4,7 +4,7 @@ import com.xykine.computation.entity.PayrollReportDetail;
 import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.entity.simulate.PayrollReportDetailSimulate;
 import com.xykine.computation.entity.simulate.PayrollReportSummarySimulate;
-import com.xykine.computation.model.PaymentInfo;
+
 import com.xykine.computation.repo.PayrollReportDetailRepo;
 import com.xykine.computation.repo.PayrollReportSummaryRepo;
 import com.xykine.computation.repo.simulate.PayrollReportDetailSimulateRepo;
