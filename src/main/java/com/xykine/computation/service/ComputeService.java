@@ -38,7 +38,8 @@ public class ComputeService {
 
             LOGGER.info("Received data size {} ", rawInfo.size());
 
-            if(rawInfo.size() > 0) {
+
+        if(rawInfo.size() > 0) {
             LOGGER.debug("First data received {} ", rawInfo.get(0));
         }
             ObjectMapper mapper = new ObjectMapper();

@@ -25,7 +25,8 @@ spring:
 
 admin:
   service:
-    url: http://localhost:8081/
+#    url: http://localhost:8081/
+    url: http://localhost:9000
     maxBufferSize: 500000
 
 de:
