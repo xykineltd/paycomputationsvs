@@ -33,11 +33,10 @@
 	<dependencies>
 		<!-- payment settings model  -->
 		<dependency>
-		    <groupId>com.xykine.models</groupId>
-		    <artifactId>payment-setting</artifactId>
-			<version>${payment.settings.version}</version>
-	</dependency>
-
+		    <groupId>org.xykine.payroll</groupId>
+		    <artifactId>payment-settings-model</artifactId>
+			<version>1</version>
+		</dependency>
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

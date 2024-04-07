@@ -2,8 +2,6 @@ package com.xykine.computation;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.xykine.computation.model.MapKeys;
-import com.xykine.computation.model.PaymentInfo;
 import com.xykine.computation.repo.ComputationConstantsRepo;
 import com.xykine.computation.repo.TaxRepo;
 import com.xykine.computation.request.PaymentInfoRequest;
@@ -21,6 +19,8 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.*;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.xykine.payroll.model.MapKeys;
+import org.xykine.payroll.model.PaymentInfo;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
