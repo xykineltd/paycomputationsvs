@@ -16,6 +16,7 @@ public class ReportUtils {
     public static List<ReportResponse> transform(List<PayrollReportDetail> payrollReportDetails){
         return payrollReportDetails.stream().map(x -> {
             return ReportResponse.builder()
+                    .reportId(x.getId())
                     .companyId(x.getCompanyId())
                     .departmentId(x.getDepartmentId())
                     .employeeId(x.getEmployeeId())

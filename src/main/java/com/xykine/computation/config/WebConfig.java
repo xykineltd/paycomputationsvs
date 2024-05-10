@@ -10,7 +10,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @EnableWebMvc
 public class WebConfig implements WebMvcConfigurer {
 
-    @Value("${payroll-ui.service.url}")
+    @Value("${admin.service.url}")
     private String payrollUIServiceUrl;
 
     @Override

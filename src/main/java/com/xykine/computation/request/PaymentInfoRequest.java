@@ -15,5 +15,6 @@ public class PaymentInfoRequest {
     Set<String> employeeId;
     LocalDate start;
     LocalDate end;
+    String offCycleID;
     boolean payrollSimulation;
 }

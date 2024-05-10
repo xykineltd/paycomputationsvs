@@ -2,6 +2,7 @@ package com.xykine.computation.controller;
 
 import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.request.UpdateReportRequest;
+import com.xykine.computation.response.ReportAnalytics;
 import com.xykine.computation.response.ReportResponse;
 import com.xykine.computation.service.ReportPersistenceService;
 import lombok.RequiredArgsConstructor;
@@ -19,14 +20,19 @@ public class Report {
 
     private final ReportPersistenceService reportPersistenceService;
 
-    @GetMapping()
-    public List<ReportResponse> getReports() {
-        return reportPersistenceService.getPayRollReports();
+    @GetMapping("/{companyId}")
+    public List<ReportResponse> getReports(@PathVariable String companyId) {
+        return reportPersistenceService.getPayRollReports(companyId);
     }
 
-    @PostMapping("/get-by-start-date")
-    public ReportResponse getReport(@RequestBody String startDate) {
-        return reportPersistenceService.getPayRollReport(startDate);
+    @GetMapping("/analytics/{companyId}")
+    public List<ReportAnalytics> getAnalyticsReports(@PathVariable String companyId) {
+        return reportPersistenceService.getReportAnalytics(companyId);
+    }
+
+    @GetMapping("/get-by-start-date/{companyId}/{startDate}")
+    public ReportResponse getReport(@PathVariable String startDate, @PathVariable String companyId) {
+        return reportPersistenceService.getPayRollReport(startDate, companyId);
     }
 
     @PutMapping("/approve")
@@ -44,10 +50,11 @@ public class Report {
 
     @GetMapping("/paymentDetails")
     public ResponseEntity<?> getPaymentDetails(
-            @RequestParam(required = true) String id,
+            @RequestParam() String id,
+            @RequestParam() String companyId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "3") int size) {
-        Map<String, Object> response = reportPersistenceService.getPaymentDetails(id, page, size);
+        Map<String, Object> response = reportPersistenceService.getPaymentDetails(id, companyId, page, size);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

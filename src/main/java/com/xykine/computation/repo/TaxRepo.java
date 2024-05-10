@@ -1,5 +1,4 @@
 package com.xykine.computation.repo;
-import com.xykine.computation.entity.ComputationConstants;
 import com.xykine.computation.entity.Tax;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.mongodb.repository.MongoRepository;
