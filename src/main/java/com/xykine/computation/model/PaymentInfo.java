@@ -33,6 +33,7 @@ public class PaymentInfo implements Serializable {
     private Set<PaymentSettings> paymentSettings;
 
     private String fullName;
+    private String offCycleID;
 
     private BigDecimal netPay;
 
@@ -40,7 +41,6 @@ public class PaymentInfo implements Serializable {
     private boolean employeeIsLock;
 
     private String createdDate;
-
 
     private String lastModifiedDate;
 
