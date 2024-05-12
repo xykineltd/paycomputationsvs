@@ -49,7 +49,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 .stream()
                 .filter(x -> x.isPensionable() || x.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_HOUSING) || x.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_TRANSPORT))
                         .map(PaymentSettings::getValue)
-                                .reduce(paymentInfo.getBasicSalary(), BigDecimal::add);
+                                .reduce(getBasicSalaryForEmployee(paymentInfo).getValue(), BigDecimal::add);
 
         BigDecimal employeePension = ComputationUtils
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("pensionFundPercent")
@@ -62,7 +62,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 .stream()
                 .filter(x -> x.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_HOUSING) || x.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_TRANSPORT))
                 .map(PaymentSettings::getValue)
-                .reduce(paymentInfo.getBasicSalary(), BigDecimal::add);
+                .reduce(getBasicSalaryForEmployee(paymentInfo).getValue(), BigDecimal::add);
 
         employerPensionContribution = ComputationUtils
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("employerPensionContributionPercent")
@@ -75,7 +75,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
         BigDecimal nationalHousingFund = ComputationUtils
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("nationalHousingFundPercent")
-                        .multiply(paymentInfo.getBasicSalary()));
+                        .multiply(getBasicSalaryForEmployee(paymentInfo).getValue()));
 
         BigDecimal nhfValue = ComputationUtils.prorate(nationalHousingFund, numberOfUnpaidDays);
         nonTaxableIncomeExemptMap.put(MapKeys.NATIONAL_HOUSING_FUND, ComputationUtils.prorate(nationalHousingFund, numberOfUnpaidDays));
@@ -145,6 +145,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         deductionMap.put(MapKeys.NATIONAL_HOUSING_FUND, paymentInfo.getNhf().get(MapKeys.NATIONAL_HOUSING_FUND));
 
         var deductions = getDeductionsForEmployee(paymentInfo);
+
         deductions.stream()
                 .filter(PaymentSettings::isActive)
                         .forEach(x -> {
@@ -161,7 +162,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     private Map<String, BigDecimal> insertRecurrentPaymentMap(Map<String, BigDecimal> earningMap, PaymentInfo paymentInfo){
 //        earningMap.put(MapKeys.BASIC_SALARY, paymentInfo.getBasicSalary());
-        earningMap.put(MapKeys.BASIC_SALARY, getBasicSalaryForEmployee(paymentInfo.getPaymentSettings()).getValue());
+        earningMap.put(MapKeys.BASIC_SALARY, getBasicSalaryForEmployee(paymentInfo).getValue());
         var allowance = getAllowanceForEmployee(paymentInfo);
         allowance.stream()
                 .filter(PaymentSettings::isActive)
@@ -170,7 +171,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 });
         return earningMap;
     }
-
 
     @Override
     public PaymentInfo computeNetPay(PaymentInfo paymentInfo) {
@@ -199,7 +199,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         BigDecimal total = BigDecimal.ZERO;
 
         for(Map.Entry<String, BigDecimal> entry : input.entrySet()) {
-            System.out.println("entry--->"+ entry);
             total = total.add(entry.getValue());
         }
         return ComputationUtils.roundToTwoDecimalPlaces(total);

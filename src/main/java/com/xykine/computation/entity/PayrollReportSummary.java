@@ -21,10 +21,12 @@ public class PayrollReportSummary {
     @Id
     private UUID id;
     private String companyId;
+    private String offCycleId;
     private byte[] report;
     private LocalDate startDate;
     private LocalDate endDate;
     private boolean payrollSimulation;
     private boolean payrollApproved;
+    private boolean offCycle;
     private LocalDateTime createdDate;
 }

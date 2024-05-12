@@ -21,16 +21,12 @@ public class AppConfig {
     WebClient webClient(WebClient.Builder webClientBuilder) {
         var mediaType = MediaType.APPLICATION_JSON_VALUE;
         return webClientBuilder
-//                .baseUrl("http://xykinehrs.com/admin/")
-                .baseUrl("http://localhost:9001/")
-//                .baseUrl("http://localhost:9001/")
-//                .baseUrl(adminServiceUrl)
                 .baseUrl(adminServiceUrl)
                 .exchangeStrategies(ExchangeStrategies
                         .builder()
                         .codecs(codecs -> codecs
                                 .defaultCodecs()
-                                .maxInMemorySize(500000 * 1024))
+                                .maxInMemorySize(maxBufferSize * 1024))
                         .build())
                 .defaultHeader("Accept", mediaType)
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)

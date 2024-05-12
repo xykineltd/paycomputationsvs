@@ -22,9 +22,11 @@ public class PaymentComputeResponse implements Serializable {
     private UUID id;
     private boolean success;
     private String message;
+    private String offCycleId;
     private List<PaymentInfo> report;
     private Map<String, BigDecimal> summary;
     private String start;
     private String end;
     private boolean payrollSimulation;
+    private boolean offCycle;
 }

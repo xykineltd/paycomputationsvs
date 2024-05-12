@@ -12,6 +12,6 @@ public interface PayrollReportDetailSimulateRepo extends MongoRepository<Payroll
     void deletePayrollReportsByPayrollSimulation(Boolean simulation);
     void deleteAllByStartDate(String startDate);
     Page<PayrollReportDetail> findPayrollReportDetailById(String id, Pageable pageable);
-    Page<PayrollReportDetail> findPayrollReportDetailBySummaryId(String summaryId, Pageable pageable);
+    Page<PayrollReportDetail> findPayrollReportDetailBySummaryIdAndCompanyId(String summaryId, String companyId, Pageable pageable);
 }
 

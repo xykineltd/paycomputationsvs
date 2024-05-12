@@ -15,8 +15,8 @@ spring:
   data:
     redis:
       connect-timeout: 2s
-#      host: ${SPRING_REDIS_HOST:localhost}
-      host: localhost
+      host: ${SPRING_REDIS_HOST:localhost}
+#      host: localhost
       port: 6379
       timeout: 1s
 
@@ -26,5 +26,6 @@ spring:
 
 admin:
   service:
-    url: http://localhost:8081/
+    url: http://localhost:9001/
+#    url: http://xykinehrs.com/
     maxBufferSize: 500000

@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 public class ReportResponse {
     String reportId;
     String companyId;
+    String offCycleId;
     String employeeId;
     String departmentId;
     PayComputeDetailResponse detail;
@@ -21,4 +22,5 @@ public class ReportResponse {
     String startDate;
     String endDate;
     boolean payrollSimulated;
+    boolean offCycle;
 }
