@@ -12,6 +12,7 @@ import java.util.List;
 public interface PayrollReportDetailRepo extends MongoRepository<PayrollReportDetail, String> {
     void deletePayrollReportsByStartDate(LocalDate startDate);
     void deleteAllByStartDateAndCompanyId(LocalDate startDate, String companyId);
+    void deleteAllByOffCycleIdAndCompanyId(String offCycleId, String companyId);
     PayrollReportDetail findPayrollReportByStartDate(LocalDate startDate);
     Page<PayrollReportDetail> findPayrollReportDetailById(String id, Pageable pageable);
     Page<PayrollReportDetail> findPayrollReportDetailBySummaryIdAndCompanyId(String summaryId, String companyId, Pageable pageable);

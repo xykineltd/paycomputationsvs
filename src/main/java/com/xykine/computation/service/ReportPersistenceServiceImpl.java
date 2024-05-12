@@ -58,7 +58,13 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 reportResponse = getReportResponseSimulate(paymentComputeResponse, companyId, paymentComputeResponse.getStart());
             } else {
                 //delete and replace based on pay period, ie only 1 pay period in the database and companyID
-                deleteReportByDate(paymentComputeResponse.getStart(), companyId, paymentComputeResponse.isOffCycle());
+                deleteReportByDate(
+                        paymentComputeResponse.getStart(),
+                        companyId,
+                        paymentComputeResponse.isOffCycle(),
+                        false,
+                        paymentComputeResponse.getOffCycleId()
+                        );
                 reportResponse = getReportResponse(paymentComputeResponse, companyId, paymentComputeResponse.getStart());
             }
         } catch (RuntimeException e) {
@@ -118,9 +124,18 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
        PayrollReportSummary payrollReportSummary = payrollReportSummaryRepo
                 .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(LocalDate.parse(starDate), companyId, false);
        if(payrollReportSummary == null){
-           throw new RuntimeException("Report with the date: " + starDate + " was not found");
+           return null;
        }
-       return ReportUtils.transform(payrollReportSummary);
+        return ReportUtils.transform(payrollReportSummary);
+    }
+
+
+    private List<ReportResponse> getPayRollReportOffCycle(String companyId){
+        return payrollReportSummaryRepo
+                .findAllByCompanyIdAndPayrollSimulationAndOffCycle(companyId, false, true)
+                .stream()
+                .map(ReportUtils::transform)
+                .collect(Collectors.toList());
     }
 
     public ReportResponse getPayRollReportSimulate(String starDate){
@@ -163,25 +178,39 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         return  existingSummaryReport;
     }
     public boolean deleteReport(UpdateReportRequest request) {
-        return deleteReportByDate(request.getStartDate(), request.getCompanyId(), request.isOffCycle());
+        return deleteReportByDate(request.getStartDate(),
+                request.getCompanyId(),
+                request.isOffCycle(),
+                request.isCancelPayroll(),
+                request.getOffCycleId()
+                );
     }
 
-    private boolean deleteReportByDate(String startDate, String companyId, boolean isOffCycle) {
-        LOGGER.info("isOffCycle {}", isOffCycle);
+    private boolean deleteReportByDate(String startDate,
+                                       String companyId,
+                                       boolean isOffCycle,
+                                       boolean isCancelPayroll,
+                                       String offCycleId
+    ) {
+        if(isOffCycle && !isCancelPayroll) return false;
+
+        //canceling offCycle payroll
+        if(isOffCycle) {
+            payrollReportSummaryRepo.deletePayrollReportSummaryByOffCycleIdAndCompanyId(offCycleId, companyId);
+            payrollReportDetailRepo.deleteAllByOffCycleIdAndCompanyId(offCycleId, companyId);
+            return true;
+        }
 
         var payroll = payrollReportSummaryRepo
                 .findPayrollReportSummaryByPayrollApprovedAndStartDateAndCompanyId(true, LocalDate.parse(startDate), companyId);
-        if(payroll != null && payroll.isPayrollApproved() && !isOffCycle) {
+        if(payroll != null && payroll.isPayrollApproved()) {
             throw new PayrollUnmodifiableException(startDate);
         }
-        LOGGER.info("isOffCycle {}", isOffCycle);
-        if(!isOffCycle) {
-            LOGGER.info("deleting******");
-            payrollReportSummaryRepo.deletePayrollReportSummaryByStartDateAndCompanyId(LocalDate.parse(startDate), companyId);
-            payrollReportDetailRepo.deleteAllByStartDateAndCompanyId(LocalDate.parse(startDate), companyId);
-            return true;
-        }
-        return false;
+
+        //canceling regular payroll
+        payrollReportSummaryRepo.deletePayrollReportSummaryByStartDateAndCompanyId(LocalDate.parse(startDate), companyId);
+        payrollReportDetailRepo.deleteAllByStartDateAndCompanyId(LocalDate.parse(startDate), companyId);
+        return true;
     }
 
     @Override
@@ -209,10 +238,23 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
     @Override
     public List<ReportAnalytics> getReportAnalytics(String companyId) {
-        return generateDateFromJanToDecember().stream().map(
-                date -> getReportAnalytics(companyId, date)
+
+        var regularPayrolls =  generateDateFromJanToDecember().stream().map(
+                date -> getReportAnalytics(getPayRollReport(date.toString(), companyId), companyId)
         ).filter( r -> r.getReportId() != null)
                 .toList();
+
+        // get for the offCyclePayrolls
+        var offCyclePayrolls =  getPayRollReportOffCycle(companyId).stream().map(
+                        reportResponse -> getReportAnalytics(reportResponse, companyId)
+                ).filter( r -> r.getReportId() != null)
+                .toList();
+
+
+        List<ReportAnalytics> mergedList = new ArrayList<>(regularPayrolls);
+
+        mergedList.addAll(offCyclePayrolls);
+        return mergedList;
     }
     private List<LocalDate> generateDateFromJanToDecember() {
         List<LocalDate> dates = new ArrayList<>();
@@ -226,10 +268,9 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         }
         return dates;
     }
-    private ReportAnalytics getReportAnalytics(String companyId, LocalDate startDate) {
-        //employee might have multiple payments for a payPeriod
+    private ReportAnalytics getReportAnalytics(ReportResponse reportSummary, String companyId) {
         try {
-            var reportSummary = getPayRollReport(startDate.toString(), companyId);
+            if(reportSummary == null) return new ReportAnalytics();
 
             int veryHighLimit = Integer.MAX_VALUE;
             Pageable pageable = PageRequest.of(0, veryHighLimit);
