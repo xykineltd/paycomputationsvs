@@ -44,11 +44,10 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     private final PayrollReportDetailSimulateRepo payrollReportDetailRepoSimulate;
     private static final Logger LOGGER = LoggerFactory.getLogger(PaymentCalculatorImpl.class);
 
-
     @Transactional
     public ReportResponse serializeAndSaveReport(PaymentComputeResponse paymentComputeResponse, String companyId)
             throws IOException {
-        long starttime = System.currentTimeMillis();
+        long startTime = System.currentTimeMillis();
         ReportResponse reportResponse = null;
         try {
             if(paymentComputeResponse.isPayrollSimulation()) {
@@ -59,18 +58,17 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 reportResponse = getReportResponseSimulate(paymentComputeResponse, companyId, paymentComputeResponse.getStart());
             } else {
                 //delete and replace based on pay period, ie only 1 pay period in the database and companyID
-                deleteReportByDate(paymentComputeResponse.getStart(), companyId);
+                deleteReportByDate(paymentComputeResponse.getStart(), companyId, paymentComputeResponse.isOffCycle());
                 reportResponse = getReportResponse(paymentComputeResponse, companyId, paymentComputeResponse.getStart());
             }
         } catch (RuntimeException e) {
             LOGGER.info(" exception {} ", e.toString());
             throw e;
         }
-        long endtime = System.currentTimeMillis();
-        LOGGER.info(" Process time ===> {} ms", endtime -starttime );
+        long endTime = System.currentTimeMillis();
+        LOGGER.info(" Process time ===> {} ms", endTime - startTime );
         return reportResponse;
     }
-
     private ReportResponse getReportResponse(PaymentComputeResponse paymentComputeResponse, String companyId, String startDate) {
         PayComputeSummaryResponse payComputeSummaryResponse = PayComputeSummaryResponse.builder()
                 .summary(paymentComputeResponse.getSummary())
@@ -78,17 +76,18 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         PayrollReportSummary payrollReportSummary = PayrollReportSummary.builder()
                 .id(paymentComputeResponse.getId())
                 .companyId(companyId)
+                .offCycleId(paymentComputeResponse.getOffCycleId())
                 .startDate(LocalDate.parse(startDate))
                 .endDate(LocalDate.parse(paymentComputeResponse.getEnd()))
                 .report(ReportUtils.serializeResponse(payComputeSummaryResponse))
                 .createdDate(LocalDateTime.now())
                 .payrollSimulation(paymentComputeResponse.isPayrollSimulation())
+                .offCycle(paymentComputeResponse.isOffCycle())
                 .build();
         payrollReportSummaryRepo.save(payrollReportSummary);
         saveReportDetails(paymentComputeResponse, companyId, payrollReportSummary.isPayrollApproved());
         return getPayRollReport(paymentComputeResponse.getId());
     }
-
     public ReportResponse getPayRollReport(UUID id){
         PayrollReportSummary payrollReportSummary = payrollReportSummaryRepo.findPayrollReportSummaryById(id);
         if(payrollReportSummary == null){
@@ -96,7 +95,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         }
         return ReportUtils.transform(payrollReportSummary);
     }
-
     private ReportResponse getReportResponseSimulate(PaymentComputeResponse paymentComputeResponse, String companyId, String startDate) {
         PayComputeSummaryResponse payComputeSummaryResponse = PayComputeSummaryResponse.builder()
                 .summary(paymentComputeResponse.getSummary())
@@ -143,7 +141,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         summary.addAll(reports);
         return summary;
     }
-
     private List<ReportResponse> getPayRollReportSimulates(String companyId){
         return  payrollReportSummaryRepoSimulate.findAllByCompanyIdOrderByCreatedDateAsc(companyId).stream()
                 .map(ReportUtils::transform)
@@ -152,26 +149,39 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
     @Transactional
     public PayrollReportSummary approveReport(UpdateReportRequest request) {
-        var existingSummaryReport = payrollReportSummaryRepo
-                .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(LocalDate.parse(request.getStartDate()), request.getCompanyId(), false);
+        PayrollReportSummary existingSummaryReport;
+        if(request.isOffCycle()) {
+            existingSummaryReport = payrollReportSummaryRepo
+                    .findPayrollReportSummaryByCompanyIdAndOffCycleId(request.getCompanyId(), request.getOffCycleId());
+        } else {
+            existingSummaryReport = payrollReportSummaryRepo
+                    .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(LocalDate.parse(request.getStartDate()), request.getCompanyId(), false);
+        }
         existingSummaryReport.setPayrollApproved(request.isPayrollApproved());
         payrollReportSummaryRepo.save(existingSummaryReport);
         //TODO update the detail report once the payroll is approved
         return  existingSummaryReport;
     }
     public boolean deleteReport(UpdateReportRequest request) {
-        return deleteReportByDate(request.getStartDate(), request.getCompanyId());
+        return deleteReportByDate(request.getStartDate(), request.getCompanyId(), request.isOffCycle());
     }
 
-    private boolean deleteReportByDate(String startDate, String companyId) {
+    private boolean deleteReportByDate(String startDate, String companyId, boolean isOffCycle) {
+        LOGGER.info("isOffCycle {}", isOffCycle);
+
         var payroll = payrollReportSummaryRepo
                 .findPayrollReportSummaryByPayrollApprovedAndStartDateAndCompanyId(true, LocalDate.parse(startDate), companyId);
-        if( payroll != null && payroll.isPayrollApproved()) {
+        if(payroll != null && payroll.isPayrollApproved() && !isOffCycle) {
             throw new PayrollUnmodifiableException(startDate);
         }
-        payrollReportSummaryRepo.deletePayrollReportSummaryByStartDateAndCompanyId(LocalDate.parse(startDate), companyId);
-        payrollReportDetailRepo.deletePayrollReportDetailByStartDateAndCompanyId(LocalDate.parse(startDate), companyId);
-        return true;
+        LOGGER.info("isOffCycle {}", isOffCycle);
+        if(!isOffCycle) {
+            LOGGER.info("deleting******");
+            payrollReportSummaryRepo.deletePayrollReportSummaryByStartDateAndCompanyId(LocalDate.parse(startDate), companyId);
+            payrollReportDetailRepo.deleteAllByStartDateAndCompanyId(LocalDate.parse(startDate), companyId);
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -204,7 +214,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         ).filter( r -> r.getReportId() != null)
                 .toList();
     }
-
     private List<LocalDate> generateDateFromJanToDecember() {
         List<LocalDate> dates = new ArrayList<>();
         LocalDate today = LocalDate.now();
@@ -217,7 +226,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         }
         return dates;
     }
-
     private ReportAnalytics getReportAnalytics(String companyId, LocalDate startDate) {
         //employee might have multiple payments for a payPeriod
         try {
@@ -245,18 +253,16 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             return new ReportAnalytics();
         }
     }
-
     private static long getDistinctEmployeesCount(Page<PayrollReportDetail> reportDetails) {
         Set<String> distinctEmployeeIds = reportDetails.stream()
                 .map(PayrollReportDetail::getEmployeeId)
                 .collect(Collectors.toSet());
         return distinctEmployeeIds.size();
     }
-
     private void saveReportDetails(PaymentComputeResponse paymentComputeResponse, String companyId, boolean isPayrollApproved) {
         List<PaymentInfo> paymentInfoList = paymentComputeResponse.getReport();
         CompletableFuture<Void> jobFuture = CompletableFuture.supplyAsync(() -> {
-            paymentInfoList.stream().forEach(x -> {
+            paymentInfoList.forEach(x -> {
                 PayComputeDetailResponse payComputeDetailResponse = PayComputeDetailResponse.builder()
                         .report(x)
                         .build();
@@ -264,7 +270,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                         .id(UUID.randomUUID().toString())
                         .employeeId(x.getEmployeeID())
                         .summaryId(paymentComputeResponse.getId().toString())
-                        .companyId(companyId.toString())
+                        .companyId(companyId)
+                        .offCycleId(paymentComputeResponse.getOffCycleId())
                         .departmentId(x.getDepartmentID())
                         .startDate(paymentComputeResponse.getStart())
                         .endDate((paymentComputeResponse.getEnd()))
@@ -272,6 +279,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                         .createdDate(LocalDateTime.now())
                         .payrollSimulation(paymentComputeResponse.isPayrollSimulation())
                         .payrollApproved(isPayrollApproved)
+                        .offCycle(paymentComputeResponse.isOffCycle())
                         .build();
                 payrollReportDetailRepo.save(payrollReportDetail);
                 //LOGGER.info("saving in repo ==> {}", payrollReportDetail);
@@ -284,7 +292,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             throw new RuntimeException(e);
         }
     }
-
     private void saveReportDetailsSimulate(PaymentComputeResponse paymentComputeResponse, String companyId) {
         List<PaymentInfo> paymentInfoList = paymentComputeResponse.getReport();
         CompletableFuture<Void> jobFuture = CompletableFuture.supplyAsync(() -> {

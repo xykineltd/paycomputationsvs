@@ -17,4 +17,5 @@ public class PaymentInfoRequest {
     LocalDate end;
     String offCycleID;
     boolean payrollSimulation;
+    boolean offCycle;
 }

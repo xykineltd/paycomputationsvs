@@ -21,6 +21,7 @@ public class PayrollReportDetail {
     @Id
     private String id;
     private String summaryId;
+    private String offCycleId;
     private String companyId;
     private String departmentId;
     private String employeeId;
@@ -29,5 +30,6 @@ public class PayrollReportDetail {
     private String endDate;
     private boolean payrollSimulation;
     private boolean payrollApproved;
+    private boolean offCycle;
     private LocalDateTime createdDate;
 }

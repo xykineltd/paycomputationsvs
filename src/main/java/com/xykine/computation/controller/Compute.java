@@ -42,8 +42,8 @@ public class Compute {
         paymentComputeResponse.setStart(paymentRequest.getStart().toString());
         paymentComputeResponse.setEnd(paymentRequest.getEnd().toString());
         paymentComputeResponse.setPayrollSimulation(paymentRequest.isPayrollSimulation());
+        paymentComputeResponse.setOffCycle(paymentRequest.isOffCycle());
+        paymentComputeResponse.setOffCycleId(paymentRequest.getOffCycleID());
         return reportPersistenceService.serializeAndSaveReport(paymentComputeResponse, paymentRequest.getCompanyId());
-
     }
-
 }

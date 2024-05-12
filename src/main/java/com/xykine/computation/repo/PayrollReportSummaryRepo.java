@@ -10,6 +10,7 @@ import java.util.UUID;
 public interface PayrollReportSummaryRepo extends MongoRepository<PayrollReportSummary, UUID> {
 
     PayrollReportSummary findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(LocalDate startDate, String companyId, boolean simulation);
+    PayrollReportSummary findPayrollReportSummaryByCompanyIdAndOffCycleId(String companyId, String offCycleId);
     List<PayrollReportSummary> findAllByCompanyIdOrderByCreatedDateAsc(String companyId);
     void deletePayrollReportSummaryByStartDateAndCompanyId(LocalDate startDate, String companyId);
     PayrollReportSummary findPayrollReportSummaryById(UUID id);
