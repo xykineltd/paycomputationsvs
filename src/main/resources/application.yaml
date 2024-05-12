@@ -21,11 +21,11 @@ spring:
       timeout: 1s
 
     mongodb:
-      uri: mongodb://admin:docker@localhost/payroll?tls=false&authSource=admin
-#      uri: ${ SPRING_DATA_MONGODB_URI }
+#      uri: mongodb://admin:docker@localhost/payroll?tls=false&authSource=admin
+      uri: ${ SPRING_DATA_MONGODB_URI }
 
 admin:
   service:
-    url: http://localhost:9001/
-#    url: http://xykinehrs.com/
+#    url: http://localhost:9001/
+    url: http://xykinehrs.com/
     maxBufferSize: 500000
