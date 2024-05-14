@@ -193,7 +193,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                                        String offCycleId
     ) {
         if(isOffCycle && !isCancelPayroll) return false;
-
         //canceling offCycle payroll
         if(isOffCycle) {
             payrollReportSummaryRepo.deletePayrollReportSummaryByOffCycleIdAndCompanyId(offCycleId, companyId);
@@ -286,8 +285,12 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                     reportSummary.getSummary().getSummary().get(MapKeys.TOTAL_NET_PAY),
                     reportSummary.isPayrollApproved() ? "Completed" : "Pending",
                     reportSummary.getReportId(),
-                    reportSummary.getCompanyId()
-            );
+                    reportSummary.getCompanyId(),
+                    reportSummary.isOffCycle(),
+                    reportSummary.getOffCycleId(),
+                    reportSummary.isOffCycle() ? "Off-Cycle" : "Regular",
+                    reportSummary.getCreatedDate()
+                    );
             return reportAnalytics;
         } catch (RuntimeException ex) {
             LOGGER.info(ex.getMessage());

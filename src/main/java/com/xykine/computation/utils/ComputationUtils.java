@@ -10,7 +10,10 @@ import java.math.RoundingMode;
 
 public class ComputationUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(PaymentCalculatorImpl.class);
-    public static BigDecimal prorate(BigDecimal rawValue, int numberOfUnPaiAbsence){
+    public static BigDecimal prorate(BigDecimal rawValue, int numberOfUnPaiAbsence,
+                                     boolean isOffCycleActualValueSupplied){
+        if(isOffCycleActualValueSupplied)
+            return rawValue;
         rawValue = rawValue.divide(BigDecimal.valueOf(12), 2,  RoundingMode.CEILING);
         if (numberOfUnPaiAbsence == 0)
             return rawValue;

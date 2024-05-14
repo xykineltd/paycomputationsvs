@@ -34,6 +34,8 @@ public class PaymentInfo implements Serializable {
 
     private String fullName;
     private String offCycleID;
+    private boolean offCycle;
+    boolean offCycleActualValueSupplied;
 
     private BigDecimal netPay;
 
