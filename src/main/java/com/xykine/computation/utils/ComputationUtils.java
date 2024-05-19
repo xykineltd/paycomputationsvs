@@ -1,5 +1,6 @@
 package com.xykine.computation.utils;
 
+import com.xykine.computation.model.PaymentSettings;
 import com.xykine.computation.service.PaymentCalculatorImpl;
 import com.xykine.computation.session.SessionCalculationObject;
 import org.slf4j.Logger;
@@ -30,6 +31,18 @@ public class ComputationUtils {
         BigDecimal currentValue = sessionCalculationObject.getSummary().get(key);
         currentValue = currentValue.add(value);
         sessionCalculationObject.getSummary().put(key, currentValue);
+    }
+
+    public static BigDecimal getPaymentValueFromPaymentSetting(PaymentSettings paymentSettings){
+        var paymentSettingValue = paymentSettings.getValue() == null ? BigDecimal.valueOf(0.0) : paymentSettings.getValue();
+        return paymentSettingValue;
+    }
+
+    public static BigDecimal getPaymentValueFromBaseSalary(BigDecimal paymentValue){
+        if(paymentValue == null) {
+            return BigDecimal.valueOf(0.0);
+        }
+        return paymentValue;
     }
 
     public static BigDecimal getTaxAmount(BigDecimal taxableIncome, SessionCalculationObject sessionCalculationObject){
@@ -75,4 +88,5 @@ public class ComputationUtils {
             return remnantTaxable;
         return BigDecimal.valueOf(nextLevel);
     }
+
 }

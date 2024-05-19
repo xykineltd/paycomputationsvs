@@ -29,6 +29,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     @Override
     public PaymentInfo computeGrossPay(PaymentInfo paymentInfo) {
+        LOGGER.info("paymentInfo====> {}", paymentInfo);
         Map<String, BigDecimal> grossPayMap = new HashMap<>();
         grossPayMap = insertRecurrentPaymentMap(grossPayMap, paymentInfo);
         BigDecimal total = getTotal(grossPayMap);
@@ -43,14 +44,21 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         Map<String, BigDecimal> nhf = new HashMap<>();
         Map<String, BigDecimal> pension = new HashMap<>();
 
+
         int numberOfUnpaidDays = paymentInfo.getNumberOfDaysOfUnpaidAbsence();
-        var basePaymentAmount = paymentInfo.isOffCycle()?
-                getOffCyclePaymentAmountForEmployee(paymentInfo).getValue() : getBasicSalaryForEmployee(paymentInfo).getValue();
+        var basePaymentAmount =
+                ComputationUtils
+                .getPaymentValueFromPaymentSetting(getOffCyclePaymentAmountForEmployee(paymentInfo))
+                        .add(ComputationUtils.getPaymentValueFromBaseSalary(paymentInfo.getBasicSalary()));
 
         BigDecimal employeePensionFund = getAllowanceForEmployee(paymentInfo)
                 .stream()
                 .filter(x -> x.isPensionable() || x.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_HOUSING) || x.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_TRANSPORT))
-                .map(PaymentSettings::getValue)
+//                .map(PaymentSettings::getValue)
+                .map(p -> {
+                    LOGGER.info("line55 {} --- {}", p.getName(), p.getValue());
+                    return p.getValue();
+                })
                 .reduce(basePaymentAmount, BigDecimal::add);
 
         BigDecimal employeePension = ComputationUtils
@@ -81,9 +89,13 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 ComputationUtils.prorate(employerPensionContribution,
                         numberOfUnpaidDays, paymentInfo.isOffCycleActualValueSupplied()));
 
+
         BigDecimal nationalHousingFund = ComputationUtils
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("nationalHousingFundPercent")
                         .multiply(basePaymentAmount));
+
+        LOGGER.info("basePaymentAmount {}", basePaymentAmount);
+        LOGGER.info("nationalHousingFund {}", basePaymentAmount);
 
         BigDecimal nhfValue = ComputationUtils.prorate(nationalHousingFund,
                 numberOfUnpaidDays, paymentInfo.isOffCycleActualValueSupplied());
@@ -184,16 +196,27 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     }
 
     private Map<String, BigDecimal> insertRecurrentPaymentMap(Map<String, BigDecimal> earningMap, PaymentInfo paymentInfo){
-//        earningMap.put(MapKeys.BASIC_SALARY, paymentInfo.getBasicSalary());
-        var paymentSettings = paymentInfo.isOffCycle()?
-                getOffCyclePaymentAmountForEmployee(paymentInfo) : getBasicSalaryForEmployee(paymentInfo);
-        earningMap.put(MapKeys.BASIC_SALARY, paymentSettings.getValue());
+
+        var basicSalaryValue =
+                paymentInfo.getBasicSalary() == null ? BigDecimal.valueOf(0.0) : paymentInfo.getBasicSalary();
+        earningMap.put(MapKeys.BASIC_SALARY, basicSalaryValue);
+
+        var paymentSettings = getOffCyclePaymentAmountForEmployee(paymentInfo);
+        var offCyclePaymentValue = paymentSettings.getValue() == null ? BigDecimal.valueOf(0.0) : paymentSettings.getValue();
+        earningMap.put(MapKeys.OFF_CYCLE_PAYMENT, offCyclePaymentValue);
+
+//        LOGGER.info("paymentSettings.getValue()+++{}",  paymentSettings.getValue());
+//        LOGGER.info("paymentInfo.getBasicSalary()+++{}", paymentInfo.getBasicSalary());
+//        earningMap.put(MapKeys.BASIC_SALARY, paymentSettings.getValue());
         var allowance = getAllowanceForEmployee(paymentInfo);
         allowance.stream()
                 .filter(PaymentSettings::isActive)
                 .forEach(x -> {
                     earningMap.put(x.getName(), x.getValue());
                 });
+
+        LOGGER.info("earningMap+++, {}", earningMap);
+
         return earningMap;
     }
 
@@ -231,10 +254,12 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     private Set<PaymentSettings> getAllowanceForEmployee (PaymentInfo paymentInfo) {
         var paymentSettings = paymentInfo.getPaymentSettings();
-        return paymentSettings
+        var list =  paymentSettings
                 .stream()
                 .filter(setting -> setting.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL) || setting.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_TRANSPORT) || setting.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_HOUSING))
                 .collect(Collectors.toSet());
+        LOGGER.info("list+++ {}", list);
+        return list;
     }
 
     private PaymentSettings getBasicSalaryForEmployee (PaymentInfo paymentInfo) {
