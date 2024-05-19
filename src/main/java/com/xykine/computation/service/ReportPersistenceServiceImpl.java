@@ -4,6 +4,7 @@ import com.xykine.computation.entity.PayrollReportDetail;
 import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.entity.simulate.PayrollReportDetailSimulate;
 import com.xykine.computation.entity.simulate.PayrollReportSummarySimulate;
+import com.xykine.computation.exceptions.PayrollReportNotException;
 import com.xykine.computation.exceptions.PayrollUnmodifiableException;
 import com.xykine.computation.model.MapKeys;
 import com.xykine.computation.model.PaymentInfo;
@@ -242,8 +243,13 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 .findPayrollReportDetailByEmployeeIdAndCompanyId(employeeId, companyId);
         List<ReportResponse> reportResponses = ReportUtils.transform(payrollReportDetailPage);
 
+        System.out.println("reportResponses====>" + reportResponses.size());
         var res = reportResponses.stream().filter(d -> d.getStartDate().equals(startDate)).findFirst();
-        return res.orElseThrow();
+
+        if(res.isEmpty()) {
+            throw new PayrollReportNotException(startDate);
+        }
+        return res.get();
     }
 
     @Override
