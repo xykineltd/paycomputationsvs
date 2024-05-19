@@ -33,6 +33,24 @@ public class ReportUtils {
         }).collect(Collectors.toList());
     }
 
+    public static ReportResponse transform(PayrollReportDetail x){
+            return ReportResponse.builder()
+                    .reportId(x.getId())
+                    .companyId(x.getCompanyId())
+                    .offCycleId(x.getOffCycleId())
+                    .departmentId(x.getDepartmentId())
+                    .employeeId(x.getEmployeeId())
+                    .payrollApproved(x.isPayrollApproved())
+                    .startDate(x.getStartDate().toString())
+                    .endDate(x.getEndDate().toString())
+                    .createdDate(String.valueOf(x.getCreatedDate()))
+                    .payrollApproved(x.isPayrollApproved())
+                    .payrollSimulated(x.isPayrollSimulation())
+                    .offCycle(x.isOffCycle())
+                    .detail(SerializationUtils.deserialize(x.getReport()))
+                    .build();
+    }
+
     public static ReportResponse transform(PayrollReportSummary payrollReportSummary){
         PayComputeSummaryResponse summary =  SerializationUtils.deserialize(payrollReportSummary.getReport());
         return ReportResponse.builder()

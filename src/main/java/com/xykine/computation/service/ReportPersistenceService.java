@@ -8,6 +8,7 @@ import com.xykine.computation.response.ReportAnalytics;
 import com.xykine.computation.response.ReportResponse;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -18,5 +19,6 @@ public interface ReportPersistenceService {
     PayrollReportSummary approveReport(UpdateReportRequest updateReportRequest);
     boolean deleteReport(UpdateReportRequest updateReportRequest);
     Map<String, Object> getPaymentDetails(String id, String companyId, int page, int size);
+    ReportResponse getPaymentDetailsByEmployee(String employeeId, String startDate, String companyId);
     List<ReportAnalytics> getReportAnalytics(String companyId);
 }

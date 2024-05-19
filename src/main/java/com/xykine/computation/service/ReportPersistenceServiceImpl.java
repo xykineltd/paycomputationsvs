@@ -235,6 +235,17 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         return response;
     }
 
+
+    @Override
+    public ReportResponse getPaymentDetailsByEmployee(String employeeId, String startDate, String companyId) {
+        List<PayrollReportDetail> payrollReportDetailPage = payrollReportDetailRepo
+                .findPayrollReportDetailByEmployeeIdAndCompanyId(employeeId, companyId);
+        List<ReportResponse> reportResponses = ReportUtils.transform(payrollReportDetailPage);
+
+        var res = reportResponses.stream().filter(d -> d.getStartDate().equals(startDate)).findFirst();
+        return res.orElseThrow();
+    }
+
     @Override
     public List<ReportAnalytics> getReportAnalytics(String companyId) {
 
