@@ -84,7 +84,6 @@ public class ComputeControllerTest {
 
         Map<String, Object> body = reportDetail.getBody();
         assertThat(body).isNotNull().satisfies((x) -> {
-            LOGGER.info("xxx, {}", x);
            x.get("totalItems").equals("10");
         });
 
