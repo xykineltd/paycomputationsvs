@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.util.UUID;
 
 
-import com.xykine.computation.exceptions.PayrollUnmodifiableException;
 import com.xykine.computation.repo.ComputationConstantsRepo;
 import com.xykine.computation.repo.TaxRepo;
 import com.xykine.computation.response.ReportResponse;
@@ -12,8 +11,6 @@ import com.xykine.computation.service.ReportPersistenceService;
 import com.xykine.computation.utils.OperationUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.xykine.computation.request.PaymentInfoRequest;

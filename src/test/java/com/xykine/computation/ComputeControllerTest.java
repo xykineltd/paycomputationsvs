@@ -63,13 +63,9 @@ public class ComputeControllerTest {
         assertThat(reportSummary.getSummary().getSummary().get(MapKeys.TOTAL_EMPLOYEE_PENSION_CONTRIBUTION)).isEqualByComparingTo("341666.70");
         assertThat(reportSummary.getSummary().getSummary().get(MapKeys.TOTAL_PAYEE_TAX)).isEqualByComparingTo("651066.70");
 
-
-        String summaryId = reportSummary.getReportId();
-        String companyId = reportSummary.getCompanyId();
-
         UriComponents builder = UriComponentsBuilder.fromHttpUrl("http://localhost:" + port + "/compute/reports/paymentDetails")
-                .queryParam("id",summaryId)
-                .queryParam("companyId",companyId)
+                .queryParam("id",reportSummary.getReportId())
+                .queryParam("companyId",reportSummary.getCompanyId())
                 .queryParam("page","0")
                 .queryParam("size","3")
                 .build();

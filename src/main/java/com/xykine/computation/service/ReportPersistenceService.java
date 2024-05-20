@@ -1,6 +1,5 @@
 package com.xykine.computation.service;
 
-import com.xykine.computation.entity.PayrollReport;
 import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.request.UpdateReportRequest;
 import com.xykine.computation.response.PaymentComputeResponse;
@@ -8,7 +7,6 @@ import com.xykine.computation.response.ReportAnalytics;
 import com.xykine.computation.response.ReportResponse;
 
 import java.io.IOException;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
