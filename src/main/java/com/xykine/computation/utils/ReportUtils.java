@@ -14,23 +14,22 @@ import java.util.stream.Collectors;
 public class ReportUtils {
 
     public static List<ReportResponse> transform(List<PayrollReportDetail> payrollReportDetails){
-        return payrollReportDetails.stream().map(x -> {
-            return ReportResponse.builder()
-                    .reportId(x.getId())
-                    .companyId(x.getCompanyId())
-                    .offCycleId(x.getOffCycleId())
-                    .departmentId(x.getDepartmentId())
-                    .employeeId(x.getEmployeeId())
-                    .payrollApproved(x.isPayrollApproved())
-                    .startDate(x.getStartDate().toString())
-                    .endDate(x.getEndDate().toString())
-                    .createdDate(String.valueOf(x.getCreatedDate()))
-                    .payrollApproved(x.isPayrollApproved())
-                    .payrollSimulated(x.isPayrollSimulation())
-                    .offCycle(x.isOffCycle())
-                    .detail(SerializationUtils.deserialize(x.getReport()))
-                    .build();
-        }).collect(Collectors.toList());
+        return payrollReportDetails.stream().map(x -> ReportResponse.builder()
+                .reportId(x.getId())
+                .companyId(x.getCompanyId())
+                .offCycleId(x.getOffCycleId())
+                .departmentId(x.getDepartmentId())
+                .employeeId(x.getEmployeeId())
+                .fullName(x.getFullName())
+                .payrollApproved(x.isPayrollApproved())
+                .startDate(x.getStartDate().toString())
+                .endDate(x.getEndDate().toString())
+                .createdDate(String.valueOf(x.getCreatedDate()))
+                .payrollApproved(x.isPayrollApproved())
+                .payrollSimulated(x.isPayrollSimulation())
+                .offCycle(x.isOffCycle())
+                .detail(SerializationUtils.deserialize(x.getReport()))
+                .build()).collect(Collectors.toList());
     }
 
     public static ReportResponse transform(PayrollReportDetail x){

@@ -47,7 +47,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         Map<String, BigDecimal> pension = new HashMap<>();
 
         int numberOfUnpaidDays = paymentInfo.getNumberOfDaysOfUnpaidAbsence();
-        BigDecimal basicSalary = ComputationUtils.getPaymentValueFromBaseSalary(paymentInfo.getBasicSalary());
+        BigDecimal basicSalary = paymentInfo.getBasicSalary();
 
         BigDecimal employeePensionFund = getAllowanceForEmployee(paymentInfo)
                 .stream()
@@ -207,7 +207,9 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
             earningMap.put(MapKeys.OFF_CYCLE_PAYMENT, getOffCyclePaymentAmountForEmployee(paymentInfo).getValue());
             return earningMap;
         }
+
         earningMap.put(MapKeys.BASIC_SALARY, paymentInfo.getBasicSalary());
+
         Set<PaymentSettings> allowance = getAllowanceForEmployee(paymentInfo);
         allowance.stream()
                 .filter(PaymentSettings::isActive)

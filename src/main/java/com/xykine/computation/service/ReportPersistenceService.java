@@ -16,7 +16,7 @@ public interface ReportPersistenceService {
     List<ReportResponse> getPayRollReports(String companyId);
     PayrollReportSummary approveReport(UpdateReportRequest updateReportRequest);
     boolean deleteReport(UpdateReportRequest updateReportRequest);
-    Map<String, Object> getPaymentDetails(String id, String companyId, int page, int size);
+    Map<String, Object> getPaymentDetails(String id, String companyId, String fullName, int page, int size);
     ReportResponse getPaymentDetailsByEmployee(String employeeId, String startDate, String companyId);
     List<ReportAnalytics> getReportAnalytics(String companyId);
 }

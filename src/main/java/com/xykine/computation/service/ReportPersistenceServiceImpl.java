@@ -213,15 +213,16 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     }
 
     @Override
-    public Map<String, Object> getPaymentDetails(String id, String companyId, int page, int size) {
+    public Map<String, Object> getPaymentDetails(String summaryId, String companyId, String fullName, int page, int size) {
         List<PayrollReportDetail> payrollDetails = new ArrayList<>();
         Pageable paging = PageRequest.of(page, size);
-        Page<PayrollReportDetail> payrollReportDetailPage = payrollReportDetailRepo.findPayrollReportDetailBySummaryIdAndCompanyId(id, companyId, paging);
+        Page<PayrollReportDetail> payrollReportDetailPage = payrollReportDetailRepo.findPayrollReportDetailBySummaryIdAndCompanyIdAndFullNameContainingIgnoreCase(summaryId, companyId, fullName, paging);
 
         // if report detail is empty then check the simulated report detail table. No need for different endpoint.
         //TODO what if the payrollReportDetailPage above is not empty and we need to get the report for simulated payroll
         if (payrollReportDetailPage.isEmpty()) {
-            payrollReportDetailPage = payrollReportDetailRepoSimulate.findPayrollReportDetailBySummaryIdAndCompanyId(id, companyId, paging);
+            payrollReportDetailPage = payrollReportDetailRepoSimulate
+                    .findPayrollReportDetailBySummaryIdAndCompanyIdAndFullNameContainingIgnoreCase(summaryId, companyId, fullName, paging);
         }
 
         payrollDetails = payrollReportDetailPage.getContent();
@@ -330,6 +331,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 PayrollReportDetail payrollReportDetail = PayrollReportDetail.builder()
                         .id(UUID.randomUUID().toString())
                         .employeeId(x.getEmployeeID())
+                        .fullName(payComputeDetailResponse.getReport().getFullName())
                         .summaryId(paymentComputeResponse.getId().toString())
                         .companyId(companyId)
                         .offCycleId(paymentComputeResponse.getOffCycleId())
@@ -363,6 +365,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 PayrollReportDetailSimulate payrollReportDetail = PayrollReportDetailSimulate.builder()
                         .id(UUID.randomUUID().toString())
                         .employeeId(x.getEmployeeID())
+                        .fullName(payComputeDetailResponse.getReport().getFullName())
                         .summaryId(paymentComputeResponse.getId().toString())
                         .companyId(companyId.toString())
                         .departmentId(x.getDepartmentID())

@@ -53,6 +53,10 @@ public class ComputeControllerTest {
         ReportResponse reportSummary =
                 restTemplate.postForEntity("http://localhost:" + port + "/compute/payroll", createPayload(), ReportResponse.class).getBody();
 
+        assert reportSummary != null;
+        System.out.println("basis salary: " +
+                reportSummary.getSummary().getSummary().get(MapKeys.BASIC_SALARY)
+                );
         assertThat(reportSummary).isNotNull();
         assertThat(reportSummary.getSummary()).isNotNull();
         assertThat(reportSummary.getSummary().getSummary().get(MapKeys.TOTAL_GROSS_PAY)).isEqualByComparingTo("4895833.40");
