@@ -293,6 +293,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             Pageable pageable = PageRequest.of(0, veryHighLimit);
             var reportDetails = payrollReportDetailRepo.findPayrollReportDetailBySummaryIdAndCompanyId(reportSummary.getReportId(), companyId, pageable);
 
+            LOGGER.info("reportDetails: {}", reportDetails.getSize());
             var numberOfPays = reportDetails.getTotalElements();
             var employeeCount = getDistinctEmployeesCount(reportDetails);
 

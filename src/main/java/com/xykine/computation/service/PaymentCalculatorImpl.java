@@ -39,7 +39,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     @Override
     public PaymentInfo computeNonTaxableIncomeExempt(PaymentInfo paymentInfo) {
-        if (paymentInfo.isOffCycleActualValueSupplied())
+        if (paymentInfo.isOffCycle())
             return computeNonTaxableIncomeExemptForOffCycle(paymentInfo);
 
         Map<String, BigDecimal> nonTaxableIncomeExemptMap = new HashMap<>();
@@ -115,6 +115,12 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         Map<String, BigDecimal> nonTaxableIncomeExemptMap = new HashMap<>();
         Map<String, BigDecimal> nhf = new HashMap<>();
         nhf.put(MapKeys.NATIONAL_HOUSING_FUND, BigDecimal.ZERO);
+
+        Map<String, BigDecimal> pension = new HashMap<>();
+        pension.put(MapKeys.EMPLOYER_PENSION_CONTRIBUTION, BigDecimal.ZERO);
+        pension.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION, BigDecimal.ZERO);
+
+
         BigDecimal grossIncomeForCRA  = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY);
 
         BigDecimal rawFXR = ComputationUtils
@@ -137,6 +143,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
         nonTaxableIncomeExemptMap.put(MapKeys.TOTAL_TAX_RELIEF, total);
         paymentInfo.setNhf(nhf);
+        paymentInfo.setPension(pension);
         paymentInfo.setTaxRelief(nonTaxableIncomeExemptMap);
         return paymentInfo;
     }
@@ -203,7 +210,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     }
 
     private Map<String, BigDecimal> insertRecurrentPaymentMap(Map<String, BigDecimal> earningMap, PaymentInfo paymentInfo){
-        if (paymentInfo.isOffCycleActualValueSupplied()) {
+        if (paymentInfo.isOffCycle()) {
             earningMap.put(MapKeys.OFF_CYCLE_PAYMENT, getOffCyclePaymentAmountForEmployee(paymentInfo).getValue());
             return earningMap;
         }
