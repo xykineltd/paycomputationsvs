@@ -112,6 +112,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     }
 
     private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo paymentInfo) {
+        LOGGER.info("paymentInfo** {}", paymentInfo.getPaymentSettings());
         Map<String, BigDecimal> nonTaxableIncomeExemptMap = new HashMap<>();
         Map<String, BigDecimal> nhf = new HashMap<>();
         nhf.put(MapKeys.NATIONAL_HOUSING_FUND, BigDecimal.ZERO);
@@ -212,6 +213,8 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     private Map<String, BigDecimal> insertRecurrentPaymentMap(Map<String, BigDecimal> earningMap, PaymentInfo paymentInfo){
         if (paymentInfo.isOffCycle()) {
             earningMap.put(MapKeys.OFF_CYCLE_PAYMENT, getOffCyclePaymentAmountForEmployee(paymentInfo).getValue());
+            LOGGER.info("earningMap** {}", earningMap);
+
             return earningMap;
         }
 
