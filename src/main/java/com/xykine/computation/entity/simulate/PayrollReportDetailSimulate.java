@@ -22,6 +22,7 @@ public class PayrollReportDetailSimulate {
     private String companyId;
     private String departmentId;
     private String employeeId;
+    private String fullName;
     private byte[] report;
     private String startDate;
     private String endDate;

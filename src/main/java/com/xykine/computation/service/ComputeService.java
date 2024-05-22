@@ -49,14 +49,6 @@ public class ComputeService {
                     }
             );
 
-        if (rawInfo == null) {
-            return  PaymentComputeResponse.builder()
-                    .message("error calling Admin service api")
-                    .success(false)
-                    .report(null)
-                    .build();
-        }
-
         List<PaymentInfo> paymentReport = generateReport(paymentInfoList);
         return  PaymentComputeResponse.builder()
                 .message("")
@@ -95,7 +87,8 @@ public class ComputeService {
     }
 
     private List<PaymentInfo> processReport(List<PaymentInfo> job){
-        return  job.stream()
+
+        var payInfos =  job.stream()
                 .map(x -> paymentCalculator.computeGrossPay(x))
                 .map(x -> paymentCalculator.computeNonTaxableIncomeExempt(x))
                 .map(x -> paymentCalculator.prorateEarnings(x))
@@ -104,5 +97,6 @@ public class ComputeService {
                 .map(x -> paymentCalculator.computeNetPay(x))
                 .map(x -> paymentCalculator.computeTotalNHF(x))
                 .collect(Collectors.toList());
+        return  payInfos;
     }
 }

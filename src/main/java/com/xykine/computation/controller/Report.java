@@ -52,9 +52,21 @@ public class Report {
     public ResponseEntity<?> getPaymentDetails(
             @RequestParam() String id,
             @RequestParam() String companyId,
+            @RequestParam(defaultValue = "") String fullName,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "3") int size) {
-        Map<String, Object> response = reportPersistenceService.getPaymentDetails(id, companyId, page, size);
+        Map<String, Object> response = reportPersistenceService.getPaymentDetails(id, companyId, fullName, page, size);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping("/paymentDetails/get-by-employee")
+    public ResponseEntity<?> getPaymentDetailsByEmployee(
+            @RequestParam() String companyId,
+            @RequestParam() String startDate,
+            @RequestParam() String employeeId
+            ) {
+        ReportResponse response = reportPersistenceService
+                .getPaymentDetailsByEmployee(employeeId, startDate, companyId);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

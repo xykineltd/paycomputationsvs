@@ -4,6 +4,7 @@ import com.xykine.computation.entity.PayrollReportDetail;
 import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.entity.simulate.PayrollReportDetailSimulate;
 import com.xykine.computation.entity.simulate.PayrollReportSummarySimulate;
+import com.xykine.computation.exceptions.PayrollReportNotException;
 import com.xykine.computation.exceptions.PayrollUnmodifiableException;
 import com.xykine.computation.model.MapKeys;
 import com.xykine.computation.model.PaymentInfo;
@@ -25,7 +26,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -193,7 +193,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                                        String offCycleId
     ) {
         if(isOffCycle && !isCancelPayroll) return false;
-
         //canceling offCycle payroll
         if(isOffCycle) {
             payrollReportSummaryRepo.deletePayrollReportSummaryByOffCycleIdAndCompanyId(offCycleId, companyId);
@@ -214,15 +213,16 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     }
 
     @Override
-    public Map<String, Object> getPaymentDetails(String id, String companyId, int page, int size) {
+    public Map<String, Object> getPaymentDetails(String summaryId, String companyId, String fullName, int page, int size) {
         List<PayrollReportDetail> payrollDetails = new ArrayList<>();
         Pageable paging = PageRequest.of(page, size);
-        Page<PayrollReportDetail> payrollReportDetailPage = payrollReportDetailRepo.findPayrollReportDetailBySummaryIdAndCompanyId(id, companyId, paging);
+        Page<PayrollReportDetail> payrollReportDetailPage = payrollReportDetailRepo.findPayrollReportDetailBySummaryIdAndCompanyIdAndFullNameContainingIgnoreCase(summaryId, companyId, fullName, paging);
 
         // if report detail is empty then check the simulated report detail table. No need for different endpoint.
         //TODO what if the payrollReportDetailPage above is not empty and we need to get the report for simulated payroll
         if (payrollReportDetailPage.isEmpty()) {
-            payrollReportDetailPage = payrollReportDetailRepoSimulate.findPayrollReportDetailBySummaryIdAndCompanyId(id, companyId, paging);
+            payrollReportDetailPage = payrollReportDetailRepoSimulate
+                    .findPayrollReportDetailBySummaryIdAndCompanyIdAndFullNameContainingIgnoreCase(summaryId, companyId, fullName, paging);
         }
 
         payrollDetails = payrollReportDetailPage.getContent();
@@ -234,6 +234,23 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         response.put("totalItems", payrollReportDetailPage.getTotalElements());
         response.put("totalPages", payrollReportDetailPage.getTotalPages());
         return response;
+    }
+
+
+    @Override
+    public ReportResponse getPaymentDetailsByEmployee(String employeeId, String startDate, String companyId) {
+        List<PayrollReportDetail> payrollReportDetailPage = payrollReportDetailRepo
+                .findPayrollReportDetailByEmployeeIdAndCompanyId(
+                        employeeId,
+                        companyId);
+        List<ReportResponse> reportResponses = ReportUtils.transform(payrollReportDetailPage);
+
+        var res = reportResponses.stream().filter(d -> d.getStartDate().equals(startDate)).findFirst();
+
+        if(res.isEmpty()) {
+            throw new PayrollReportNotException(startDate);
+        }
+        return res.get();
     }
 
     @Override
@@ -276,6 +293,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             Pageable pageable = PageRequest.of(0, veryHighLimit);
             var reportDetails = payrollReportDetailRepo.findPayrollReportDetailBySummaryIdAndCompanyId(reportSummary.getReportId(), companyId, pageable);
 
+            LOGGER.info("reportDetails: {}", reportDetails.getSize());
             var numberOfPays = reportDetails.getTotalElements();
             var employeeCount = getDistinctEmployeesCount(reportDetails);
 
@@ -286,8 +304,12 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                     reportSummary.getSummary().getSummary().get(MapKeys.TOTAL_NET_PAY),
                     reportSummary.isPayrollApproved() ? "Completed" : "Pending",
                     reportSummary.getReportId(),
-                    reportSummary.getCompanyId()
-            );
+                    reportSummary.getCompanyId(),
+                    reportSummary.isOffCycle(),
+                    reportSummary.getOffCycleId(),
+                    reportSummary.isOffCycle() ? "Off-Cycle" : "Regular",
+                    reportSummary.getCreatedDate()
+                    );
             return reportAnalytics;
         } catch (RuntimeException ex) {
             LOGGER.info(ex.getMessage());
@@ -310,6 +332,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 PayrollReportDetail payrollReportDetail = PayrollReportDetail.builder()
                         .id(UUID.randomUUID().toString())
                         .employeeId(x.getEmployeeID())
+                        .fullName(payComputeDetailResponse.getReport().getFullName())
                         .summaryId(paymentComputeResponse.getId().toString())
                         .companyId(companyId)
                         .offCycleId(paymentComputeResponse.getOffCycleId())
@@ -343,6 +366,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 PayrollReportDetailSimulate payrollReportDetail = PayrollReportDetailSimulate.builder()
                         .id(UUID.randomUUID().toString())
                         .employeeId(x.getEmployeeID())
+                        .fullName(payComputeDetailResponse.getReport().getFullName())
                         .summaryId(paymentComputeResponse.getId().toString())
                         .companyId(companyId.toString())
                         .departmentId(x.getDepartmentID())

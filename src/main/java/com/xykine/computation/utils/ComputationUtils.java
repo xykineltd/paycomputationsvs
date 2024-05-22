@@ -1,5 +1,6 @@
 package com.xykine.computation.utils;
 
+import com.xykine.computation.model.PaymentSettings;
 import com.xykine.computation.service.PaymentCalculatorImpl;
 import com.xykine.computation.session.SessionCalculationObject;
 import org.slf4j.Logger;
@@ -11,6 +12,8 @@ import java.math.RoundingMode;
 public class ComputationUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(PaymentCalculatorImpl.class);
     public static BigDecimal prorate(BigDecimal rawValue, int numberOfUnPaiAbsence){
+        if (rawValue == null)
+            return BigDecimal.ZERO;
         rawValue = rawValue.divide(BigDecimal.valueOf(12), 2,  RoundingMode.CEILING);
         if (numberOfUnPaiAbsence == 0)
             return rawValue;
@@ -25,17 +28,34 @@ public class ComputationUtils {
 
     public static synchronized void updateReportSummary(SessionCalculationObject sessionCalculationObject, String key, BigDecimal value){
         BigDecimal currentValue = sessionCalculationObject.getSummary().get(key);
+        value = value != null ? value : BigDecimal.ZERO;
         currentValue = currentValue.add(value);
         sessionCalculationObject.getSummary().put(key, currentValue);
     }
 
-    public static BigDecimal getTaxAmount(BigDecimal taxableIncome, SessionCalculationObject sessionCalculationObject){
-        taxableIncome = taxableIncome.multiply(BigDecimal.valueOf(12));
-//      7% on the first 3000000
-        taxableIncome = taxableIncome.subtract(BigDecimal.valueOf(300000));
-        BigDecimal taxAmount = sessionCalculationObject.getComputationConstants().get("TaxClassA").multiply(getRemnant(taxableIncome, 300000)).divide(BigDecimal.valueOf(100));
-        if (taxableIncome.compareTo(BigDecimal.valueOf(300000)) == -1)
-            return taxAmount.divide(BigDecimal.valueOf(12), RoundingMode.CEILING).setScale(2, RoundingMode.CEILING);;
+    public static BigDecimal getPaymentValueFromPaymentSetting(PaymentSettings paymentSettings){
+        var paymentSettingValue = paymentSettings.getValue() == null ? BigDecimal.valueOf(0.0) : paymentSettings.getValue();
+        return paymentSettingValue;
+    }
+
+    public static BigDecimal getPaymentValueFromBaseSalary(BigDecimal paymentValue){
+        if(paymentValue == null) {
+            return BigDecimal.valueOf(0.0);
+        }
+        return paymentValue;
+    }
+
+    public static BigDecimal getTaxAmount(BigDecimal aTaxableIncome, SessionCalculationObject sessionCalculationObject){
+        aTaxableIncome = aTaxableIncome.multiply(BigDecimal.valueOf(12));
+//      7% on the first 300000
+        BigDecimal taxableIncome = aTaxableIncome.subtract(BigDecimal.valueOf(300000));
+        BigDecimal taxAmount = BigDecimal.ZERO;
+        if (taxableIncome.compareTo(BigDecimal.ZERO) == -1) {
+            taxAmount = sessionCalculationObject.getComputationConstants().get("TaxClassA").multiply(aTaxableIncome).divide(BigDecimal.valueOf(100));
+            return taxAmount.divide(BigDecimal.valueOf(12), RoundingMode.CEILING).setScale(2, RoundingMode.CEILING);
+        } else {
+            taxAmount = sessionCalculationObject.getComputationConstants().get("TaxClassA").multiply(getRemnant(taxableIncome, 300000)).divide(BigDecimal.valueOf(100));
+        }
 
 //      11% on the next 3000000
         taxAmount = taxAmount.add(sessionCalculationObject.getComputationConstants().get("TaxClassB").multiply(getRemnant(taxableIncome, 300000)).divide(BigDecimal.valueOf(100)));
@@ -72,4 +92,5 @@ public class ComputationUtils {
             return remnantTaxable;
         return BigDecimal.valueOf(nextLevel);
     }
+
 }

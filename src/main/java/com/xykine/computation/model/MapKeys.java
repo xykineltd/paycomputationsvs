@@ -15,6 +15,7 @@ public class MapKeys {
     public static final String TOTAL_PERSONAL_DEDUCTION = "Total Personal Deduction";
     public static final String TOTAL_DEDUCTION = "Total Deduction";
     public static final String BASIC_SALARY = "Basic Salary";
+    public static final String OFF_CYCLE_PAYMENT = "Off-Cycle Payment";
     public static final String TOTAL_NET_PAY = "Total Net Pay";
     public static final String TOTAL_GROSS_PAY = "Total Gross Pay";
     public static final String TOTAL_NHF = "Total National Housing Fund";
