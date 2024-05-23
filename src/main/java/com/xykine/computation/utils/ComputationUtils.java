@@ -46,6 +46,9 @@ public class ComputationUtils {
     }
 
     public static BigDecimal getTaxAmount(BigDecimal aTaxableIncome, SessionCalculationObject sessionCalculationObject){
+        if(aTaxableIncome.compareTo(BigDecimal.ZERO) < 0) {
+            return BigDecimal.ZERO;
+        }
         aTaxableIncome = aTaxableIncome.multiply(BigDecimal.valueOf(12));
 //      7% on the first 300000
         BigDecimal taxableIncome = aTaxableIncome.subtract(BigDecimal.valueOf(300000));
