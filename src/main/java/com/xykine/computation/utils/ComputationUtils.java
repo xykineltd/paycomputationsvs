@@ -1,13 +1,18 @@
 package com.xykine.computation.utils;
 
-import com.xykine.computation.model.PaymentSettings;
+import com.xykine.computation.response.SummaryDetail;
 import com.xykine.computation.service.PaymentCalculatorImpl;
 import com.xykine.computation.session.SessionCalculationObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xykine.payroll.model.PaymentInfo;
+import org.xykine.payroll.model.PaymentSettings;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 public class ComputationUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(PaymentCalculatorImpl.class);
@@ -26,11 +31,20 @@ public class ComputationUtils {
         return input.setScale(2, RoundingMode.CEILING);
     }
 
-    public static synchronized void updateReportSummary(SessionCalculationObject sessionCalculationObject, String key, BigDecimal value){
+    public static synchronized void updateReportSummary(PaymentInfo paymentInfo, SessionCalculationObject sessionCalculationObject, String key, BigDecimal value){
         BigDecimal currentValue = sessionCalculationObject.getSummary().get(key);
         value = value != null ? value : BigDecimal.ZERO;
         currentValue = currentValue.add(value);
         sessionCalculationObject.getSummary().put(key, currentValue);
+
+        List<SummaryDetail> summaryDetailsList = sessionCalculationObject.getSummaryDetails().get(key);
+        SummaryDetail summaryDetail = SummaryDetail.builder()
+                .employeeName(paymentInfo.getFullName())
+                .departmentName(paymentInfo.getDepartmentName())
+                .value(value)
+                .build();
+        summaryDetailsList.add(summaryDetail);
+        sessionCalculationObject.getSummaryDetails().put(key, summaryDetailsList);
     }
 
     public static BigDecimal getPaymentValueFromPaymentSetting(PaymentSettings paymentSettings){

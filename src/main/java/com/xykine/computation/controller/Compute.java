@@ -36,6 +36,7 @@ public class Compute {
         PaymentComputeResponse paymentComputeResponse = computeService.computePayroll(paymentRequest);
         paymentComputeResponse.setId(UUID.randomUUID());
         paymentComputeResponse.setSummary(sessionCalculationObject.getSummary());
+        paymentComputeResponse.setSummaryDetails(sessionCalculationObject.getSummaryDetails());
         paymentComputeResponse.setStart(paymentRequest.getStart().toString());
         paymentComputeResponse.setEnd(paymentRequest.getEnd().toString());
         paymentComputeResponse.setPayrollSimulation(paymentRequest.isPayrollSimulation());

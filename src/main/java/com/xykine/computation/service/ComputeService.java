@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.xykine.computation.model.PaymentInfo;
+
 import com.xykine.computation.request.PaymentInfoRequest;
 import com.xykine.computation.response.PaymentComputeResponse;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.xykine.payroll.model.PaymentInfo;
 
 import java.util.ArrayList;
 import java.util.List;

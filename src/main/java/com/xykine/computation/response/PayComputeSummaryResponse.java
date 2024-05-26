@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 
 @Data
@@ -16,4 +17,5 @@ import java.util.Map;
 public class PayComputeSummaryResponse implements Serializable {
     private String message;
     private Map<String, BigDecimal> summary;
+    private Map<String, List<SummaryDetail>> summaryDetails;
 }

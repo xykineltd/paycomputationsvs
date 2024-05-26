@@ -6,8 +6,7 @@ import com.xykine.computation.entity.simulate.PayrollReportDetailSimulate;
 import com.xykine.computation.entity.simulate.PayrollReportSummarySimulate;
 import com.xykine.computation.exceptions.PayrollReportNotException;
 import com.xykine.computation.exceptions.PayrollUnmodifiableException;
-import com.xykine.computation.model.MapKeys;
-import com.xykine.computation.model.PaymentInfo;
+
 import com.xykine.computation.repo.PayrollReportDetailRepo;
 import com.xykine.computation.repo.PayrollReportSummaryRepo;
 import com.xykine.computation.repo.simulate.PayrollReportDetailSimulateRepo;
@@ -24,6 +23,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.xykine.payroll.model.MapKeys;
+import org.xykine.payroll.model.PaymentInfo;
 
 import java.io.IOException;
 import java.time.LocalDate;
@@ -78,6 +79,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     private ReportResponse getReportResponse(PaymentComputeResponse paymentComputeResponse, String companyId, String startDate) {
         PayComputeSummaryResponse payComputeSummaryResponse = PayComputeSummaryResponse.builder()
                 .summary(paymentComputeResponse.getSummary())
+                .summaryDetails(paymentComputeResponse.getSummaryDetails())
                 .build();
         PayrollReportSummary payrollReportSummary = PayrollReportSummary.builder()
                 .id(paymentComputeResponse.getId())
@@ -104,6 +106,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     private ReportResponse getReportResponseSimulate(PaymentComputeResponse paymentComputeResponse, String companyId, String startDate) {
         PayComputeSummaryResponse payComputeSummaryResponse = PayComputeSummaryResponse.builder()
                 .summary(paymentComputeResponse.getSummary())
+                .summaryDetails(paymentComputeResponse.getSummaryDetails())
                 .build();
         PayrollReportSummarySimulate payrollReportSummary = PayrollReportSummarySimulate.builder()
                 .id(paymentComputeResponse.getId())
