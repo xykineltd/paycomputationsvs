@@ -2,8 +2,8 @@ package com.xykine.computation.service;
 
 import org.xykine.payroll.model.MapKeys;
 import org.xykine.payroll.model.PaymentInfo;
-import org.xykine.payroll.model.PaymentSettings;
 
+import org.xykine.payroll.model.PaymentSettingsResponse;
 import org.xykine.payroll.model.enums.PaymentTypeEnum;
 import com.xykine.computation.session.SessionCalculationObject;
 import com.xykine.computation.utils.ComputationUtils;
@@ -52,7 +52,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         BigDecimal employeePensionFund = getAllowanceForEmployee(paymentInfo)
                 .stream()
                 .filter(x -> x.isPensionable() || x.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_HOUSING) || x.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_TRANSPORT))
-                .map(PaymentSettings::getValue)
+                .map(PaymentSettingsResponse::getValue)
                 .reduce(basicSalary, BigDecimal::add);
         BigDecimal employeePension = ComputationUtils
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("pensionFundPercent")
@@ -64,7 +64,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         BigDecimal employerPensionContribution = getAllowanceForEmployee(paymentInfo)
                 .stream()
                 .filter(x -> x.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_HOUSING) || x.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_TRANSPORT))
-                .map(PaymentSettings::getValue)
+                .map(PaymentSettingsResponse::getValue)
                 .reduce(basicSalary, BigDecimal::add);
 
         employerPensionContribution = ComputationUtils
@@ -197,7 +197,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         var deductions = getDeductionsForEmployee(paymentInfo);
 
         deductions.stream()
-                .filter(PaymentSettings::isActive)
+                .filter(PaymentSettingsResponse::isActive)
                         .forEach(x -> {
                             deductionMap.put(x.getName(), x.getValue());
                             ComputationUtils.updateReportSummary(paymentInfo, sessionCalculationObject, MapKeys.TOTAL_PERSONAL_DEDUCTION, x.getValue());
@@ -218,9 +218,9 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         }
         earningMap.put(MapKeys.BASIC_SALARY, paymentInfo.getBasicSalary());
 
-        Set<PaymentSettings> allowance = getAllowanceForEmployee(paymentInfo);
+        Set<PaymentSettingsResponse> allowance = getAllowanceForEmployee(paymentInfo);
         allowance.stream()
-                .filter(PaymentSettings::isActive)
+                .filter(PaymentSettingsResponse::isActive)
                 .forEach(x -> {
                     earningMap.put(x.getName(), x.getValue());
                 });
@@ -259,7 +259,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         return ComputationUtils.roundToTwoDecimalPlaces(total);
     }
 
-    private Set<PaymentSettings> getAllowanceForEmployee (PaymentInfo paymentInfo) {
+    private Set<PaymentSettingsResponse> getAllowanceForEmployee (PaymentInfo paymentInfo) {
         var paymentSettings = paymentInfo.getPaymentSettings();
         return  paymentSettings
                 .stream()
@@ -267,23 +267,23 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 .collect(Collectors.toSet());
     }
 
-    private PaymentSettings getBasicSalaryForEmployee (PaymentInfo paymentInfo) {
+    private PaymentSettingsResponse getBasicSalaryForEmployee (PaymentInfo paymentInfo) {
         var paymentSettings = paymentInfo.getPaymentSettings();
         return paymentSettings
                 .stream()
                 .filter(setting -> setting.getType().equals(PaymentTypeEnum.BASIC_SALARY_ANNUAL))
-                .findFirst().orElseGet(PaymentSettings::new);
+                .findFirst().orElseGet(PaymentSettingsResponse::new);
     }
 
-    private PaymentSettings getOffCyclePaymentAmountForEmployee (PaymentInfo paymentInfo) {
+    private PaymentSettingsResponse getOffCyclePaymentAmountForEmployee (PaymentInfo paymentInfo) {
         var paymentSettings = paymentInfo.getPaymentSettings();
         return paymentSettings
                 .stream()
                 .filter(setting -> setting.getType().equals(PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT))
-                .findFirst().orElseGet(PaymentSettings::new);
+                .findFirst().orElseGet(PaymentSettingsResponse::new);
     }
 
-    private Set<PaymentSettings> getDeductionsForEmployee (PaymentInfo paymentInfo) {
+    private Set<PaymentSettingsResponse> getDeductionsForEmployee (PaymentInfo paymentInfo) {
         var paymentSettings = paymentInfo.getPaymentSettings();
         return paymentSettings.stream().filter(setting -> setting.getType().equals(PaymentTypeEnum.DEDUCTION_MONTHLY)).collect(Collectors.toSet());
     }

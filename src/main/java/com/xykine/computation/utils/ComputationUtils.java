@@ -6,7 +6,7 @@ import com.xykine.computation.session.SessionCalculationObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xykine.payroll.model.PaymentInfo;
-import org.xykine.payroll.model.PaymentSettings;
+import org.xykine.payroll.model.PaymentSettingsResponse;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -47,7 +47,7 @@ public class ComputationUtils {
         sessionCalculationObject.getSummaryDetails().put(key, summaryDetailsList);
     }
 
-    public static BigDecimal getPaymentValueFromPaymentSetting(PaymentSettings paymentSettings){
+    public static BigDecimal getPaymentValueFromPaymentSetting(PaymentSettingsResponse paymentSettings){
         var paymentSettingValue = paymentSettings.getValue() == null ? BigDecimal.valueOf(0.0) : paymentSettings.getValue();
         return paymentSettingValue;
     }
