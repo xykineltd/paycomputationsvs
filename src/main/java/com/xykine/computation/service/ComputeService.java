@@ -24,21 +24,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ComputeService {
 
-    private final WebClient webClient;
     private final PaymentCalculator paymentCalculator;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ComputeService.class);
 
-    public PaymentComputeResponse computePayroll(PaymentInfoRequest paymentComputeRequest) {
-
-        List rawInfo =  webClient
-                .post()
-                .uri("admin/paymentinfo/compute")
-                .body(BodyInserters.fromValue(paymentComputeRequest))
-                .retrieve().bodyToMono(List.class).block();
-
-            LOGGER.info("Received data size {} ", rawInfo.size());
-
+    public PaymentComputeResponse computePayroll(List<PaymentInfo> rawInfo) {
 
         if(rawInfo.size() > 0) {
             LOGGER.debug("First data received {} ", rawInfo.get(0));
@@ -90,6 +80,8 @@ public class ComputeService {
     private List<PaymentInfo> processReport(List<PaymentInfo> job){
 
         var payInfos =  job.stream()
+                .map(x -> paymentCalculator.applyExchange(x))
+                .map(x -> paymentCalculator.harmoniseToAnnual(x))
                 .map(x -> paymentCalculator.computeGrossPay(x))
                 .map(x -> paymentCalculator.computeNonTaxableIncomeExempt(x))
                 .map(x -> paymentCalculator.prorateEarnings(x))
