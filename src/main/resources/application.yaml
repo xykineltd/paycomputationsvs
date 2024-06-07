@@ -12,6 +12,11 @@ spring:
   codec:
     max-in-memory-size: 500000KB
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://xykine.com/realms/XykinePayroll
   data:
     redis:
       connect-timeout: 2s
