@@ -1,9 +1,9 @@
 package com.xykine.computation.service;
 
-import org.xykine.payroll.model.MapKeys;
-import org.xykine.payroll.model.PaymentInfo;
+import org.springframework.beans.factory.annotation.Value;
+import org.xykine.payroll.model.*;
 
-import org.xykine.payroll.model.PaymentSettingsResponse;
+import org.xykine.payroll.model.enums.PaymentFrequencyEnum;
 import org.xykine.payroll.model.enums.PaymentTypeEnum;
 import com.xykine.computation.session.SessionCalculationObject;
 import com.xykine.computation.utils.ComputationUtils;
@@ -13,18 +13,73 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-
 @Service
 @RequiredArgsConstructor
 public class PaymentCalculatorImpl implements PaymentCalculator{
-
+    @Value("${local.currency.code}")
+    private String localCurrencyCode;
     private final SessionCalculationObject sessionCalculationObject;
     private static final Logger LOGGER = LoggerFactory.getLogger(PaymentCalculatorImpl.class);
+
+    @Override
+    public PaymentInfo applyExchange(PaymentInfo paymentInfo) {
+        BigDecimal exchangeRate = paymentInfo.getExchangeInfo().getExchangeRate();
+        paymentInfo.setBasicSalary(ComputationUtils.exchangeToLocalCurrency(exchangeRate, paymentInfo.getBasicSalary()));
+        Set<PaymentSettingsResponse> paymentSettingsResponseSet = new HashSet<>();
+        paymentInfo.getPaymentSettings()
+                .stream()
+                .filter(x -> x.getValue() != null)
+                .forEach(x -> {
+                    x.setValue(ComputationUtils.exchangeToLocalCurrency(exchangeRate, x.getValue()));
+                    paymentSettingsResponseSet.add(x);
+                });
+        paymentInfo.setPaymentSettings(paymentSettingsResponseSet);
+        return paymentInfo;
+    }
+
+    @Override
+    public PaymentInfo harmoniseToAnnual(PaymentInfo paymentInfo) {
+        long multiplier = 1L;
+        switch (paymentInfo.getSalaryFrequency().getDescription()) {
+            case "Yearly" -> multiplier = 1L;
+            case "Monthly" -> multiplier = 12L;
+            case "Weekly" -> multiplier = 52L;
+            default -> multiplier = 1L;
+        }
+        paymentInfo.setBasicSalary(ComputationUtils.harmoniseToAnnual(multiplier, paymentInfo.getBasicSalary()));
+        Set<PaymentSettingsResponse> paymentSettingsResponseSet = new HashSet<>();
+        long finalMultiplier = multiplier;
+        // annualise all allowances
+        paymentInfo.getPaymentSettings()
+                .stream()
+                .filter(x -> x.getValue() != null && x.getType().getDescription().contains("ALLOWANCE"))
+                .forEach(x -> {
+                    x.setValue(ComputationUtils.harmoniseToAnnual(finalMultiplier, x.getValue()));
+                    if (x.getType().getDescription().contains("HOUSING")) {
+                        x.setType(PaymentTypeEnum.ALLOWANCE_ANNUAL_HOUSING);
+                    } else  if (x.getType().getDescription().contains("TRANSPORT")) {
+                        x.setType(PaymentTypeEnum.ALLOWANCE_ANNUAL_TRANSPORT);
+                    } else {
+                        x.setType(PaymentTypeEnum.ALLOWANCE_ANNUAL);
+                    }
+                    paymentSettingsResponseSet.add(x);
+                });
+        // leave personal deduction as is.
+        paymentInfo.getPaymentSettings()
+                .stream()
+                .filter(x -> x.getValue() != null && x.getType().getDescription().contains("DEDUCTION"))
+                .forEach(x -> {paymentSettingsResponseSet.add(x);
+                });
+        paymentInfo.setPaymentSettings(paymentSettingsResponseSet);
+        return paymentInfo;
+    }
 
     @Override
     public PaymentInfo computeGrossPay(PaymentInfo paymentInfo) {
@@ -38,15 +93,16 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     @Override
     public PaymentInfo computeNonTaxableIncomeExempt(PaymentInfo paymentInfo) {
+        PaymentFrequencyEnum salaryFrequency = paymentInfo.getSalaryFrequency();
         if (paymentInfo.isOffCycle())
             return computeNonTaxableIncomeExemptForOffCycle(paymentInfo);
 
         Map<String, BigDecimal> nonTaxableIncomeExemptMap = new HashMap<>();
         Map<String, BigDecimal> nhf = new HashMap<>();
         Map<String, BigDecimal> pension = new HashMap<>();
+
         int numberOfUnpaidDays = paymentInfo.getNumberOfDaysOfUnpaidAbsence();
-        BigDecimal basicSalary = getBasicSalaryForEmployee(paymentInfo).getValue();
-//        BigDecimal basicSalary = paymentInfo.getBasicSalary();
+        BigDecimal basicSalary = paymentInfo.getBasicSalary();
 
         BigDecimal employeePensionFund = getAllowanceForEmployee(paymentInfo)
                 .stream()
@@ -57,8 +113,8 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("pensionFundPercent")
                         .multiply(employeePensionFund));
 
-        nonTaxableIncomeExemptMap.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION, ComputationUtils.prorate(employeePension,numberOfUnpaidDays));
-        pension.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION, ComputationUtils.prorate(employeePension, numberOfUnpaidDays));
+        nonTaxableIncomeExemptMap.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION, ComputationUtils.prorate(employeePension,numberOfUnpaidDays, salaryFrequency));
+        pension.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION, ComputationUtils.prorate(employeePension, numberOfUnpaidDays, salaryFrequency));
 
         BigDecimal employerPensionContribution = getAllowanceForEmployee(paymentInfo)
                 .stream()
@@ -70,17 +126,16 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("employerPensionContributionPercent")
                         .multiply(employerPensionContribution));
 
-
-        pension.put(MapKeys.EMPLOYER_PENSION_CONTRIBUTION, ComputationUtils.prorate(employerPensionContribution, numberOfUnpaidDays));
+        pension.put(MapKeys.EMPLOYER_PENSION_CONTRIBUTION, ComputationUtils.prorate(employerPensionContribution, numberOfUnpaidDays, salaryFrequency));
         pension.put(MapKeys.TOTAL_PENSION_FOR_EMPLOYEE, getTotal(pension));
 
-        ComputationUtils.updateReportSummary(paymentInfo, sessionCalculationObject, MapKeys.TOTAL_EMPLOYER_PENSION_CONTRIBUTION, ComputationUtils.prorate(employerPensionContribution,  numberOfUnpaidDays));
+        ComputationUtils.updateReportSummary(paymentInfo, sessionCalculationObject, MapKeys.TOTAL_EMPLOYER_PENSION_CONTRIBUTION, ComputationUtils.prorate(employerPensionContribution,  numberOfUnpaidDays, salaryFrequency));
 
         BigDecimal nationalHousingFund = ComputationUtils
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("nationalHousingFundPercent")
                         .multiply(basicSalary));
-        BigDecimal nhfValue = ComputationUtils.prorate(nationalHousingFund, numberOfUnpaidDays);
-        nonTaxableIncomeExemptMap.put(MapKeys.NATIONAL_HOUSING_FUND, ComputationUtils.prorate(nationalHousingFund,numberOfUnpaidDays));
+        BigDecimal nhfValue = ComputationUtils.prorate(nationalHousingFund, numberOfUnpaidDays, salaryFrequency);
+        nonTaxableIncomeExemptMap.put(MapKeys.NATIONAL_HOUSING_FUND, ComputationUtils.prorate(nationalHousingFund,numberOfUnpaidDays, salaryFrequency));
         nhf.put(MapKeys.NATIONAL_HOUSING_FUND, nhfValue);
         paymentInfo.setNhf(nhf);
 
@@ -90,17 +145,17 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("craFraction")
                         .multiply(grossIncomeForCRA));
         if (rawFXR.compareTo(sessionCalculationObject.getComputationConstants().get("craCutOff")) == 1) {
-            nonTaxableIncomeExemptMap.put(MapKeys.FIXED_CONSOLIDATED_RELIEF_ALLOWANCE, ComputationUtils.prorate(rawFXR, numberOfUnpaidDays));
+            nonTaxableIncomeExemptMap.put(MapKeys.FIXED_CONSOLIDATED_RELIEF_ALLOWANCE, ComputationUtils.prorate(rawFXR, numberOfUnpaidDays, salaryFrequency));
         } else {
             nonTaxableIncomeExemptMap.put(MapKeys.FIXED_CONSOLIDATED_RELIEF_ALLOWANCE, ComputationUtils.prorate(
-                    BigDecimal.valueOf(200000),numberOfUnpaidDays));
+                    BigDecimal.valueOf(200000),numberOfUnpaidDays, salaryFrequency));
         }
 
         BigDecimal variableCRA = ComputationUtils
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("variableCRAFraction")
                         .multiply(grossIncomeForCRA));
         nonTaxableIncomeExemptMap.put(MapKeys.VARIABLE_CONSOLIDATED_RELIEF_ALLOWANCE, ComputationUtils
-                .roundToTwoDecimalPlaces(ComputationUtils.prorate(variableCRA, numberOfUnpaidDays)));
+                .roundToTwoDecimalPlaces(ComputationUtils.prorate(variableCRA, numberOfUnpaidDays, salaryFrequency)));
 
         BigDecimal total = getTotal(nonTaxableIncomeExemptMap);
 
@@ -111,7 +166,8 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     }
 
     private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo paymentInfo) {
-        LOGGER.info("paymentInfo** {}", paymentInfo.getPaymentSettings());
+        LOGGER.info("paymentInfo ===> {}", paymentInfo.getPaymentSettings());
+        PaymentFrequencyEnum salaryFrequency = paymentInfo.getSalaryFrequency();
         Map<String, BigDecimal> nonTaxableIncomeExemptMap = new HashMap<>();
         Map<String, BigDecimal> nhf = new HashMap<>();
         nhf.put(MapKeys.NATIONAL_HOUSING_FUND, BigDecimal.ZERO);
@@ -127,17 +183,17 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("craFraction")
                         .multiply(grossIncomeForCRA));
         if (rawFXR.compareTo(sessionCalculationObject.getComputationConstants().get("craCutOff")) == 1) {
-            nonTaxableIncomeExemptMap.put(MapKeys.FIXED_CONSOLIDATED_RELIEF_ALLOWANCE, ComputationUtils.prorate(rawFXR, 0));
+            nonTaxableIncomeExemptMap.put(MapKeys.FIXED_CONSOLIDATED_RELIEF_ALLOWANCE, ComputationUtils.prorate(rawFXR, 0, salaryFrequency));
         } else {
             nonTaxableIncomeExemptMap.put(MapKeys.FIXED_CONSOLIDATED_RELIEF_ALLOWANCE, ComputationUtils.prorate(
-                    BigDecimal.valueOf(200000),0));
+                    BigDecimal.valueOf(200000),0, salaryFrequency));
         }
 
         BigDecimal variableCRA = ComputationUtils
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("variableCRAFraction")
                         .multiply(grossIncomeForCRA));
         nonTaxableIncomeExemptMap.put(MapKeys.VARIABLE_CONSOLIDATED_RELIEF_ALLOWANCE, ComputationUtils
-                .roundToTwoDecimalPlaces(ComputationUtils.prorate(variableCRA, 0)));
+                .roundToTwoDecimalPlaces(ComputationUtils.prorate(variableCRA, 0, salaryFrequency)));
 
         BigDecimal total = getTotal(nonTaxableIncomeExemptMap);
 
@@ -150,6 +206,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     @Override
     public PaymentInfo prorateEarnings(PaymentInfo paymentInfo){
+        PaymentFrequencyEnum salaryFrequency = paymentInfo.getSalaryFrequency();
         if (paymentInfo.isOffCycleActualValueSupplied())
             return paymentInfo;
 
@@ -159,7 +216,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         for(Map.Entry<String, BigDecimal> entry : earningMap.entrySet()) {
             if (!entry.getKey().contains(MapKeys.GROSS_PAY))  {
                 earningMap.put(entry.getKey(), ComputationUtils.prorate(entry.getValue(),
-                        paymentInfo.getNumberOfDaysOfUnpaidAbsence()));
+                        paymentInfo.getNumberOfDaysOfUnpaidAbsence(), salaryFrequency));
             }
         }
         BigDecimal total = getTotal(earningMap);
@@ -197,10 +254,10 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
         deductions.stream()
                 .filter(PaymentSettingsResponse::isActive)
-                        .forEach(x -> {
-                            deductionMap.put(x.getName(), x.getValue());
-                            ComputationUtils.updateReportSummary(paymentInfo, sessionCalculationObject, MapKeys.TOTAL_PERSONAL_DEDUCTION, x.getValue());
-                        });
+                .forEach(x -> {
+                    deductionMap.put(x.getName(), x.getValue());
+                    ComputationUtils.updateReportSummary(paymentInfo, sessionCalculationObject, MapKeys.TOTAL_PERSONAL_DEDUCTION, x.getValue());
+                });
 
         deductionMap.put(MapKeys.TOTAL_DEDUCTION, getTotal(deductionMap));
         paymentInfo.setDeduction(deductionMap);
@@ -215,8 +272,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
             LOGGER.info("earningMap** {}", earningMap);
             return earningMap;
         }
-//        earningMap.put(MapKeys.BASIC_SALARY, paymentInfo.getBasicSalary());
-        earningMap.put(MapKeys.BASIC_SALARY, getBasicSalaryForEmployee(paymentInfo).getValue());
+        earningMap.put(MapKeys.BASIC_SALARY, paymentInfo.getBasicSalary());
 
         Set<PaymentSettingsResponse> allowance = getAllowanceForEmployee(paymentInfo);
         allowance.stream()
@@ -224,14 +280,17 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 .forEach(x -> {
                     earningMap.put(x.getName(), x.getValue());
                 });
+        LOGGER.debug("earningMap ==> {}", earningMap);
         return earningMap;
     }
 
     @Override
     public PaymentInfo computeNetPay(PaymentInfo paymentInfo) {
         if(paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY) != null) {
+            ExchangeInfo exchangeInfo = paymentInfo.getExchangeInfo();
+            BigDecimal exchangeRate = exchangeInfo.getExchangeRate();
             BigDecimal netPay = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(paymentInfo.getDeduction().get(MapKeys.TOTAL_DEDUCTION));
-            paymentInfo.setNetPay(netPay);
+            paymentInfo.setNetPay(ComputationUtils.roundToTwoDecimalPlaces(netPay.divide(exchangeRate, 2, RoundingMode.CEILING)));
             //Add net pay to summary
             ComputationUtils.updateReportSummary(paymentInfo, sessionCalculationObject, MapKeys.TOTAL_NET_PAY, netPay);
             //Add gross pay to summary
@@ -266,14 +325,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 .collect(Collectors.toSet());
     }
 
-    private PaymentSettingsResponse getBasicSalaryForEmployee (PaymentInfo paymentInfo) {
-        var paymentSettings = paymentInfo.getPaymentSettings();
-        return paymentSettings
-                .stream()
-                .filter(setting -> setting.getType().equals(PaymentTypeEnum.BASIC_SALARY_ANNUAL))
-                .findFirst().orElseGet(PaymentSettingsResponse::new);
-    }
-
     private PaymentSettingsResponse getOffCyclePaymentAmountForEmployee (PaymentInfo paymentInfo) {
         var paymentSettings = paymentInfo.getPaymentSettings();
         return paymentSettings
@@ -284,6 +335,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     private Set<PaymentSettingsResponse> getDeductionsForEmployee (PaymentInfo paymentInfo) {
         var paymentSettings = paymentInfo.getPaymentSettings();
-        return paymentSettings.stream().filter(setting -> setting.getType().equals(PaymentTypeEnum.DEDUCTION_MONTHLY)).collect(Collectors.toSet());
+        return paymentSettings.stream().filter(setting -> setting.getType().getDescription().contains("DEDUCTION")).collect(Collectors.toSet());
     }
 }
