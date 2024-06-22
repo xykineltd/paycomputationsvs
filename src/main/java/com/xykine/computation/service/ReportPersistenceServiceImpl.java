@@ -337,6 +337,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                         .employeeId(x.getEmployeeID())
                         .fullName(payComputeDetailResponse.getReport().getFullName())
                         .summaryId(paymentComputeResponse.getId().toString())
+                        .currency(x.getCurrency().getCode())
+                        .exchangeInfo(x.getExchangeInfo())
                         .companyId(companyId)
                         .offCycleId(paymentComputeResponse.getOffCycleId())
                         .departmentId(x.getDepartmentID())

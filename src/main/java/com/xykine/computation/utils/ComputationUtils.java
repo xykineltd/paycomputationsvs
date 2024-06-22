@@ -5,24 +5,31 @@ import com.xykine.computation.service.PaymentCalculatorImpl;
 import com.xykine.computation.session.SessionCalculationObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xykine.payroll.model.PaymentFrequencyEnum;
 import org.xykine.payroll.model.PaymentInfo;
 import org.xykine.payroll.model.PaymentSettingsResponse;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+
 
 public class ComputationUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(PaymentCalculatorImpl.class);
-    public static BigDecimal prorate(BigDecimal rawValue, int numberOfUnPaiAbsence){
+    public static BigDecimal prorate(BigDecimal rawValue, int numberOfUnPaiAbsence, PaymentFrequencyEnum salaryFrequency){
         if (rawValue == null)
             return BigDecimal.ZERO;
         rawValue = rawValue.divide(BigDecimal.valueOf(12), 2,  RoundingMode.CEILING);
+
+        if (salaryFrequency.compareTo(PaymentFrequencyEnum.WEEKLY) == 0)
+            rawValue = rawValue.divide(BigDecimal.valueOf(4), 2,  RoundingMode.CEILING);
+
+        if (salaryFrequency.compareTo(PaymentFrequencyEnum.BI_WEEKLY) == 0)
+            rawValue = rawValue.divide(BigDecimal.valueOf(2), 2,  RoundingMode.CEILING);
+
         if (numberOfUnPaiAbsence == 0)
             return rawValue;
-//       if numberOfDaysOfUnpaidAbsence is not 0, remove the daily wage equivalent multiplied by the number of unpaid absences
+//      if numberOfDaysOfUnpaidAbsence is not 0, remove the daily wage equivalent multiplied by the number of unpaid absences
         BigDecimal dailyEquivalent = rawValue.divide(BigDecimal.valueOf(21), 2,  RoundingMode.CEILING); // To do ==> verify number of working days in the month
         return roundToTwoDecimalPlaces(rawValue.subtract(dailyEquivalent.multiply(BigDecimal.valueOf(numberOfUnPaiAbsence))));
     }
@@ -104,10 +111,21 @@ public class ComputationUtils {
         return taxAmount.divide(BigDecimal.valueOf(12), RoundingMode.CEILING).setScale(2, RoundingMode.CEILING);
     }
 
+    public  static BigDecimal exchangeToLocalCurrency(BigDecimal exchangeRate, BigDecimal amount){
+        return roundToTwoDecimalPlaces(exchangeRate.multiply(amount));
+    }
+
+    public static BigDecimal exchangeToForeignCurrency(BigDecimal exchangeRate, BigDecimal amount){
+        return roundToTwoDecimalPlaces(amount.divide(exchangeRate));
+    }
+
+    public static BigDecimal harmoniseToAnnual(long multiplier, BigDecimal amount){
+        return roundToTwoDecimalPlaces(BigDecimal.valueOf(multiplier).multiply(amount));
+    }
+
     private static BigDecimal getRemnant(BigDecimal remnantTaxable, Integer nextLevel) {
         if (remnantTaxable.compareTo(BigDecimal.valueOf(nextLevel)) == -1)
             return remnantTaxable;
         return BigDecimal.valueOf(nextLevel);
     }
-
 }
