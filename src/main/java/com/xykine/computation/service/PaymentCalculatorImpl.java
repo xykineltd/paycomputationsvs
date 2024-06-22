@@ -23,7 +23,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PaymentCalculatorImpl implements PaymentCalculator{
 
-
     private final SessionCalculationObject sessionCalculationObject;
     private static final Logger LOGGER = LoggerFactory.getLogger(PaymentCalculatorImpl.class);
 
@@ -45,9 +44,9 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         Map<String, BigDecimal> nonTaxableIncomeExemptMap = new HashMap<>();
         Map<String, BigDecimal> nhf = new HashMap<>();
         Map<String, BigDecimal> pension = new HashMap<>();
-
         int numberOfUnpaidDays = paymentInfo.getNumberOfDaysOfUnpaidAbsence();
-        BigDecimal basicSalary = paymentInfo.getBasicSalary();
+        BigDecimal basicSalary = getBasicSalaryForEmployee(paymentInfo).getValue();
+//        BigDecimal basicSalary = paymentInfo.getBasicSalary();
 
         BigDecimal employeePensionFund = getAllowanceForEmployee(paymentInfo)
                 .stream()
@@ -216,7 +215,8 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
             LOGGER.info("earningMap** {}", earningMap);
             return earningMap;
         }
-        earningMap.put(MapKeys.BASIC_SALARY, paymentInfo.getBasicSalary());
+//        earningMap.put(MapKeys.BASIC_SALARY, paymentInfo.getBasicSalary());
+        earningMap.put(MapKeys.BASIC_SALARY, getBasicSalaryForEmployee(paymentInfo).getValue());
 
         Set<PaymentSettingsResponse> allowance = getAllowanceForEmployee(paymentInfo);
         allowance.stream()
@@ -224,7 +224,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 .forEach(x -> {
                     earningMap.put(x.getName(), x.getValue());
                 });
-        LOGGER.debug("earningMap ==> {}", earningMap);
         return earningMap;
     }
 
