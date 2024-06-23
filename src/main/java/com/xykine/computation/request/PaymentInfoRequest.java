@@ -1,6 +1,7 @@
 package com.xykine.computation.request;
 
 import lombok.Data;
+import org.xykine.payroll.model.enums.PaymentFrequencyEnum;
 
 import java.time.LocalDate;
 import java.util.Set;
@@ -15,4 +16,5 @@ public class PaymentInfoRequest {
     String offCycleID;
     boolean payrollSimulation;
     boolean offCycle;
+    PaymentFrequencyEnum paymentFrequency;
 }

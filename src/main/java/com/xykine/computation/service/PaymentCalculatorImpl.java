@@ -1,6 +1,5 @@
 package com.xykine.computation.service;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.xykine.payroll.model.*;
 
 import org.xykine.payroll.model.enums.PaymentFrequencyEnum;
@@ -23,8 +22,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class PaymentCalculatorImpl implements PaymentCalculator{
-    @Value("${local.currency.code}")
-    private String localCurrencyCode;
+//    @Value("${local.currency.code}")
+//    private String localCurrencyCode;
     private final SessionCalculationObject sessionCalculationObject;
     private static final Logger LOGGER = LoggerFactory.getLogger(PaymentCalculatorImpl.class);
 
@@ -325,6 +324,14 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 .collect(Collectors.toSet());
     }
 
+    private PaymentSettingsResponse getBasicSalaryForEmployee (PaymentInfo paymentInfo) {
+        var paymentSettings = paymentInfo.getPaymentSettings();
+        return paymentSettings
+                .stream()
+                .filter(setting -> setting.getType().equals(PaymentTypeEnum.BASIC_SALARY_ANNUAL))
+                .findFirst().orElseGet(PaymentSettingsResponse::new);
+    }
+
     private PaymentSettingsResponse getOffCyclePaymentAmountForEmployee (PaymentInfo paymentInfo) {
         var paymentSettings = paymentInfo.getPaymentSettings();
         return paymentSettings
@@ -335,6 +342,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     private Set<PaymentSettingsResponse> getDeductionsForEmployee (PaymentInfo paymentInfo) {
         var paymentSettings = paymentInfo.getPaymentSettings();
-        return paymentSettings.stream().filter(setting -> setting.getType().getDescription().contains("DEDUCTION")).collect(Collectors.toSet());
+        return paymentSettings.stream().filter(setting -> setting.getType().equals(PaymentTypeEnum.DEDUCTION_MONTHLY)).collect(Collectors.toSet());
     }
 }

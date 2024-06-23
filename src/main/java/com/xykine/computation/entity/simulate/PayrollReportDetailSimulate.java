@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.xykine.payroll.model.ExchangeInfo;
 
 import java.time.LocalDateTime;
 
@@ -28,5 +29,7 @@ public class PayrollReportDetailSimulate {
     private String endDate;
     private boolean payrollSimulation;
     private boolean payrollApproved;
+    private String currency;
+    private ExchangeInfo exchangeInfo;
     private LocalDateTime createdDate;
 }
