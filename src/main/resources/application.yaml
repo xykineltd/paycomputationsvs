@@ -26,8 +26,8 @@ spring:
       timeout: 1s
 
     mongodb:
-      uri: mongodb://admin:docker@localhost/payroll?tls=false&authSource=admin
-#      uri: ${ SPRING_DATA_MONGODB_URI }
+#      uri: mongodb://admin:docker@localhost/payroll?tls=false&authSource=admin
+      uri: ${ SPRING_DATA_MONGODB_URI }
 
 admin:
   service:
