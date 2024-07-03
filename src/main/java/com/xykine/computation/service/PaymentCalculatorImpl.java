@@ -17,13 +17,13 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class PaymentCalculatorImpl implements PaymentCalculator{
-    @Value("${local.currency.code}")
-    private String localCurrencyCode;
+
     private final SessionCalculationObject sessionCalculationObject;
     private static final Logger LOGGER = LoggerFactory.getLogger(PaymentCalculatorImpl.class);
 
@@ -45,22 +45,18 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     @Override
     public PaymentInfo harmoniseToAnnual(PaymentInfo paymentInfo) {
-        long multiplier = 1L;
-        switch (paymentInfo.getSalaryFrequency().getDescription()) {
-            case "Yearly" -> multiplier = 1L;
-            case "Monthly" -> multiplier = 12L;
-            case "Weekly" -> multiplier = 52L;
-            default -> multiplier = 1L;
-        }
-        paymentInfo.setBasicSalary(ComputationUtils.harmoniseToAnnual(multiplier, paymentInfo.getBasicSalary()));
+        AtomicLong multiplier = new AtomicLong(1L);
+        multiplier.set(getMultiplier(paymentInfo.getSalaryFrequency().getDescription()));
+        paymentInfo.setBasicSalary(ComputationUtils.harmoniseToAnnual(multiplier.get(), paymentInfo.getBasicSalary()));
         Set<PaymentSettingsResponse> paymentSettingsResponseSet = new HashSet<>();
-        long finalMultiplier = multiplier;
+
         // annualise all allowances
         paymentInfo.getPaymentSettings()
                 .stream()
                 .filter(x -> x.getValue() != null && x.getType().getDescription().contains("ALLOWANCE"))
                 .forEach(x -> {
-                    x.setValue(ComputationUtils.harmoniseToAnnual(finalMultiplier, x.getValue()));
+                     multiplier.set(getMultiplier(x.getPaymentFrequency().getDescription()));
+                    x.setValue(ComputationUtils.harmoniseToAnnual(multiplier.get(), x.getValue()));
                         if (x.getType().getDescription().contains("HOUSING")) {
                             x.setType(PaymentTypeEnum.ALLOWANCE_ANNUAL_HOUSING);
                         } else  if (x.getType().getDescription().contains("TRANSPORT")) {
@@ -335,5 +331,17 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     private Set<PaymentSettingsResponse> getDeductionsForEmployee (PaymentInfo paymentInfo) {
         var paymentSettings = paymentInfo.getPaymentSettings();
         return paymentSettings.stream().filter(setting -> setting.getType().getDescription().contains("DEDUCTION")).collect(Collectors.toSet());
+    }
+
+    private Long getMultiplier(String description) {
+        Long multiplier = null;
+        switch (description) {
+            case "Yearly" -> multiplier = 1L;
+            case "Monthly" -> multiplier = 12L;
+            case "Weekly" -> multiplier = 48L;
+            case "Bi-weekly" -> multiplier = 24L;
+            default -> multiplier = 1L;
+        }
+        return multiplier;
     }
 }
