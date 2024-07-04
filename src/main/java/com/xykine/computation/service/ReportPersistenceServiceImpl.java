@@ -338,6 +338,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                         .fullName(payComputeDetailResponse.getReport().getFullName())
                         .summaryId(paymentComputeResponse.getId().toString())
                         .currency(x.getCurrency().getDescription())
+                        .currency(x.getCurrency().getCode())
                         .exchangeInfo(x.getExchangeInfo())
                         .companyId(companyId)
                         .offCycleId(paymentComputeResponse.getOffCycleId())
