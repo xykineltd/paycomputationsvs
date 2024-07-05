@@ -6,6 +6,6 @@
          -Ddocker.publishRegistry.password=dckr_pat_K9c-HdfboeduOqJRnVsLBkSvlMo \
          -Ddocker.publishRegistry.url=docker.io \
          -Dspring-boot.build-image.publish=true \
-	 -Dspring-boot.build-image.imageName=kacytunde/paycomputation-service:1.0
+	 -Dspring-boot.build-image.imageName=kacytunde/paycomputation-service:1.1
 
 ```

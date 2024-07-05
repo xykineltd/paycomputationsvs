@@ -26,7 +26,9 @@ public class PaymentComputeResponse implements Serializable {
     private String fullName;
     private List<PaymentInfo> report;
     private Map<String, BigDecimal> summary;
+    private Map<String, BigDecimal> summaryVariance;
     private Map<String, List<SummaryDetail>> summaryDetails;
+    private Map<String, List<SummaryDetail>> summaryDetailsVariance;
     private String start;
     private String end;
     private boolean payrollSimulation;

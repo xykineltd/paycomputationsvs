@@ -49,6 +49,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     public ReportResponse serializeAndSaveReport(PaymentComputeResponse paymentComputeResponse, String companyId)
             throws IOException {
         long startTime = System.currentTimeMillis();
+//        populateReportVariance(paymentComputeResponse);
         ReportResponse reportResponse = null;
         try {
             if(paymentComputeResponse.isPayrollSimulation()) {
@@ -76,10 +77,21 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         LOGGER.info(" Process time ===> {} ms", endTime - startTime );
         return reportResponse;
     }
+
+    private void populateReportVariance(PaymentComputeResponse paymentComputeResponse) {
+        paymentComputeResponse.setSummaryVariance(paymentComputeResponse.getSummary());
+        paymentComputeResponse.setSummaryDetailsVariance(paymentComputeResponse.getSummaryDetails());
+    }
+
     private ReportResponse getReportResponse(PaymentComputeResponse paymentComputeResponse, String companyId, String startDate) {
+        // TODO process the variance
+
         PayComputeSummaryResponse payComputeSummaryResponse = PayComputeSummaryResponse.builder()
                 .summary(paymentComputeResponse.getSummary())
                 .summaryDetails(paymentComputeResponse.getSummaryDetails())
+                // TODO update the variance values
+                .summaryVariance(paymentComputeResponse.getSummary())
+                .summaryDetailsVariance(paymentComputeResponse.getSummaryDetails())
                 .build();
         PayrollReportSummary payrollReportSummary = PayrollReportSummary.builder()
                 .id(paymentComputeResponse.getId())
@@ -104,9 +116,16 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         return ReportUtils.transform(payrollReportSummary);
     }
     private ReportResponse getReportResponseSimulate(PaymentComputeResponse paymentComputeResponse, String companyId, String startDate) {
+//        var reportSummary = payrollReportSummaryRepoSimulate.findPayrollReportSummaryByStartDateAndCompanyId(LocalDate.parse(startDate), companyId);
+//        System.out.println(ReportUtils.transform(reportSummary));
+
+        // TODO process the variance
         PayComputeSummaryResponse payComputeSummaryResponse = PayComputeSummaryResponse.builder()
                 .summary(paymentComputeResponse.getSummary())
                 .summaryDetails(paymentComputeResponse.getSummaryDetails())
+                // TODO update the variance values
+                .summaryVariance(paymentComputeResponse.getSummary())
+                .summaryDetailsVariance(paymentComputeResponse.getSummaryDetails())
                 .build();
         PayrollReportSummarySimulate payrollReportSummary = PayrollReportSummarySimulate.builder()
                 .id(paymentComputeResponse.getId())

@@ -17,5 +17,7 @@ import java.util.Map;
 public class PayComputeSummaryResponse implements Serializable {
     private String message;
     private Map<String, BigDecimal> summary;
+    private Map<String, BigDecimal> summaryVariance;
     private Map<String, List<SummaryDetail>> summaryDetails;
+    private Map<String, List<SummaryDetail>> summaryDetailsVariance;
 }

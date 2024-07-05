@@ -5,7 +5,6 @@ import com.xykine.computation.service.PaymentCalculatorImpl;
 import com.xykine.computation.session.SessionCalculationObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xykine.payroll.model.PaymentFrequencyEnum;
 import org.xykine.payroll.model.PaymentInfo;
 import org.xykine.payroll.model.PaymentSettingsResponse;
 import org.xykine.payroll.model.enums.PaymentFrequencyEnum;
