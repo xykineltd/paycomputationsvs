@@ -9,8 +9,8 @@ import java.util.UUID;
 
 public interface PayrollReportSummarySimulateRepo extends MongoRepository<PayrollReportSummarySimulate, UUID> {
 
-    PayrollReportSummarySimulate findPayrollReportSummaryByStartDate(LocalDate startDate);
-    PayrollReportSummarySimulate findPayrollReportSummaryByStartDateAndCompanyId(LocalDate startDate, String companyID);
+    PayrollReportSummarySimulate findPayrollReportSummaryByStartDate(String startDate);
+    PayrollReportSummarySimulate findPayrollReportSummaryByStartDateAndCompanyId(String startDate, String companyID);
     List<PayrollReportSummarySimulate> findAllByCompanyIdOrderByCreatedDateAsc(String companyId);
     void deleteAllByStartDate(LocalDate startDate);
     void deletePayrollReportSummaryByPayrollSimulation(Boolean simulation);

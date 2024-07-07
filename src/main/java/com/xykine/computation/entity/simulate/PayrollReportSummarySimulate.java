@@ -21,8 +21,10 @@ public class PayrollReportSummarySimulate {
     private UUID id;
     private String companyId;
     private byte[] report;
-    private LocalDate startDate;
-    private LocalDate endDate;
+//    private LocalDate startDate;
+//    private LocalDate endDate;
+    private String startDate;
+    private String endDate;
     private boolean payrollSimulation;
     private boolean payrollApproved;
     private LocalDateTime createdDate;

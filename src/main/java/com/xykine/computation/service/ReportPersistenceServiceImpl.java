@@ -27,6 +27,7 @@ import org.xykine.payroll.model.MapKeys;
 import org.xykine.payroll.model.PaymentInfo;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -49,7 +50,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     public ReportResponse serializeAndSaveReport(PaymentComputeResponse paymentComputeResponse, String companyId)
             throws IOException {
         long startTime = System.currentTimeMillis();
-//        populateReportVariance(paymentComputeResponse);
         ReportResponse reportResponse = null;
         try {
             if(paymentComputeResponse.isPayrollSimulation()) {
@@ -85,13 +85,15 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
     private ReportResponse getReportResponse(PaymentComputeResponse paymentComputeResponse, String companyId, String startDate) {
         // TODO process the variance
+        var previousDate = LocalDate.parse(startDate).minusMonths(1);
+        var reportSummary = payrollReportSummaryRepo.findPayrollReportSummaryByStartDateAndCompanyId(previousDate, companyId);
 
         PayComputeSummaryResponse payComputeSummaryResponse = PayComputeSummaryResponse.builder()
                 .summary(paymentComputeResponse.getSummary())
                 .summaryDetails(paymentComputeResponse.getSummaryDetails())
                 // TODO update the variance values
-                .summaryVariance(paymentComputeResponse.getSummary())
-                .summaryDetailsVariance(paymentComputeResponse.getSummaryDetails())
+                .summaryVariance(processSummaryVariance(paymentComputeResponse.getSummary(), reportSummary))
+                .summaryDetailsVariance(processSummaryDetailsVariance(paymentComputeResponse.getSummaryDetails(), reportSummary))
                 .build();
         PayrollReportSummary payrollReportSummary = PayrollReportSummary.builder()
                 .id(paymentComputeResponse.getId())
@@ -108,6 +110,100 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         saveReportDetails(paymentComputeResponse, companyId, payrollReportSummary.isPayrollApproved());
         return getPayRollReport(paymentComputeResponse.getId());
     }
+
+    private Map<String, List<SummaryDetail>> processSummaryDetailsVariance(Map<String, List<SummaryDetail>> currentSummaryDetails, PayrollReportSummary previousPayrollReportSummary) {
+        Map<String, List<SummaryDetail>> summaryDetailsVariance = new HashMap<>();
+
+        if (previousPayrollReportSummary == null) {
+            // If previousPayrollReportSummary is null, set all values to zero
+            for (Map.Entry<String, List<SummaryDetail>> entry : currentSummaryDetails.entrySet()) {
+                List<SummaryDetail> zeroValueDetails = entry.getValue().stream()
+                        .map(detail -> new SummaryDetail(detail.getEmployeeName(), detail.getDepartmentName(), BigDecimal.ZERO))
+                        .collect(Collectors.toList());
+                summaryDetailsVariance.put(entry.getKey(), zeroValueDetails);
+            }
+        } else {
+            // If previousPayrollReportSummary is not null, calculate the differences
+            var previousSummaryDetails = ReportUtils.transform(previousPayrollReportSummary).getSummary().getSummaryDetails();
+
+            for (Map.Entry<String, List<SummaryDetail>> entry : currentSummaryDetails.entrySet()) {
+                String key = entry.getKey();
+                List<SummaryDetail> currentDetailsList = entry.getValue();
+                List<SummaryDetail> previousDetailsList = previousSummaryDetails.get(key);
+
+                // Create a map from employee name to previous details for quick lookup
+                Map<String, SummaryDetail> previousDetailsMap = previousDetailsList != null
+                        ? previousDetailsList.stream().collect(Collectors.toMap(SummaryDetail::getEmployeeName, detail -> detail))
+                        : new HashMap<>();
+
+                // Calculate the differences
+                List<SummaryDetail> varianceDetailsList = currentDetailsList.stream()
+                        .map(detail -> {
+                            SummaryDetail previousDetail = previousDetailsMap.get(detail.getEmployeeName());
+                            BigDecimal previousValue = previousDetail != null ? previousDetail.getValue() : BigDecimal.ZERO;
+                            BigDecimal difference = detail.getValue().subtract(previousValue);
+                            return new SummaryDetail(detail.getEmployeeName(), detail.getDepartmentName(), difference);
+                        })
+                        .collect(Collectors.toList());
+
+                summaryDetailsVariance.put(key, varianceDetailsList);
+            }
+        }
+        return summaryDetailsVariance;
+    }
+
+    private Map<String, List<SummaryDetail>> processSummaryDetailsVarianceSimulate(Map<String, List<SummaryDetail>> currentSummaryDetails) {
+        Map<String, List<SummaryDetail>> summaryDetailsVariance = new HashMap<>();
+        for (Map.Entry<String, List<SummaryDetail>> entry : currentSummaryDetails.entrySet()) {
+            List<SummaryDetail> zeroValueDetails = entry.getValue().stream()
+                    .map(detail -> new SummaryDetail(detail.getEmployeeName(), detail.getDepartmentName(), BigDecimal.ZERO))
+                    .collect(Collectors.toList());
+            summaryDetailsVariance.put(entry.getKey(), zeroValueDetails);
+        }
+        return summaryDetailsVariance;
+    }
+
+
+    private Map<String, BigDecimal> processSummaryVariance(Map<String, BigDecimal> currentSummary, PayrollReportSummary previousPayrollReportSummary) {
+        Map<String, BigDecimal> summaryVariance = new HashMap<>();
+
+        if (previousPayrollReportSummary == null) {
+            // If previousPayrollReportSummary is null, set all values to zero
+            for (Map.Entry<String, BigDecimal> entry : currentSummary.entrySet()) {
+                summaryVariance.put(entry.getKey(), BigDecimal.ZERO);
+            }
+        } else {
+            // If previousPayrollReportSummary is not null, calculate the differences
+            var previousSummary = ReportUtils.transform(previousPayrollReportSummary).getSummary().getSummary();
+
+            for (Map.Entry<String, BigDecimal> entry : currentSummary.entrySet()) {
+                String key = entry.getKey();
+                BigDecimal currentValue = entry.getValue();
+                BigDecimal previousValue = previousSummary.get(key);
+
+                // If previousValue is not present, assume it to be BigDecimal.ZERO
+                if (previousValue == null) {
+                    previousValue = BigDecimal.ZERO;
+                }
+
+                // Calculate the difference
+                BigDecimal difference = currentValue.subtract(previousValue);
+
+                // Add the difference to the differences map
+                summaryVariance.put(key, difference);
+            }
+        }
+        return summaryVariance;
+    }
+
+    private Map<String, BigDecimal> processSummaryVarianceSimulate(Map<String, BigDecimal> currentSummary) {
+        Map<String, BigDecimal> summaryVariance = new HashMap<>();
+        for (Map.Entry<String, BigDecimal> entry : currentSummary.entrySet()) {
+            summaryVariance.put(entry.getKey(), BigDecimal.ZERO);
+        }
+        return summaryVariance;
+    }
+
     public ReportResponse getPayRollReport(UUID id){
         PayrollReportSummary payrollReportSummary = payrollReportSummaryRepo.findPayrollReportSummaryById(id);
         if(payrollReportSummary == null){
@@ -116,22 +212,19 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         return ReportUtils.transform(payrollReportSummary);
     }
     private ReportResponse getReportResponseSimulate(PaymentComputeResponse paymentComputeResponse, String companyId, String startDate) {
-//        var reportSummary = payrollReportSummaryRepoSimulate.findPayrollReportSummaryByStartDateAndCompanyId(LocalDate.parse(startDate), companyId);
-//        System.out.println(ReportUtils.transform(reportSummary));
-
         // TODO process the variance
         PayComputeSummaryResponse payComputeSummaryResponse = PayComputeSummaryResponse.builder()
                 .summary(paymentComputeResponse.getSummary())
                 .summaryDetails(paymentComputeResponse.getSummaryDetails())
                 // TODO update the variance values
-                .summaryVariance(paymentComputeResponse.getSummary())
-                .summaryDetailsVariance(paymentComputeResponse.getSummaryDetails())
+                .summaryVariance(processSummaryVarianceSimulate(paymentComputeResponse.getSummary()))
+                .summaryDetailsVariance(processSummaryDetailsVarianceSimulate(paymentComputeResponse.getSummaryDetails()))
                 .build();
         PayrollReportSummarySimulate payrollReportSummary = PayrollReportSummarySimulate.builder()
                 .id(paymentComputeResponse.getId())
                 .companyId(companyId)
-                .startDate(LocalDate.parse(startDate))
-                .endDate(LocalDate.parse(paymentComputeResponse.getEnd()))
+                .startDate(startDate)
+                .endDate(paymentComputeResponse.getEnd())
                 .report(ReportUtils.serializeResponse(payComputeSummaryResponse))
                 .createdDate(LocalDateTime.now())
                 .payrollSimulation(paymentComputeResponse.isPayrollSimulation())
@@ -161,7 +254,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     }
 
     public ReportResponse getPayRollReportSimulate(String starDate){
-        PayrollReportSummarySimulate payrollReportSummary = payrollReportSummaryRepoSimulate.findPayrollReportSummaryByStartDate(LocalDate.parse(starDate));
+        PayrollReportSummarySimulate payrollReportSummary = payrollReportSummaryRepoSimulate.findPayrollReportSummaryByStartDate(starDate);
 
         if(payrollReportSummary == null){
             //return empty
