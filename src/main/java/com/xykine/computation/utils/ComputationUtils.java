@@ -15,11 +15,19 @@ import java.util.List;
 
 
 public class ComputationUtils {
+
     private static final Logger LOGGER = LoggerFactory.getLogger(PaymentCalculatorImpl.class);
+
     public static BigDecimal prorate(BigDecimal rawValue, int numberOfUnPaiAbsence, PaymentFrequencyEnum salaryFrequency){
+
         if (rawValue == null)
             return BigDecimal.ZERO;
-        rawValue = rawValue.divide(BigDecimal.valueOf(12), 2,  RoundingMode.CEILING);
+
+        if (salaryFrequency == null)
+            return rawValue.divide(BigDecimal.valueOf(1), 2,  RoundingMode.CEILING);
+
+        if (salaryFrequency.compareTo(PaymentFrequencyEnum.MONTHLY) == 0)
+            rawValue = rawValue.divide(BigDecimal.valueOf(12), 2,  RoundingMode.CEILING);
 
         if (salaryFrequency.compareTo(PaymentFrequencyEnum.WEEKLY) == 0)
             rawValue = rawValue.divide(BigDecimal.valueOf(4), 2,  RoundingMode.CEILING);
@@ -112,6 +120,8 @@ public class ComputationUtils {
     }
 
     public  static BigDecimal exchangeToLocalCurrency(BigDecimal exchangeRate, BigDecimal amount){
+        if (amount == null)
+            return BigDecimal.ZERO;
         return roundToTwoDecimalPlaces(exchangeRate.multiply(amount));
     }
 

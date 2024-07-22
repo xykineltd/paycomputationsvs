@@ -46,22 +46,27 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     @Override
     public PaymentInfo harmoniseToAnnual(PaymentInfo paymentInfo) {
         AtomicLong multiplier = new AtomicLong(1L);
-        multiplier.set(getMultiplier(paymentInfo.getSalaryFrequency().getDescription()));
+
         paymentInfo.setBasicSalary(ComputationUtils.harmoniseToAnnual(multiplier.get(), paymentInfo.getBasicSalary()));
         Set<PaymentSettingsResponse> paymentSettingsResponseSet = new HashSet<>();
 
         // annualise all allowances
         paymentInfo.getPaymentSettings()
                 .stream()
-                .filter(x -> x.getValue() != null && x.getType().getDescription().contains("ALLOWANCE"))
+                .filter(x -> x.getValue() != null && (x.getType().getDescription().contains("ALLOWANCE") || x.getType().equals(PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT)))
                 .forEach(x -> {
-                     multiplier.set(getMultiplier(x.getPaymentFrequency().getDescription()));
+
+                    if (paymentInfo.getSalaryFrequency() != null)
+                        multiplier.set(getMultiplier(paymentInfo.getSalaryFrequency().getDescription()));
+
                     x.setValue(ComputationUtils.harmoniseToAnnual(multiplier.get(), x.getValue()));
                         if (x.getType().getDescription().contains("HOUSING")) {
                             x.setType(PaymentTypeEnum.ALLOWANCE_ANNUAL_HOUSING);
                         } else  if (x.getType().getDescription().contains("TRANSPORT")) {
                             x.setType(PaymentTypeEnum.ALLOWANCE_ANNUAL_TRANSPORT);
-                        } else {
+                        } else  if (x.getType().getDescription().contains("OFF CYCLE")) {
+                            x.setType(PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT);
+                        }  else {
                             x.setType(PaymentTypeEnum.ALLOWANCE_ANNUAL);
                         }
                     paymentSettingsResponseSet.add(x);
