@@ -49,6 +49,14 @@ public class Report {
         return reportPersistenceService.deleteReport(request);
     }
 
+    @PutMapping("/post-to-finance")
+    public boolean completeReport(@RequestBody UpdateReportRequest request) {
+        PayrollReportSummary payrollReport = reportPersistenceService.completeReport(request);
+        if (payrollReport.isPayrollCompleted() != request.isPayrollCompleted())
+            return false;
+        return true;
+    }
+
     @GetMapping("/paymentDetails")
     public ResponseEntity<?> getPaymentDetails(
             @RequestParam() String id,

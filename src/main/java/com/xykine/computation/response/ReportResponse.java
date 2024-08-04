@@ -23,5 +23,6 @@ public class ReportResponse {
     String startDate;
     String endDate;
     boolean payrollSimulated;
+    boolean payrollCompleted;
     boolean offCycle;
 }

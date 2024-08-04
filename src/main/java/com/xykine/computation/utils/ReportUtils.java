@@ -45,6 +45,7 @@ public class ReportUtils {
                     .createdDate(String.valueOf(x.getCreatedDate()))
                     .payrollApproved(x.isPayrollApproved())
                     .payrollSimulated(x.isPayrollSimulation())
+                    .payrollCompleted(x.isPayrollCompleted())
                     .offCycle(x.isOffCycle())
                     .detail(SerializationUtils.deserialize(x.getReport()))
                     .build();
@@ -62,6 +63,7 @@ public class ReportUtils {
                 .createdDate(String.valueOf(payrollReportSummary.getCreatedDate()))
                 .payrollApproved(payrollReportSummary.isPayrollApproved())
                 .payrollSimulated(payrollReportSummary.isPayrollSimulation())
+                .payrollCompleted(payrollReportSummary.isPayrollCompleted())
                 .offCycle(payrollReportSummary.isOffCycle())
                 .summary(summary)
                 .build();

@@ -301,6 +301,15 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 );
     }
 
+    @Override
+    public PayrollReportSummary completeReport(UpdateReportRequest request) {
+        var  existingSummaryReport = payrollReportSummaryRepo
+                .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(LocalDate.parse(request.getStartDate()), request.getCompanyId(), false);
+        existingSummaryReport.setPayrollCompleted(request.isPayrollCompleted());
+        payrollReportSummaryRepo.save(existingSummaryReport);
+        return  existingSummaryReport;
+    }
+
     private boolean deleteReportByDate(String startDate,
                                        String companyId,
                                        boolean isOffCycle,

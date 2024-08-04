@@ -26,6 +26,7 @@ public class PayrollReportSummary {
     private LocalDate endDate;
     private boolean payrollSimulation;
     private boolean payrollApproved;
+    private boolean payrollCompleted;
     private boolean offCycle;
     private LocalDateTime createdDate;
 }
