@@ -53,7 +53,7 @@
 		<dependency>
 			<groupId>org.xykine.payroll</groupId>
 			<artifactId>payment-settings-model</artifactId>
-			<version>5</version>
+			<version>6</version>
 		</dependency>
 		<dependency>
 			<groupId>org.projectlombok</groupId>

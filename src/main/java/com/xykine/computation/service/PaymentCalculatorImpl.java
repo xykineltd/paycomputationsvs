@@ -1,6 +1,5 @@
 package com.xykine.computation.service;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.xykine.payroll.model.*;
 
 import org.xykine.payroll.model.enums.PaymentTypeEnum;
@@ -47,6 +46,9 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     public PaymentInfo harmoniseToAnnual(PaymentInfo paymentInfo) {
         AtomicLong multiplier = new AtomicLong(1L);
 
+        if (paymentInfo.getSalaryFrequency() != null)
+            multiplier.set(getMultiplier(paymentInfo.getSalaryFrequency().getDescription()));
+
         paymentInfo.setBasicSalary(ComputationUtils.harmoniseToAnnual(multiplier.get(), paymentInfo.getBasicSalary()));
         Set<PaymentSettingsResponse> paymentSettingsResponseSet = new HashSet<>();
 
@@ -55,10 +57,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 .stream()
                 .filter(x -> x.getValue() != null && (x.getType().getDescription().contains("ALLOWANCE") || x.getType().equals(PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT)))
                 .forEach(x -> {
-
-                    if (paymentInfo.getSalaryFrequency() != null)
-                        multiplier.set(getMultiplier(paymentInfo.getSalaryFrequency().getDescription()));
-
                     x.setValue(ComputationUtils.harmoniseToAnnual(multiplier.get(), x.getValue()));
                         if (x.getType().getDescription().contains("HOUSING")) {
                             x.setType(PaymentTypeEnum.ALLOWANCE_ANNUAL_HOUSING);
