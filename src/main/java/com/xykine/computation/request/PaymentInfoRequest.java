@@ -1,7 +1,8 @@
 package com.xykine.computation.request;
 
 import lombok.Data;
-import org.xykine.payroll.model.enums.PaymentFrequencyEnum;
+import org.xykine.payroll.model.PaymentFrequencyEnum;
+
 
 import java.time.LocalDate;
 import java.util.Set;
