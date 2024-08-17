@@ -23,6 +23,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.xykine.payroll.model.AuditTrailEvents;
 import org.xykine.payroll.model.MapKeys;
 import org.xykine.payroll.model.PaymentInfo;
 
@@ -40,6 +41,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
+    private final AuditTrailService auditTrailService;
     private final PayrollReportSummaryRepo payrollReportSummaryRepo;
     private final PayrollReportSummarySimulateRepo payrollReportSummaryRepoSimulate;
     private final PayrollReportDetailRepo payrollReportDetailRepo;
@@ -75,6 +77,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         }
         long endTime = System.currentTimeMillis();
         LOGGER.info(" Process time ===> {} ms", endTime - startTime );
+        auditTrailService.logEvent(AuditTrailEvents.GENERATE_REPORT, "report id: " + reportResponse.getReportId());
         return reportResponse;
     }
 
@@ -241,6 +244,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
        if(payrollReportSummary == null){
            return null;
        }
+       auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Get payroll report with start date :" + starDate + " for company id : " + companyId);
         return ReportUtils.transform(payrollReportSummary);
     }
 
@@ -269,6 +273,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         var reports = payrollReportSummaryRepo.findAllByCompanyIdOrderByCreatedDateAsc(companyId).stream()
                 .map(ReportUtils::transform).toList();
         summary.addAll(reports);
+        auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Pulled payroll report for company id :" + companyId);
         return summary;
     }
     private List<ReportResponse> getPayRollReportSimulates(String companyId){
@@ -290,9 +295,11 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         existingSummaryReport.setPayrollApproved(request.isPayrollApproved());
         payrollReportSummaryRepo.save(existingSummaryReport);
         //TODO update the detail report once the payroll is approved
+        auditTrailService.logEvent(AuditTrailEvents.APPROVE_PAYROLL, "Approved report with detail start date: " + request.getStartDate() + " and company id: " + request.getCompanyId() );
         return  existingSummaryReport;
     }
     public boolean deleteReport(UpdateReportRequest request) {
+        auditTrailService.logEvent(AuditTrailEvents.DELETE_REPORT, "Deleted report with start date : " + request.getStartDate() + " company id : " + request.getCompanyId());
         return deleteReportByDate(request.getStartDate(),
                 request.getCompanyId(),
                 request.isOffCycle(),
@@ -307,6 +314,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(LocalDate.parse(request.getStartDate()), request.getCompanyId(), false);
         existingSummaryReport.setPayrollCompleted(request.isPayrollCompleted());
         payrollReportSummaryRepo.save(existingSummaryReport);
+        auditTrailService.logEvent(AuditTrailEvents.POST_TO_FINANCE, "Posted payroll report with detail start date : " + request.getStartDate() + " and company id : " + request.getCompanyId());
         return  existingSummaryReport;
     }
 
@@ -357,6 +365,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         response.put("currentPage", payrollReportDetailPage.getNumber());
         response.put("totalItems", payrollReportDetailPage.getTotalElements());
         response.put("totalPages", payrollReportDetailPage.getTotalPages());
+        auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Retrieved report detail for report id :" +  summaryId);
         return response;
     }
 
@@ -374,6 +383,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         if(res.isEmpty()) {
             throw new PayrollReportNotException(startDate);
         }
+        auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Retrieved payment detail for employee id :" +  employeeId + " companyId : " + companyId + " startDate : " + startDate);
         return res.get();
     }
 
@@ -395,6 +405,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         List<ReportAnalytics> mergedList = new ArrayList<>(regularPayrolls);
 
         mergedList.addAll(offCyclePayrolls);
+        auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Get report analytics for company id :" +  companyId);
         return mergedList;
     }
     private List<LocalDate> generateDateFromJanToDecember() {

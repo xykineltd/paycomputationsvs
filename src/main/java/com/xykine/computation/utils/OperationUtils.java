@@ -2,15 +2,14 @@ package com.xykine.computation.utils;
 
 import com.xykine.computation.repo.ComputationConstantsRepo;
 import com.xykine.computation.repo.TaxRepo;
+import com.xykine.computation.request.PaymentInfoRequest;
+import com.xykine.computation.response.PaymentComputeResponse;
 import com.xykine.computation.response.SummaryDetail;
 import com.xykine.computation.session.SessionCalculationObject;
 import org.xykine.payroll.model.MapKeys;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class OperationUtils {
@@ -47,5 +46,19 @@ public class OperationUtils {
         });
         sessionCalculationObject.setComputationConstants(computationConstants);
         return sessionCalculationObject;
+    }
+
+    public static PaymentComputeResponse refineResponse(PaymentComputeResponse paymentComputeResponse,
+                                                        SessionCalculationObject sessionCalculationObject,
+                                                        PaymentInfoRequest paymentRequest) {
+        paymentComputeResponse.setId(UUID.randomUUID());
+        paymentComputeResponse.setSummary(sessionCalculationObject.getSummary());
+        paymentComputeResponse.setSummaryDetails(sessionCalculationObject.getSummaryDetails());
+        paymentComputeResponse.setStart(paymentRequest.getStart().toString());
+        paymentComputeResponse.setEnd(paymentRequest.getEnd().toString());
+        paymentComputeResponse.setPayrollSimulation(paymentRequest.isPayrollSimulation());
+        paymentComputeResponse.setOffCycle(paymentRequest.isOffCycle());
+        paymentComputeResponse.setOffCycleId(paymentRequest.getOffCycleID());
+        return paymentComputeResponse;
     }
 }

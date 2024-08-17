@@ -1,7 +1,6 @@
 package com.xykine.computation.repo;
 
 import com.xykine.computation.entity.PayrollReportSummary;
-import com.xykine.computation.entity.simulate.PayrollReportSummarySimulate;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.time.LocalDate;
