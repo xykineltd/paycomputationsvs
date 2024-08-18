@@ -4,10 +4,12 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
-import org.xykine.payroll.model.AuditTrailEvents;
+import org.xykine.payroll.model.PaymentFrequencyEnum;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @NoArgsConstructor
@@ -15,11 +17,12 @@ import java.time.LocalDateTime;
 @Builder
 @Data
 @Document
-public class AuditTrail {
+public class DashboardGraph {
     @Id
     private String id;
-    private AuditTrailEvents event;
-    private String details;
-    private String userId;
-    private LocalDateTime dateTime;
+    private String startDate;
+    private String endDate;
+    private PaymentFrequencyEnum paymentFrequency;
+    private BigDecimal netPay;
+    private LocalDateTime dateAdded;
 }

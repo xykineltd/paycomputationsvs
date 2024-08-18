@@ -1,13 +1,17 @@
 package com.xykine.computation.utils;
 
+import com.xykine.computation.entity.DashboardGraph;
 import com.xykine.computation.entity.PayrollReportDetail;
 import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.entity.simulate.PayrollReportSummarySimulate;
+import com.xykine.computation.response.DashboardGraphResponse;
 import com.xykine.computation.response.PayComputeSummaryResponse;
 import com.xykine.computation.response.ReportResponse;
 import org.apache.commons.lang3.SerializationUtils;
+import org.xykine.payroll.model.PaymentFrequencyEnum;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -84,7 +88,23 @@ public class ReportUtils {
                 .build();
     }
 
+    public static List<DashboardGraphResponse> transformToResponse(List<DashboardGraph> dashboardGraphList) {
+        return  dashboardGraphList.stream()
+                .map(x -> transformToResponse(x))
+                .collect(Collectors.toList());
+    }
+
     public static <T extends Serializable> byte[] serializeResponse(T report) {
         return SerializationUtils.serialize(report);
+    }
+
+    private static DashboardGraphResponse transformToResponse(DashboardGraph x){
+        return DashboardGraphResponse.builder()
+                .startDate(x.getStartDate())
+                .endDate(x.getEndDate())
+                .paymentFrequency(x.getPaymentFrequency())
+                .netPay(x.getNetPay())
+                .dateAdded(x.getDateAdded().toString())
+                .build();
     }
 }

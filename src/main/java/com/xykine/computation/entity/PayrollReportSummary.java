@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.xykine.payroll.model.PaymentFrequencyEnum;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -29,4 +30,6 @@ public class PayrollReportSummary {
     private boolean payrollCompleted;
     private boolean offCycle;
     private LocalDateTime createdDate;
+    private long totalNumberOfEmployees;
+    private PaymentFrequencyEnum paymentFrequency;
 }
