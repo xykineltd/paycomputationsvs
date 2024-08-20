@@ -36,9 +36,13 @@ public class Compute {
     private SessionCalculationObject sessionCalculationObject;
 
     @PostMapping("/payroll")
-    public ReportResponse computePayroll(@RequestBody PaymentInfoRequest paymentRequest) throws IOException, ClassNotFoundException {
+    public ReportResponse computePayroll(
+            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestBody PaymentInfoRequest paymentRequest) throws IOException, ClassNotFoundException {
+        System.out.println("Authorization===>" + authorizationHeader);
+
         sessionCalculationObject = OperationUtils.doPreflight(sessionCalculationObject, computationConstantsRepo, taxRepo);
-        List<PaymentInfo> rawInfo = adminService.getPaymentInfoList(paymentRequest);
+        List<PaymentInfo> rawInfo = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
         PaymentComputeResponse paymentComputeResponse = computeService.computePayroll(rawInfo);
         paymentComputeResponse.setId(UUID.randomUUID());
         paymentComputeResponse.setSummary(sessionCalculationObject.getSummary());
