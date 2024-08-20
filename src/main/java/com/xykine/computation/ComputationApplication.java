@@ -3,7 +3,9 @@ package com.xykine.computation;
 import com.xykine.computation.entity.*;
 import com.xykine.computation.repo.*;
 import com.xykine.computation.session.SessionCalculationObject;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.xykine.computation.utils.AppConstants;
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -11,20 +13,21 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 @EnableCaching
 @SpringBootApplication
 @ConfigurationPropertiesScan
+@RequiredArgsConstructor
 public class ComputationApplication implements CommandLineRunner {
-	@Autowired
-	private TaxRepo taxRepo;
-	@Autowired
-	private PensionFundRepo pensionFundRepo;
-	@Autowired
-	private ComputationConstantsRepo computationConstantsRepo;
+
+	private final TaxRepo taxRepo;
+	private final PensionFundRepo pensionFundRepo;
+	private final ComputationConstantsRepo computationConstantsRepo;
+	private final DashboardCardRepo dashboardCardRepo;
 
 	private String uri = "mongodb://admin:docker@localhost/payroll?tls=false&authSource=admin";
-
 
 	public static void main(String[] args) {
 		SpringApplication.run(ComputationApplication.class, args);
@@ -117,5 +120,18 @@ public class ComputationApplication implements CommandLineRunner {
 		computationConstantsRepo.save(craCutOff);
 		computationConstantsRepo.save(variableCRAFraction);
 		computationConstantsRepo.save(employerPensionContributionPercent);
+
+		DashboardCard dashboardCard = DashboardCard.builder()
+				.id(UUID.randomUUID().toString())
+				.totalOffCyclePayroll(0L)
+				.totalRegularPayroll(0L)
+				.totalPayrollCost(BigDecimal.ZERO)
+				.averageEmployeeCost(BigDecimal.ZERO)
+				.tableMarker(AppConstants.dashboardData)
+				.lastUpdatedAt(LocalDateTime.now())
+				.build();
+
+		if (dashboardCardRepo.findAll().size() == 0)
+			dashboardCardRepo.save(dashboardCard);
 	}
 }

@@ -8,9 +8,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface PayrollReportRepo extends MongoRepository<PayrollReport,String> {
-    PayrollReport findPayrollReportByStartDate(LocalDate startDate);
-
-    List<PayrollReport> findAllByOrderByCreatedDateAsc();
+     PayrollReport findPayrollReportByStartDate(LocalDate startDate);
+     List<PayrollReport> findAllByOrderByCreatedDateAsc();
      void deletePayrollReportByStartDate(LocalDate startDate);
      void deletePayrollReportsByPayrollSimulation(Boolean simulation);
 }

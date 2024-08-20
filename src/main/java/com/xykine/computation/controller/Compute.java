@@ -2,7 +2,6 @@ package com.xykine.computation.controller;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.UUID;
 
 
 import com.xykine.computation.repo.ComputationConstantsRepo;
@@ -44,14 +43,7 @@ public class Compute {
         sessionCalculationObject = OperationUtils.doPreflight(sessionCalculationObject, computationConstantsRepo, taxRepo);
         List<PaymentInfo> rawInfo = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
         PaymentComputeResponse paymentComputeResponse = computeService.computePayroll(rawInfo);
-        paymentComputeResponse.setId(UUID.randomUUID());
-        paymentComputeResponse.setSummary(sessionCalculationObject.getSummary());
-        paymentComputeResponse.setSummaryDetails(sessionCalculationObject.getSummaryDetails());
-        paymentComputeResponse.setStart(paymentRequest.getStart().toString());
-        paymentComputeResponse.setEnd(paymentRequest.getEnd().toString());
-        paymentComputeResponse.setPayrollSimulation(paymentRequest.isPayrollSimulation());
-        paymentComputeResponse.setOffCycle(paymentRequest.isOffCycle());
-        paymentComputeResponse.setOffCycleId(paymentRequest.getOffCycleID());
+        paymentComputeResponse = OperationUtils.refineResponse(paymentComputeResponse, sessionCalculationObject, paymentRequest);
         return reportPersistenceService.serializeAndSaveReport(paymentComputeResponse, paymentRequest.getCompanyId());
     }
 }
