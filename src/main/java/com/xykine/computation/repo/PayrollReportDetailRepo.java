@@ -14,7 +14,7 @@ public interface PayrollReportDetailRepo extends MongoRepository<PayrollReportDe
     void deleteAllByStartDateAndCompanyId(LocalDate startDate, String companyId);
     void deleteAllByOffCycleIdAndCompanyId(String offCycleId, String companyId);
     PayrollReportDetail findPayrollReportByStartDate(LocalDate startDate);
-    Page<PayrollReportDetail> findPayrollReportDetailById(String id, Pageable pageable);
+    List<PayrollReportDetail> findPayrollReportDetailBySummaryId(String id);
     Page<PayrollReportDetail> findPayrollReportDetailBySummaryIdAndCompanyId(String summaryId, String companyId, Pageable pageable);
     Page<PayrollReportDetail> findPayrollReportDetailBySummaryIdAndCompanyIdAndFullNameContainingIgnoreCase(String summaryId, String companyId, String fullName, Pageable pageable);
 

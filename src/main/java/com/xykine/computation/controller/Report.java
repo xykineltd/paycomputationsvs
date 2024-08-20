@@ -1,6 +1,7 @@
 package com.xykine.computation.controller;
 
 import com.xykine.computation.entity.PayrollReportSummary;
+import com.xykine.computation.entity.YTDReport;
 import com.xykine.computation.request.UpdateReportRequest;
 import com.xykine.computation.response.ReportAnalytics;
 import com.xykine.computation.response.ReportResponse;
@@ -76,6 +77,15 @@ public class Report {
             ) {
         ReportResponse response = reportPersistenceService
                 .getPaymentDetailsByEmployee(employeeId, startDate, companyId);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping("/ytdReport")
+    public ResponseEntity<?> getYtdReport(
+            @RequestParam() String employeeId,
+            @RequestParam() String companyId
+    ) {
+        YTDReport response = reportPersistenceService.getYTDReport(employeeId, companyId);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }
