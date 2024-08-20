@@ -1,6 +1,5 @@
 package com.xykine.computation.entity;
 
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

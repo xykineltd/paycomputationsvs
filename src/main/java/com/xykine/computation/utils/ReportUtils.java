@@ -14,7 +14,25 @@ import java.util.stream.Collectors;
 public class ReportUtils {
 
     public static List<ReportResponse> transform(List<PayrollReportDetail> payrollReportDetails){
-        return payrollReportDetails.stream().map(x -> {
+        return payrollReportDetails.stream().map(x -> ReportResponse.builder()
+                .reportId(x.getId())
+                .companyId(x.getCompanyId())
+                .offCycleId(x.getOffCycleId())
+                .departmentId(x.getDepartmentId())
+                .employeeId(x.getEmployeeId())
+                .fullName(x.getFullName())
+                .payrollApproved(x.isPayrollApproved())
+                .startDate(x.getStartDate().toString())
+                .endDate(x.getEndDate().toString())
+                .createdDate(String.valueOf(x.getCreatedDate()))
+                .payrollApproved(x.isPayrollApproved())
+                .payrollSimulated(x.isPayrollSimulation())
+                .offCycle(x.isOffCycle())
+                .detail(SerializationUtils.deserialize(x.getReport()))
+                .build()).collect(Collectors.toList());
+    }
+
+    public static ReportResponse transform(PayrollReportDetail x){
             return ReportResponse.builder()
                     .reportId(x.getId())
                     .companyId(x.getCompanyId())
@@ -27,10 +45,10 @@ public class ReportUtils {
                     .createdDate(String.valueOf(x.getCreatedDate()))
                     .payrollApproved(x.isPayrollApproved())
                     .payrollSimulated(x.isPayrollSimulation())
+                    .payrollCompleted(x.isPayrollCompleted())
                     .offCycle(x.isOffCycle())
                     .detail(SerializationUtils.deserialize(x.getReport()))
                     .build();
-        }).collect(Collectors.toList());
     }
 
     public static ReportResponse transform(PayrollReportSummary payrollReportSummary){
@@ -45,6 +63,7 @@ public class ReportUtils {
                 .createdDate(String.valueOf(payrollReportSummary.getCreatedDate()))
                 .payrollApproved(payrollReportSummary.isPayrollApproved())
                 .payrollSimulated(payrollReportSummary.isPayrollSimulation())
+                .payrollCompleted(payrollReportSummary.isPayrollCompleted())
                 .offCycle(payrollReportSummary.isOffCycle())
                 .summary(summary)
                 .build();
@@ -56,8 +75,8 @@ public class ReportUtils {
                 .reportId(payrollReportSummary.getId().toString())
                 .companyId(payrollReportSummary.getCompanyId())
                 .payrollApproved(payrollReportSummary.isPayrollApproved())
-                .startDate(payrollReportSummary.getStartDate().toString())
-                .endDate(payrollReportSummary.getEndDate().toString())
+                .startDate(payrollReportSummary.getStartDate())
+                .endDate(payrollReportSummary.getEndDate())
                 .createdDate(String.valueOf(payrollReportSummary.getCreatedDate()))
                 .payrollApproved(payrollReportSummary.isPayrollApproved())
                 .payrollSimulated(payrollReportSummary.isPayrollSimulation())

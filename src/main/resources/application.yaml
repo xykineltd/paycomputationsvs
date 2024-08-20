@@ -12,6 +12,12 @@ spring:
   codec:
     max-in-memory-size: 500000KB
 
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://xykine.com/realms/AcedPayroll
+  #          issuer-uri: http://backend-keycloak-auth:8080/auth/realms/payroll
   data:
     redis:
       connect-timeout: 2s

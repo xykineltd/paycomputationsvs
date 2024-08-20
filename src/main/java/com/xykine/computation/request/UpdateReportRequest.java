@@ -8,6 +8,7 @@ public class UpdateReportRequest {
     String companyId;
     String offCycleId;
     boolean payrollApproved;
+    boolean payrollCompleted;
     boolean cancelPayroll;
     boolean offCycle;
 }

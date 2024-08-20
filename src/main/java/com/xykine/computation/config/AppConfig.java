@@ -1,5 +1,7 @@
 package com.xykine.computation.config;
 
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,9 +19,11 @@ public class AppConfig {
     @Value("${admin.service.maxBufferSize}")
     private Integer maxBufferSize;
 
+
     @Bean
     WebClient webClient(WebClient.Builder webClientBuilder) {
         var mediaType = MediaType.APPLICATION_JSON_VALUE;
+
         return webClientBuilder
                 .baseUrl(adminServiceUrl)
                 .exchangeStrategies(ExchangeStrategies

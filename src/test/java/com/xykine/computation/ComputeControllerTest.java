@@ -2,8 +2,6 @@
 //
 //import com.fasterxml.jackson.core.type.TypeReference;
 //import com.fasterxml.jackson.databind.ObjectMapper;
-//import com.xykine.computation.model.MapKeys;
-//import com.xykine.computation.model.PaymentInfo;
 //import com.xykine.computation.repo.ComputationConstantsRepo;
 //import com.xykine.computation.repo.TaxRepo;
 //import com.xykine.computation.request.PaymentInfoRequest;
@@ -21,6 +19,8 @@
 //import org.springframework.http.*;
 //import org.springframework.web.util.UriComponents;
 //import org.springframework.web.util.UriComponentsBuilder;
+//import org.xykine.payroll.model.MapKeys;
+//import org.xykine.payroll.model.PaymentInfo;
 //
 //import java.math.BigDecimal;
 //import java.time.LocalDate;
@@ -28,7 +28,7 @@
 //import java.util.Map;
 //
 //import static org.assertj.core.api.Assertions.assertThat;
-////@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+//@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 //public class ComputeControllerTest {
 //    @Autowired
 //    private TestRestTemplate restTemplate;
@@ -53,20 +53,23 @@
 //        ReportResponse reportSummary =
 //                restTemplate.postForEntity("http://localhost:" + port + "/compute/payroll", createPayload(), ReportResponse.class).getBody();
 //
+//        assert reportSummary != null;
+//        System.out.println("basis salary: " +
+//                reportSummary.getSummary().getSummary().get(MapKeys.BASIC_SALARY)
+//                );
 //        assertThat(reportSummary).isNotNull();
 //        assertThat(reportSummary.getSummary()).isNotNull();
 //        assertThat(reportSummary.getSummary().getSummary().get(MapKeys.TOTAL_GROSS_PAY)).isEqualByComparingTo("4895833.40");
-//        assertThat(reportSummary.getSummary().getSummary().get(MapKeys.TOTAL_PAYEE_TAX)).isEqualByComparingTo("651066.70");
 //        assertThat(reportSummary.getSummary().getSummary().get(MapKeys.TOTAL_NHF)).isEqualByComparingTo("52083.40");
 //        assertThat(reportSummary.getSummary().getSummary().get(MapKeys.TOTAL_PERSONAL_DEDUCTION)).isEqualByComparingTo("150000");
 //        assertThat(reportSummary.getSummary().getSummary().get(MapKeys.TOTAL_NET_PAY)).isEqualByComparingTo("3701016.60");
 //        assertThat(reportSummary.getSummary().getSummary().get(MapKeys.TOTAL_EMPLOYER_PENSION_CONTRIBUTION)).isEqualByComparingTo("427083.40");
 //        assertThat(reportSummary.getSummary().getSummary().get(MapKeys.TOTAL_EMPLOYEE_PENSION_CONTRIBUTION)).isEqualByComparingTo("341666.70");
-//
-//        String summaryId = reportSummary.getReportId();
+//        assertThat(reportSummary.getSummary().getSummary().get(MapKeys.TOTAL_PAYEE_TAX)).isEqualByComparingTo("651066.70");
 //
 //        UriComponents builder = UriComponentsBuilder.fromHttpUrl("http://localhost:" + port + "/compute/reports/paymentDetails")
-//                .queryParam("id",summaryId)
+//                .queryParam("id",reportSummary.getReportId())
+//                .queryParam("companyId",reportSummary.getCompanyId())
 //                .queryParam("page","0")
 //                .queryParam("size","3")
 //                .build();

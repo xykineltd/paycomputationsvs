@@ -20,4 +20,8 @@ public class ReportAnalytics {
     private String status;
     private String reportId;
     private String companyId;
+    private boolean offCycle;
+    private String offCycleId;
+    private String payrollType;
+    private String createdDate;
 }

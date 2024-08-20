@@ -7,10 +7,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.xykine.payroll.model.ExchangeInfo;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -25,11 +24,15 @@ public class PayrollReportDetail {
     private String companyId;
     private String departmentId;
     private String employeeId;
+    private String fullName;
     private byte[] report;
     private String startDate;
     private String endDate;
     private boolean payrollSimulation;
     private boolean payrollApproved;
+    private boolean payrollCompleted;
     private boolean offCycle;
+    private String currency;
+    private ExchangeInfo exchangeInfo;
     private LocalDateTime createdDate;
 }

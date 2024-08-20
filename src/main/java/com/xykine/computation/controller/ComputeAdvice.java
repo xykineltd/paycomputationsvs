@@ -1,6 +1,7 @@
 package com.xykine.computation.controller;
 
 import com.xykine.computation.exceptions.ApiError;
+import com.xykine.computation.exceptions.PayrollInternalServerError;
 import com.xykine.computation.exceptions.PayrollUnmodifiableException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,5 +22,11 @@ public class ComputeAdvice {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(error);
+    }
+
+    @ExceptionHandler(PayrollInternalServerError.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    String PayrollInternalServerErrorHandler(PayrollInternalServerError ex) {
+        return ex.getMessage();
     }
 }

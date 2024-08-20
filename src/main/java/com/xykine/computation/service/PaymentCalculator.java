@@ -1,9 +1,10 @@
 package com.xykine.computation.service;
 
-import com.xykine.computation.model.PaymentInfo;
-
+import org.xykine.payroll.model.PaymentInfo;
 
 public interface PaymentCalculator {
+    PaymentInfo applyExchange(PaymentInfo paymentInfo);
+    PaymentInfo harmoniseToAnnual(PaymentInfo paymentInfo);
     PaymentInfo computeGrossPay(PaymentInfo paymentInfo);
     PaymentInfo computeNonTaxableIncomeExempt(PaymentInfo paymentInfo);
     PaymentInfo computePayeeTax(PaymentInfo paymentInfo);

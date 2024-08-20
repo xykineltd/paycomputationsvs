@@ -1,11 +1,11 @@
 package com.xykine.computation.repo;
 
 import com.xykine.computation.entity.PayrollReportSummary;
+import com.xykine.computation.entity.simulate.PayrollReportSummarySimulate;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 public interface PayrollReportSummaryRepo extends MongoRepository<PayrollReportSummary, UUID> {
@@ -19,4 +19,6 @@ public interface PayrollReportSummaryRepo extends MongoRepository<PayrollReportS
     PayrollReportSummary findPayrollReportSummaryById(UUID id);
     PayrollReportSummary findPayrollReportSummaryByPayrollApprovedAndStartDateAndCompanyId(boolean payrollApproved, LocalDate startDate, String companyId);
     void deletePayrollReportSummaryByStartDate(Boolean simulation);
+    PayrollReportSummary findPayrollReportSummaryByStartDateAndCompanyId(LocalDate startDate, String companyID);
+
 }

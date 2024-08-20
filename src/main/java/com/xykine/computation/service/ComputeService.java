@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.xykine.computation.model.PaymentInfo;
+
 import com.xykine.computation.request.PaymentInfoRequest;
 import com.xykine.computation.response.PaymentComputeResponse;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.xykine.payroll.model.PaymentInfo;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,21 +24,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ComputeService {
 
-    private final WebClient webClient;
     private final PaymentCalculator paymentCalculator;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ComputeService.class);
 
-    public PaymentComputeResponse computePayroll(PaymentInfoRequest paymentComputeRequest) {
-
-        List rawInfo =  webClient
-                .post()
-                .uri("admin/paymentinfo/compute")
-                .body(BodyInserters.fromValue(paymentComputeRequest))
-                .retrieve().bodyToMono(List.class).block();
-
-            LOGGER.info("Received data size {} ", rawInfo.size());
-
+    public PaymentComputeResponse computePayroll(List<PaymentInfo> rawInfo) {
 
         if(rawInfo.size() > 0) {
             LOGGER.debug("First data received {} ", rawInfo.get(0));
@@ -48,14 +39,6 @@ public class ComputeService {
                     new TypeReference<List<PaymentInfo>>() {
                     }
             );
-
-        if (rawInfo == null) {
-            return  PaymentComputeResponse.builder()
-                    .message("error calling Admin service api")
-                    .success(false)
-                    .report(null)
-                    .build();
-        }
 
         List<PaymentInfo> paymentReport = generateReport(paymentInfoList);
         return  PaymentComputeResponse.builder()
@@ -95,7 +78,10 @@ public class ComputeService {
     }
 
     private List<PaymentInfo> processReport(List<PaymentInfo> job){
-        return  job.stream()
+
+        var payInfos =  job.stream()
+                .map(x -> paymentCalculator.applyExchange(x))
+                .map(x -> paymentCalculator.harmoniseToAnnual(x))
                 .map(x -> paymentCalculator.computeGrossPay(x))
                 .map(x -> paymentCalculator.computeNonTaxableIncomeExempt(x))
                 .map(x -> paymentCalculator.prorateEarnings(x))
@@ -104,5 +90,6 @@ public class ComputeService {
                 .map(x -> paymentCalculator.computeNetPay(x))
                 .map(x -> paymentCalculator.computeTotalNHF(x))
                 .collect(Collectors.toList());
+        return  payInfos;
     }
 }

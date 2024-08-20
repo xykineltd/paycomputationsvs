@@ -1,7 +1,5 @@
 package com.xykine.computation;
 
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
 import com.xykine.computation.entity.*;
 import com.xykine.computation.repo.*;
 import com.xykine.computation.session.SessionCalculationObject;
@@ -12,10 +10,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
-import org.springframework.data.mongodb.MongoDatabaseFactory;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.SimpleMongoClientDatabaseFactory;
-
 import java.math.BigDecimal;
 
 @EnableCaching
@@ -35,22 +29,6 @@ public class ComputationApplication implements CommandLineRunner {
 	public static void main(String[] args) {
 		SpringApplication.run(ComputationApplication.class, args);
 	}
-
-//	@Bean
-//	public MongoDatabaseFactory mongoDbFactory() {
-//		return new SimpleMongoClientDatabaseFactory(uri);
-//	}
-//
-//	@Bean
-//	public MongoClient mongoClient() {
-//		return MongoClients.create(uri);
-//	}
-//
-//	@Bean
-//	public MongoTemplate mongoTemplate(MongoClient mongoClient) {
-//		return new MongoTemplate(mongoDbFactory());
-//	}
-
 
 	@Bean
 	public SessionCalculationObject employerBornTaxDetails(){
