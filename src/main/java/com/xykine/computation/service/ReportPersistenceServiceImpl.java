@@ -1,7 +1,9 @@
 package com.xykine.computation.service;
 
+import com.xykine.computation.entity.YTDReport;
 import com.xykine.computation.repo.PayrollReportDetailRepo;
 import com.xykine.computation.repo.PayrollReportSummaryRepo;
+import com.xykine.computation.repo.YTDReportRepo;
 import com.xykine.computation.repo.simulate.PayrollReportDetailSimulateRepo;
 import com.xykine.computation.repo.simulate.PayrollReportSummarySimulateRepo;
 import com.xykine.computation.request.UpdateReportRequest;
@@ -52,6 +54,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     private final PayrollReportDetailRepo payrollReportDetailRepo;
     private final PayrollReportDetailSimulateRepo payrollReportDetailRepoSimulate;
     private final DashboardDataService dashboardDataService;
+    private final YTDReportRepo ytdReportRepo;
 
     @Transactional
     public ReportResponse serializeAndSaveReport(PaymentComputeResponse paymentComputeResponse, String companyId)
@@ -422,6 +425,12 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Get report analytics for company id :" +  companyId);
         return mergedList;
     }
+
+    @Override
+    public YTDReport getYTDReport(String employeeId, String companyId) {
+        return ytdReportRepo.findYTDReportByEmployeeIdAndCompanyId(employeeId, companyId).get();
+    }
+
     private List<LocalDate> generateDateFromJanToDecember() {
         List<LocalDate> dates = new ArrayList<>();
         LocalDate today = LocalDate.now();
