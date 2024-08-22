@@ -5,6 +5,9 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -15,23 +18,26 @@ import java.io.IOException;
 @Component
 public class JwtTokenFilter extends OncePerRequestFilter {
 
+    private final JwtDecoder jwtDecoder;
+
+    public JwtTokenFilter(JwtDecoder jwtDecoder) {
+        this.jwtDecoder = jwtDecoder;
+    }
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws IOException, ServletException {
-
-        // Extract the Authorization header
         String authHeader = request.getHeader("Authorization");
-
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            // Extract the token from the header
-            String jwtToken = authHeader.substring(7);
+            String token = authHeader.substring(7);
+            Jwt jwt = jwtDecoder.decode(token);
 
-            // You can set the token into the SecurityContext here or perform additional validation
-            PreAuthenticatedAuthenticationToken authentication = new PreAuthenticatedAuthenticationToken(jwtToken, null);
-
+            JwtAuthenticationToken authentication = new JwtAuthenticationToken(jwt);
+            String email = jwt.getClaimAsString("email");
+            String name = jwt.getClaimAsString("name");
+            System.out.println("authentication==>" + email + ", ===>"+ name);
             SecurityContextHolder.getContext().setAuthentication(authentication);
         }
-
         // Continue the filter chain
         filterChain.doFilter(request, response);
     }
