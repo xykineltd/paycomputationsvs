@@ -27,6 +27,18 @@ public class Report {
         return reportPersistenceService.getPayRollReports(companyId);
     }
 
+    @GetMapping("/{companyId}/{employeeId}")
+    public ResponseEntity<?> getReportByEmployeeID(
+            @PathVariable String companyId,
+            @PathVariable String employeeId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "3") int size
+            ) {
+        //TODO add summaryVariance field that give the difference between the current and previuos summary values
+        Map<String, Object> response =  reportPersistenceService.getReportByEmployeeID(companyId,  employeeId, page, size);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
     @GetMapping("/analytics/{companyId}")
     public List<ReportAnalytics> getAnalyticsReports(@PathVariable String companyId) {
         return reportPersistenceService.getReportAnalytics(companyId);

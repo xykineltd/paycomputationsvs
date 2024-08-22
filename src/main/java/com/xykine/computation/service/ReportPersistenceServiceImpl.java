@@ -288,6 +288,31 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Pulled payroll report for company id :" + companyId);
         return summary;
     }
+
+    @Override
+    public Map<String, Object> getReportByEmployeeID(String companyId, String employeeID, int page, int size) {
+        List<PayrollReportDetail> payrollDetails;
+        Pageable paging = PageRequest.of(page, size);
+        Page<PayrollReportDetail> payrollReportDetailPage = payrollReportDetailRepo.findPayrollReportDetailByEmployeeIdAndCompanyId(companyId, employeeID, paging);
+
+        Map<String, Object> response = retrievePayrolDetails(payrollReportDetailPage);
+        auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Pulled payroll report for company id :" + companyId + "and employee id: " + employeeID);
+        return response;
+    }
+
+    private Map<String, Object> retrievePayrolDetails(Page<PayrollReportDetail> payrollReportDetailPage) {
+        List<PayrollReportDetail> payrollDetails;
+        payrollDetails = payrollReportDetailPage.getContent();
+        List<ReportResponse> reportResponses = ReportUtils.transform(payrollDetails);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("payrollDetails", reportResponses);
+        response.put("currentPage", payrollReportDetailPage.getNumber());
+        response.put("totalItems", payrollReportDetailPage.getTotalElements());
+        response.put("totalPages", payrollReportDetailPage.getTotalPages());
+        return response;
+    }
+
     private List<ReportResponse> getPayRollReportSimulates(String companyId){
         return  payrollReportSummaryRepoSimulate.findAllByCompanyIdOrderByCreatedDateAsc(companyId).stream()
                 .map(ReportUtils::transform)
