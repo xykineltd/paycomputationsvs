@@ -69,12 +69,25 @@ public class Report {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @GetMapping("/paymentDetails/get-by-employee/by-end-dates")
+    public ResponseEntity<?> getPaymentDetailsByEmployeeByDates(
+            @RequestParam() String employeeId,
+            @RequestParam() String companyId,
+            @RequestParam() List<String> endDates,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "3") int size
+            ) {
+        Map<String, Object> response  = reportPersistenceService
+                .getPaymentDetailForDates(employeeId, companyId, endDates, page, size);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
     @GetMapping("/paymentDetails/get-by-employee")
     public ResponseEntity<?> getPaymentDetailsByEmployee(
             @RequestParam() String companyId,
             @RequestParam() String startDate,
             @RequestParam() String employeeId
-            ) {
+    ) {
         ReportResponse response = reportPersistenceService
                 .getPaymentDetailsByEmployee(employeeId, startDate, companyId);
         return new ResponseEntity<>(response, HttpStatus.OK);
