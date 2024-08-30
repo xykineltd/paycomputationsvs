@@ -8,5 +8,5 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 public interface AuditTrailRepo extends MongoRepository<AuditTrail,String> {
 
     Page<AuditTrail> findAuditTrailByUserId(String userId, Pageable pageable);
-    Page<AuditTrail> findAllByOrderByDateTimeDesc(Pageable pageable);
+    Page<AuditTrail> findByCompanyIdOrderByDateTimeDesc(String companyId, Pageable pageable);
 }

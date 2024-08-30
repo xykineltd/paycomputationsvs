@@ -1,17 +1,17 @@
 package com.xykine.computation.utils;
 
+import com.xykine.computation.entity.AuditTrail;
 import com.xykine.computation.entity.DashboardGraph;
 import com.xykine.computation.entity.PayrollReportDetail;
 import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.entity.simulate.PayrollReportSummarySimulate;
+import com.xykine.computation.response.AuditTrailResponse;
 import com.xykine.computation.response.DashboardGraphResponse;
 import com.xykine.computation.response.PayComputeSummaryResponse;
 import com.xykine.computation.response.ReportResponse;
 import org.apache.commons.lang3.SerializationUtils;
-import org.xykine.payroll.model.PaymentFrequencyEnum;
 
 import java.io.Serializable;
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -107,4 +107,15 @@ public class ReportUtils {
                 .dateAdded(x.getDateAdded().toString())
                 .build();
     }
+
+    public static List<AuditTrailResponse> transformAuditTrail(List<AuditTrail> auditTrails){
+        return auditTrails.stream().map(x -> AuditTrailResponse.builder()
+                .companyId(x.getCompanyId())
+                .event(x.getEvent())
+                .details(x.getDetails())
+                .userId(x.getUserId())
+                .dateTime(x.getDateTime().toString())
+                .build()).collect(Collectors.toList());
+    }
 }
+
