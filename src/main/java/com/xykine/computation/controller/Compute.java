@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.List;
 
 
+import com.xykine.computation.config.CurrentUser;
+import com.xykine.computation.config.CustomUserDetails;
 import com.xykine.computation.repo.ComputationConstantsRepo;
 import com.xykine.computation.repo.TaxRepo;
 import com.xykine.computation.response.ReportResponse;
@@ -12,6 +14,11 @@ import com.xykine.computation.service.ReportPersistenceService;
 import com.xykine.computation.utils.OperationUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.annotation.CurrentSecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import com.xykine.computation.request.PaymentInfoRequest;
@@ -35,9 +42,17 @@ public class Compute {
     private SessionCalculationObject sessionCalculationObject;
 
     @PostMapping("/payroll")
-    public ReportResponse computePayroll(@RequestBody PaymentInfoRequest paymentRequest) throws IOException, ClassNotFoundException {
+    public ReportResponse computePayroll(
+            @CurrentUser CustomUserDetails userDetails,
+            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestBody PaymentInfoRequest paymentRequest) throws IOException, ClassNotFoundException {
+
+
+        System.out.println("currentUserEmail===>currentUserEmail: ---->" +
+                SecurityContextHolder.getContext().getAuthentication().getName());
+
         sessionCalculationObject = OperationUtils.doPreflight(sessionCalculationObject, computationConstantsRepo, taxRepo);
-        List<PaymentInfo> rawInfo = adminService.getPaymentInfoList(paymentRequest);
+        List<PaymentInfo> rawInfo = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
         PaymentComputeResponse paymentComputeResponse = computeService.computePayroll(rawInfo);
         paymentComputeResponse = OperationUtils.refineResponse(paymentComputeResponse, sessionCalculationObject, paymentRequest);
         return reportPersistenceService.serializeAndSaveReport(paymentComputeResponse, paymentRequest.getCompanyId());

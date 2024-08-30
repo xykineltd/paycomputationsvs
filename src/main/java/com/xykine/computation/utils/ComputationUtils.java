@@ -130,6 +130,7 @@ public class ComputationUtils {
     }
 
     public static BigDecimal harmoniseToAnnual(long multiplier, BigDecimal amount){
+
         return roundToTwoDecimalPlaces(BigDecimal.valueOf(multiplier).multiply(amount));
     }
 
