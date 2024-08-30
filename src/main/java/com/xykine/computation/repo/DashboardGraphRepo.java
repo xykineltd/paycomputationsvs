@@ -7,5 +7,5 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.xykine.payroll.model.PaymentFrequencyEnum;
 
 public interface DashboardGraphRepo extends MongoRepository<DashboardGraph,String> {
-    Page<DashboardGraph> findDashboardGraphByPaymentFrequencyOrderByDateAddedDesc(PaymentFrequencyEnum paymentFrequencyEnum, Pageable pageable);
+    Page<DashboardGraph> findDashboardGraphByPaymentFrequencyAndCompanyIdOrderByDateAddedDesc(PaymentFrequencyEnum paymentFrequencyEnum, String companyId, Pageable pageable);
 }

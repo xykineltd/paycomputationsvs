@@ -6,5 +6,5 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import java.util.Optional;
 
 public interface DashboardCardRepo extends MongoRepository<DashboardCard,String> {
-    Optional<DashboardCard> findByTableMarker(String id);
+    Optional<DashboardCard> findByCompanyId(String companyId);
 }

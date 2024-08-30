@@ -8,4 +8,8 @@ public class AuthUtil {
 //        return "test-user";
         return SecurityContextHolder.getContext().getAuthentication().getName();
     }
+    public static String getCompanyId(){
+        return "test-companyId";
+        //return SecurityContextHolder.getContext().getAuthentication().getName();
+    }
 }

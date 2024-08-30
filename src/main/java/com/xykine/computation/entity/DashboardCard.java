@@ -19,10 +19,10 @@ import java.time.LocalDateTime;
 public class DashboardCard {
     @Id
     private String id;
+    private String companyId;
     private long totalOffCyclePayroll;
     private long totalRegularPayroll;
     private BigDecimal totalPayrollCost;
     private BigDecimal averageEmployeeCost;
-    private String tableMarker;
     private LocalDateTime lastUpdatedAt;
 }

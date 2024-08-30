@@ -31,7 +31,6 @@ import org.xykine.payroll.model.PaymentFrequencyEnum;
 
 import com.xykine.computation.repo.DashboardCardRepo;
 import com.xykine.computation.response.ReportResponse;
-import com.xykine.computation.utils.AppConstants;
 import com.xykine.computation.utils.ReportUtils;
 import org.xykine.payroll.model.PaymentInfo;
 
@@ -49,21 +48,38 @@ public class DashboardDataService {
     private static final Logger LOGGER = LoggerFactory.getLogger(PaymentCalculatorImpl.class);
 
     public void updatePayrollCountTypeOffCycle(PayrollReportSummary payrollReportSummary) {
-        DashboardCard dashboardCard = dashboardCardRepo.findByTableMarker(AppConstants.dashboardData).get();
+        DashboardCard dashboardCard;
+        Optional<DashboardCard> dashboardCardOptional = dashboardCardRepo.findByCompanyId(payrollReportSummary.getCompanyId());
+        if (dashboardCardOptional.isEmpty()) {
+            dashboardCard =  DashboardCard.builder()
+                    .id(UUID.randomUUID().toString())
+                    .companyId(payrollReportSummary.getCompanyId())
+                    .totalOffCyclePayroll(0L)
+                    .totalRegularPayroll(0L)
+                    .totalPayrollCost(BigDecimal.ZERO)
+                    .averageEmployeeCost(BigDecimal.ZERO)
+                    .lastUpdatedAt(LocalDateTime.now())
+                    .build();
+
+            dashboardCardRepo.save(dashboardCard);
+        } else {
+            dashboardCard = dashboardCardOptional.get();
+        }
+
         long currentCount = dashboardCard.getTotalOffCyclePayroll();
         dashboardCard.setTotalOffCyclePayroll(++currentCount);
         updateDashboardData(dashboardCard, payrollReportSummary);
     }
 
     public void updatePayrollCountTypeRegular(PayrollReportSummary payrollReportSummary) {
-        DashboardCard dashboardCard = dashboardCardRepo.findByTableMarker(AppConstants.dashboardData).get();
+        DashboardCard dashboardCard = dashboardCardRepo.findByCompanyId(payrollReportSummary.getCompanyId()).get();
         long currentCount = dashboardCard.getTotalRegularPayroll();
         dashboardCard.setTotalRegularPayroll(++currentCount);
         updateDashboardData(dashboardCard, payrollReportSummary);
     }
 
-    public DashboardCardResponse retrieveDashboardData(){
-        DashboardCard dashboardCard =  dashboardCardRepo.findByTableMarker(AppConstants.dashboardData).get();
+    public DashboardCardResponse retrieveDashboardCardData(String companyId){
+        DashboardCard dashboardCard =  dashboardCardRepo.findByCompanyId(companyId).get();
         return DashboardCardResponse.builder()
                 .totalOffCyclePayroll(dashboardCard.getTotalOffCyclePayroll())
                 .totalRegularPayroll(dashboardCard.getTotalRegularPayroll())
@@ -73,9 +89,9 @@ public class DashboardDataService {
                 .build();
     }
 
-    public Map<String, Object> getDashboardGraph(PaymentFrequencyEnum paymentFrequencyEnum, int page, int size) {
+    public Map<String, Object> getDashboardGraph(PaymentFrequencyEnum paymentFrequencyEnum, String companyId, int page, int size) {
         Pageable paging = PageRequest.of(page, size);
-        Page<DashboardGraph> dashboardGraphs = dashboardGraphRepo.findDashboardGraphByPaymentFrequencyOrderByDateAddedDesc(paymentFrequencyEnum, paging);
+        Page<DashboardGraph> dashboardGraphs = dashboardGraphRepo.findDashboardGraphByPaymentFrequencyAndCompanyIdOrderByDateAddedDesc(paymentFrequencyEnum, companyId, paging);
         List<DashboardGraph> dashboardGraphList = dashboardGraphs.getContent();
         List<DashboardGraphResponse> dashboardResponse = ReportUtils.transformToResponse(dashboardGraphList);
 
@@ -202,6 +218,7 @@ public class DashboardDataService {
         dashboardCardRepo.save(dashboardCard);
         DashboardGraph dashboardGraph = DashboardGraph.builder()
                 .id(UUID.randomUUID().toString())
+                .companyId(payrollReportSummary.getCompanyId())
                 .startDate(payrollReportSummary.getStartDate().toString())
                 .endDate(payrollReportSummary.getEndDate().toString())
                 .paymentFrequency(payrollReportSummary.getPaymentFrequency())

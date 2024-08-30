@@ -256,7 +256,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
        if(payrollReportSummary == null){
            return null;
        }
-       auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Get payroll report with start date :" + starDate + " for company id : " + companyId);
+       //auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Get payroll report with start date :" + starDate + " for company id : " + companyId);
         return ReportUtils.transform(payrollReportSummary);
     }
 
@@ -285,7 +285,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         var reports = payrollReportSummaryRepo.findAllByCompanyIdOrderByCreatedDateAsc(companyId).stream()
                 .map(ReportUtils::transform).toList();
         summary.addAll(reports);
-        auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Pulled payroll report for company id :" + companyId);
+        //auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Pulled payroll report for company id :" + companyId);
         return summary;
     }
 
@@ -407,7 +407,29 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         response.put("currentPage", payrollReportDetailPage.getNumber());
         response.put("totalItems", payrollReportDetailPage.getTotalElements());
         response.put("totalPages", payrollReportDetailPage.getTotalPages());
-        auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Retrieved report detail for report id :" +  summaryId);
+        //auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Retrieved report detail for report id :" +  summaryId);
+        return response;
+    }
+
+    @Override
+    public Map<String, Object> getPaymentDetailForDates(String employeeId, String companyId, List<String> endDates,  int page, int size) {
+        Pageable paging = PageRequest.of(page, size);
+        Page<PayrollReportDetail> payrollReportDetailPage = payrollReportDetailRepo
+                .findPayrollReportDetailByEmployeeIdAndCompanyId(
+                        employeeId,
+                        companyId,
+                        paging);
+
+        List<ReportResponse> reportResponses = ReportUtils.transform(payrollReportDetailPage.getContent()).stream()
+                .filter(x -> endDates.contains(x.getEndDate()))
+                .collect(Collectors.toList());
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("payrollDetails", reportResponses);
+        response.put("currentPage", payrollReportDetailPage.getNumber());
+        response.put("totalItems", payrollReportDetailPage.getTotalElements());
+        response.put("totalPages", payrollReportDetailPage.getTotalPages());
+        //auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Retrieved report detail for employeeId id :" +  employeeId);
         return response;
     }
 
@@ -450,7 +472,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         if(res.isEmpty()) {
             throw new PayrollReportNotException(startDate);
         }
-        auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Retrieved payment detail for employee id :" +  employeeId + " companyId : " + companyId + " startDate : " + startDate);
+        //auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Retrieved payment detail for employee id :" +  employeeId + " companyId : " + companyId + " startDate : " + startDate);
         return res.get();
     }
 
@@ -472,7 +494,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         List<ReportAnalytics> mergedList = new ArrayList<>(regularPayrolls);
 
         mergedList.addAll(offCyclePayrolls);
-        auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Get report analytics for company id :" +  companyId);
+        //auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Get report analytics for company id :" +  companyId);
         return mergedList;
     }
 
