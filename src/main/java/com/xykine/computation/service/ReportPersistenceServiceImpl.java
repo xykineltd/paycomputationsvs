@@ -419,10 +419,13 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                         employeeId,
                         companyId,
                         paging);
+        LOGGER.info("payrollReportDetailPage {}", payrollReportDetailPage);
 
         List<ReportResponse> reportResponses = ReportUtils.transform(payrollReportDetailPage.getContent()).stream()
                 .filter(x -> endDates.contains(x.getEndDate()))
                 .collect(Collectors.toList());
+
+        LOGGER.info("reportResponses {}", reportResponses);
 
         Map<String, Object> response = new HashMap<>();
         response.put("payrollDetails", reportResponses);

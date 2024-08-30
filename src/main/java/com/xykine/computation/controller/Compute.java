@@ -48,7 +48,8 @@ public class Compute {
             @RequestBody PaymentInfoRequest paymentRequest) throws IOException, ClassNotFoundException {
 
 
-        System.out.println("userDetails===>userDetails: ---->" + userDetails);
+        System.out.println("currentUserEmail===>currentUserEmail: ---->" +
+                SecurityContextHolder.getContext().getAuthentication().getName());
 
         sessionCalculationObject = OperationUtils.doPreflight(sessionCalculationObject, computationConstantsRepo, taxRepo);
         List<PaymentInfo> rawInfo = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);

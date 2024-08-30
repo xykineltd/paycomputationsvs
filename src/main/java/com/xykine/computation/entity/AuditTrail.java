@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.xykine.payroll.model.AuditTrailEvents;
@@ -20,6 +21,7 @@ public class AuditTrail {
     private String id;
     private AuditTrailEvents event;
     private String details;
+    @CreatedBy
     private String userId;
     private LocalDateTime dateTime;
 }
