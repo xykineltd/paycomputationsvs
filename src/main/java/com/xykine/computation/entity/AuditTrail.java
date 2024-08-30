@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 public class AuditTrail {
     @Id
     private String id;
+    private String companyId;
     private AuditTrailEvents event;
     private String details;
     private String userId;

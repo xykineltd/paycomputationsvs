@@ -28,8 +28,10 @@ public class AuditTrailServiceImpl implements AuditTrailService{
     @Override
     public void logEvent(AuditTrailEvents eventType, String detail) {
         String userId = AuthUtil.getCurrentUser();
+        String companyId = AuthUtil.getCompanyId();
         AuditTrail auditTrail = AuditTrail.builder()
                 .id(UUID.randomUUID().toString())
+                .companyId(companyId)
                 .userId(userId)
                 .event(eventType)
                 .details(detail)

@@ -23,17 +23,20 @@ public class Dashboard {
     private final DashboardDataService dashboardDataService;
 
     @GetMapping("/card")
-    public ResponseEntity<?> getUserTrail() {
-        DashboardCardResponse response = dashboardDataService.retrieveDashboardData();
+    public ResponseEntity<?> getDashboardCard(
+            @RequestParam String companyId
+    ) {
+        DashboardCardResponse response = dashboardDataService.retrieveDashboardCardData(companyId);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @GetMapping("/graph")
-    public ResponseEntity<?> getPaymentDetails(
+    public ResponseEntity<?> getDashboardGraph(
+            @RequestParam String companyId,
             @RequestParam(defaultValue = "") PaymentFrequencyEnum paymentFrequency,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size) {
-        Map<String, Object> response = dashboardDataService.getDashboardGraph(paymentFrequency, page, size);
+        Map<String, Object> response = dashboardDataService.getDashboardGraph(paymentFrequency, companyId, page, size);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 public class DashboardGraph {
     @Id
     private String id;
+    private String companyId;
     private String startDate;
     private String endDate;
     private PaymentFrequencyEnum paymentFrequency;

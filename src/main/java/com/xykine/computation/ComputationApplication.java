@@ -3,7 +3,6 @@ package com.xykine.computation;
 import com.xykine.computation.entity.*;
 import com.xykine.computation.repo.*;
 import com.xykine.computation.session.SessionCalculationObject;
-import com.xykine.computation.utils.AppConstants;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.boot.CommandLineRunner;
@@ -127,7 +126,6 @@ public class ComputationApplication implements CommandLineRunner {
 				.totalRegularPayroll(0L)
 				.totalPayrollCost(BigDecimal.ZERO)
 				.averageEmployeeCost(BigDecimal.ZERO)
-				.tableMarker(AppConstants.dashboardData)
 				.lastUpdatedAt(LocalDateTime.now())
 				.build();
 
