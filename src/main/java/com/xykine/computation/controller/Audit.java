@@ -31,9 +31,10 @@ public class Audit {
 
     @GetMapping("/audit-trail")
     public ResponseEntity<?> getAuditTrails(
+            @RequestParam() String companyId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "3") int size) {
-        Map<String, Object> response = auditTrailService.getAllEvents(page, size);
+        Map<String, Object> response = auditTrailService.getAllEvents(companyId, page, size);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }
