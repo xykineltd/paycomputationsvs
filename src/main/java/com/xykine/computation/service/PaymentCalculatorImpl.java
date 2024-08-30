@@ -28,6 +28,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     @Override
     public PaymentInfo applyExchange(PaymentInfo paymentInfo) {
+
         BigDecimal exchangeRate = paymentInfo.getExchangeInfo().getExchangeRate();
         paymentInfo.setBasicSalary(ComputationUtils.exchangeToLocalCurrency(exchangeRate, paymentInfo.getBasicSalary()));
         Set<PaymentSettingsResponse> paymentSettingsResponseSet = new HashSet<>();
@@ -82,7 +83,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     @Override
     public PaymentInfo computeGrossPay(PaymentInfo paymentInfo) {
         Map<String, BigDecimal> grossPayMap = new HashMap<>();
-        grossPayMap = insertRecurrentPaymentMap(grossPayMap, paymentInfo);
+        insertRecurrentPaymentMap(grossPayMap, paymentInfo);
         BigDecimal total = getTotal(grossPayMap);
         grossPayMap.put(MapKeys.GROSS_PAY, total);
         paymentInfo.setGrossPay(grossPayMap);
@@ -92,8 +93,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     @Override
     public PaymentInfo computeNonTaxableIncomeExempt(PaymentInfo paymentInfo) {
         PaymentFrequencyEnum salaryFrequency = paymentInfo.getSalaryFrequency();
-        LOGGER.info("isOffCycle ===> {}", paymentInfo.isOffCycle());
-        LOGGER.info("gross ===> {}", paymentInfo.getGrossPay());
 
         if (paymentInfo.isOffCycle())
             return computeNonTaxableIncomeExemptForOffCycle(paymentInfo);
@@ -167,7 +166,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     }
 
     private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo paymentInfo) {
-//        LOGGER.info("paymentInfo ===> {}", paymentInfo.getPaymentSettings());
         PaymentFrequencyEnum salaryFrequency = paymentInfo.getSalaryFrequency();
 
         Map<String, BigDecimal> nonTaxableIncomeExemptMap = new HashMap<>();
@@ -270,18 +268,18 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     private Map<String, BigDecimal> insertRecurrentPaymentMap(Map<String, BigDecimal> earningMap, PaymentInfo paymentInfo){
         if (paymentInfo.isOffCycle()) {
-            earningMap.put(MapKeys.OFF_CYCLE_PAYMENT, getOffCyclePaymentAmountForEmployee(paymentInfo).getValue());
-            return earningMap;
-        }
-        earningMap.put(MapKeys.BASIC_SALARY, paymentInfo.getBasicSalary());
 
-        Set<PaymentSettingsResponse> allowance = getAllowanceForEmployee(paymentInfo);
-        allowance.stream()
-                .filter(PaymentSettingsResponse::isActive)
-                .forEach(x -> {
-                    earningMap.put(x.getName(), x.getValue());
-                });
-        LOGGER.debug("earningMap ==> {}", earningMap);
+            earningMap.put(MapKeys.OFF_CYCLE_PAYMENT, getOffCyclePaymentAmountForEmployee(paymentInfo).getValue());
+        } else {
+            earningMap.put(MapKeys.BASIC_SALARY, paymentInfo.getBasicSalary());
+
+            Set<PaymentSettingsResponse> allowance = getAllowanceForEmployee(paymentInfo);
+            allowance.stream()
+                    .filter(PaymentSettingsResponse::isActive)
+                    .forEach(x -> {
+                        earningMap.put(x.getName(), x.getValue());
+                    });
+        }
         return earningMap;
     }
 
@@ -327,8 +325,8 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     }
 
     private PaymentSettingsResponse getOffCyclePaymentAmountForEmployee (PaymentInfo paymentInfo) {
+
         var paymentSettings = paymentInfo.getPaymentSettings();
-        LOGGER.debug("paymentSettings ==> {}", paymentSettings);
         return paymentSettings
                 .stream()
                 .filter(setting -> setting.getType().equals(PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT))
