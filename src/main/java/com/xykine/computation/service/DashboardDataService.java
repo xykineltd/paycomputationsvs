@@ -14,6 +14,7 @@ import com.xykine.computation.repo.YTDReportRepo;
 import com.xykine.computation.response.DashboardCardResponse;
 import com.xykine.computation.response.DashboardGraphResponse;
 import com.xykine.computation.response.PayComputeDetailResponse;
+import com.xykine.computation.utils.AppConstants;
 import com.xykine.computation.utils.ComputationUtils;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
@@ -45,36 +46,26 @@ public class DashboardDataService {
     private final YTDReportRepo ytdReportRepo;
     private final PayrollReportDetailRepo payrollReportDetailRepo;
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(PaymentCalculatorImpl.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(DashboardDataService.class);
 
-    public void updatePayrollCountTypeOffCycle(PayrollReportSummary payrollReportSummary) {
+    public void updatePayrollCount(String updateType, PayrollReportSummary payrollReportSummary) {
         DashboardCard dashboardCard;
         Optional<DashboardCard> dashboardCardOptional = dashboardCardRepo.findByCompanyId(payrollReportSummary.getCompanyId());
-        if (dashboardCardOptional.isEmpty()) {
-            dashboardCard =  DashboardCard.builder()
-                    .id(UUID.randomUUID().toString())
-                    .companyId(payrollReportSummary.getCompanyId())
-                    .totalOffCyclePayroll(0L)
-                    .totalRegularPayroll(0L)
-                    .totalPayrollCost(BigDecimal.ZERO)
-                    .averageEmployeeCost(BigDecimal.ZERO)
-                    .lastUpdatedAt(LocalDateTime.now())
-                    .build();
+        dashboardCard = dashboardCardOptional.orElseGet(() -> saveFreshDashboardCard(payrollReportSummary.getCompanyId()));
+        long currentCount = 0L;
+        switch (updateType) {
+            case(AppConstants.payrollCountRegular) : {
+                currentCount = dashboardCard.getTotalRegularPayroll();
+                dashboardCard.setTotalRegularPayroll(++currentCount);
+                break;
+            }
 
-            dashboardCardRepo.save(dashboardCard);
-        } else {
-            dashboardCard = dashboardCardOptional.get();
+            case(AppConstants.payrollCountOffCycle) : {
+                currentCount =  dashboardCard.getTotalOffCyclePayroll();
+                dashboardCard.setTotalOffCyclePayroll(++currentCount);
+                break;
+            }
         }
-
-        long currentCount = dashboardCard.getTotalOffCyclePayroll();
-        dashboardCard.setTotalOffCyclePayroll(++currentCount);
-        updateDashboardData(dashboardCard, payrollReportSummary);
-    }
-
-    public void updatePayrollCountTypeRegular(PayrollReportSummary payrollReportSummary) {
-        DashboardCard dashboardCard = dashboardCardRepo.findByCompanyId(payrollReportSummary.getCompanyId()).get();
-        long currentCount = dashboardCard.getTotalRegularPayroll();
-        dashboardCard.setTotalRegularPayroll(++currentCount);
         updateDashboardData(dashboardCard, payrollReportSummary);
     }
 
@@ -131,7 +122,7 @@ public class DashboardDataService {
         Map<String, Map<String, BigDecimal>> newValuesForAllEmployees = new HashMap<>();
         Map<String, YTDReport> latestYTDs = new HashMap<>();
         payrollReportDetailList.stream()
-                .map(x -> ReportUtils.transform(x))
+                .map(ReportUtils::transform)
                 .forEach(x -> {
                     Map<String, BigDecimal> newValuesForEmployee = new HashMap<>();
 
@@ -175,14 +166,7 @@ public class DashboardDataService {
                 .forEach(x -> {
                     PayrollReportDetail payrollReportDetail = payrollReportDetailRepo.findById(x.getId()).get();
                     YTDReport ytdReport = latestYTDs.get(payrollReportDetail.getEmployeeId());
-                    Map<String, BigDecimal> ytdReportMap = new HashMap<>();
-                    ytdReportMap.put(MapKeys.BASIC_SALARY, ytdReport.getBasicSalary());
-                    ytdReportMap.put(MapKeys.GROSS_PAY, ytdReport.getGrossPay());
-                    ytdReportMap.put(MapKeys.NET_PAY, ytdReport.getNetPay());
-                    ytdReportMap.put(MapKeys.NATIONAL_HOUSING_FUND, ytdReport.getNhf());
-                    ytdReportMap.put(MapKeys.PAYEE_TAX, ytdReport.getPayeeTax());
-                    ytdReportMap.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION, ytdReport.getEmployeeContributedPension());
-                    ytdReportMap.put(MapKeys.EMPLOYER_PENSION_CONTRIBUTION, ytdReport.getEmployerContributedPension());
+                    Map<String, BigDecimal> ytdReportMap = getStringBigDecimalMap(ytdReport);
 
                     PayComputeDetailResponse payComputeDetailResponse = SerializationUtils.deserialize(payrollReportDetail.getReport());
                     PaymentInfo paymentInfo = payComputeDetailResponse.getReport();
@@ -192,6 +176,18 @@ public class DashboardDataService {
                             payrollReportDetailRepo.save(payrollReportDetail);
                 });
         return true;
+    }
+
+    private static Map<String, BigDecimal> getStringBigDecimalMap(YTDReport ytdReport) {
+        Map<String, BigDecimal> ytdReportMap = new HashMap<>();
+        ytdReportMap.put(MapKeys.BASIC_SALARY, ytdReport.getBasicSalary());
+        ytdReportMap.put(MapKeys.GROSS_PAY, ytdReport.getGrossPay());
+        ytdReportMap.put(MapKeys.NET_PAY, ytdReport.getNetPay());
+        ytdReportMap.put(MapKeys.NATIONAL_HOUSING_FUND, ytdReport.getNhf());
+        ytdReportMap.put(MapKeys.PAYEE_TAX, ytdReport.getPayeeTax());
+        ytdReportMap.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION, ytdReport.getEmployeeContributedPension());
+        ytdReportMap.put(MapKeys.EMPLOYER_PENSION_CONTRIBUTION, ytdReport.getEmployerContributedPension());
+        return ytdReportMap;
     }
 
     private YTDReport createYTDReportForNewEmployee(String employeeId, Map<String, BigDecimal> currentValues, String companyId) {
@@ -232,6 +228,20 @@ public class DashboardDataService {
     private BigDecimal extractNetPayFromReport(PayrollReportSummary payrollReportSummary){
         ReportResponse reportResponse = ReportUtils.transform(payrollReportSummary);
         return reportResponse.getSummary().getSummary().get(MapKeys.TOTAL_NET_PAY);
+    }
+
+    private DashboardCard saveFreshDashboardCard(String companyId){
+        DashboardCard dashboardCard =  DashboardCard.builder()
+                .id(UUID.randomUUID().toString())
+                .companyId(companyId)
+                .totalOffCyclePayroll(0L)
+                .totalRegularPayroll(0L)
+                .totalPayrollCost(BigDecimal.ZERO)
+                .averageEmployeeCost(BigDecimal.ZERO)
+                .lastUpdatedAt(LocalDateTime.now())
+                .build();
+        dashboardCardRepo.save(dashboardCard);
+        return dashboardCard;
     }
 }
 

@@ -46,7 +46,7 @@ import com.xykine.computation.utils.AppConstants;
 @RequiredArgsConstructor
 public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(PaymentCalculatorImpl.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ReportPersistenceServiceImpl.class);
 
     private final AuditTrailService auditTrailService;
     private final PayrollReportSummaryRepo payrollReportSummaryRepo;
@@ -325,11 +325,11 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         if(request.isOffCycle()) {
             existingSummaryReport = payrollReportSummaryRepo
                     .findPayrollReportSummaryByCompanyIdAndOffCycleId(request.getCompanyId(), request.getOffCycleId());
-            updateDashboardData(AppConstants.payrollCountOffCycle, existingSummaryReport);
+            dashboardDataService.updatePayrollCount(AppConstants.payrollCountOffCycle, existingSummaryReport);
         } else {
             existingSummaryReport = payrollReportSummaryRepo
                     .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(LocalDate.parse(request.getStartDate()), request.getCompanyId(), false);
-            updateDashboardData(AppConstants.payrollCountRegular, existingSummaryReport);
+             dashboardDataService.updatePayrollCount(AppConstants.payrollCountRegular, existingSummaryReport);
         }
         existingSummaryReport.setPayrollApproved(request.isPayrollApproved());
         payrollReportSummaryRepo.save(existingSummaryReport);
@@ -432,32 +432,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         //auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Retrieved report detail for employeeId id :" +  employeeId);
         return response;
     }
-
-    @Override
-    public Map<String, Object> getPaymentDetailForDates(String employeeId, String companyId, List<String> endDates,  int page, int size) {
-        Pageable paging = PageRequest.of(page, size);
-        Page<PayrollReportDetail> payrollReportDetailPage = payrollReportDetailRepo
-                .findPayrollReportDetailByEmployeeIdAndCompanyId(
-                        employeeId,
-                        companyId,
-                        paging);
-        LOGGER.info("payrollReportDetailPage {}", payrollReportDetailPage);
-
-        List<ReportResponse> reportResponses = ReportUtils.transform(payrollReportDetailPage.getContent()).stream()
-                .filter(x -> endDates.contains(x.getEndDate()))
-                .collect(Collectors.toList());
-
-        LOGGER.info("reportResponses {}", reportResponses);
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("payrollDetails", reportResponses);
-        response.put("currentPage", payrollReportDetailPage.getNumber());
-        response.put("totalItems", payrollReportDetailPage.getTotalElements());
-        response.put("totalPages", payrollReportDetailPage.getTotalPages());
-        auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Retrieved report detail for employeeId id :" +  employeeId);
-        return response;
-    }
-
 
     @Override
     public ReportResponse getPaymentDetailsByEmployee(String employeeId, String startDate, String companyId) {
@@ -620,13 +594,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             jobFuture.get();
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
-        }
-    }
-
-    private void updateDashboardData(String updateType, PayrollReportSummary payrollReportSummary) {
-        switch (updateType) {
-            case(AppConstants.payrollCountOffCycle) : dashboardDataService.updatePayrollCountTypeOffCycle(payrollReportSummary); break;
-            case(AppConstants.payrollCountRegular) : dashboardDataService.updatePayrollCountTypeRegular(payrollReportSummary); break;
         }
     }
 }

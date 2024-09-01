@@ -22,9 +22,7 @@ public interface PayrollReportDetailRepo extends MongoRepository<PayrollReportDe
     //TODO fix the payrollApproved column for payrollReportDetails and then use this method
     //    List<PayrollReportDetail> findPayrollReportDetailByEmployeeIdAndCompanyIdAndPayrollApproved(String employeeId,
 //                                                                                                String companyId, boolean payrollApproved);
-    List<PayrollReportDetail> findPayrollReportDetailByEmployeeIdAndCompanyId(String employeeId,String companyId);
-
-    Page<PayrollReportDetail> findPayrollReportDetailByEmployeeIdAndCompanyId(String employeeId,String companyId, Pageable pageable);
+   List<PayrollReportDetail> findPayrollReportDetailByEmployeeIdAndCompanyId(String employeeId,String companyId);
 
 //    @Query(value="{ 'companyId' : ?0, 'startDate' : ?1 }", fields="{ 'employeeId' : 1 }")
 //    List<PayrollReportDetail> findDistinctEmployeeIdByCompanyIdAndStartDate(String companyId, LocalDate startDate);

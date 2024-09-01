@@ -74,8 +74,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         paymentInfo.getPaymentSettings()
                 .stream()
                 .filter(x -> x.getValue() != null && x.getType().getDescription().contains("DEDUCTION"))
-                .forEach(x -> {paymentSettingsResponseSet.add(x);
-                });
+                .forEach(paymentSettingsResponseSet::add);
         paymentInfo.setPaymentSettings(paymentSettingsResponseSet);
         return paymentInfo;
     }
@@ -339,9 +338,8 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     }
 
     private Long getMultiplier(String description) {
-        Long multiplier = null;
+        long multiplier;
         switch (description) {
-            case "Yearly" -> multiplier = 1L;
             case "Monthly" -> multiplier = 12L;
             case "Weekly" -> multiplier = 48L;
             case "Bi-weekly" -> multiplier = 24L;

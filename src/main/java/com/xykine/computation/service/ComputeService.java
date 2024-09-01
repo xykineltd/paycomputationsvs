@@ -27,7 +27,7 @@ public class ComputeService {
 
     public PaymentComputeResponse computePayroll(List<PaymentInfo> rawInfo) {
 
-        if(rawInfo.size() > 0) {
+        if(!rawInfo.isEmpty()) {
             LOGGER.debug("First data received {} ", rawInfo.get(0));
         }
             ObjectMapper mapper = new ObjectMapper();
@@ -75,18 +75,16 @@ public class ComputeService {
     }
 
     private List<PaymentInfo> processReport(List<PaymentInfo> job){
-
-        var payInfos =  job.stream()
-                .map(x -> paymentCalculator.applyExchange(x))
-                .map(x -> paymentCalculator.harmoniseToAnnual(x))
-                .map(x -> paymentCalculator.computeGrossPay(x))
-                .map(x -> paymentCalculator.computeNonTaxableIncomeExempt(x))
-                .map(x -> paymentCalculator.prorateEarnings(x))
-                .map(x -> paymentCalculator.computePayeeTax(x))
-                .map(x -> paymentCalculator.computeTotalDeduction(x))
-                .map(x -> paymentCalculator.computeNetPay(x))
-                .map(x -> paymentCalculator.computeTotalNHF(x))
+        return job.stream()
+                .map(paymentCalculator::applyExchange)
+                .map(paymentCalculator::harmoniseToAnnual)
+                .map(paymentCalculator::computeGrossPay)
+                .map(paymentCalculator::computeNonTaxableIncomeExempt)
+                .map(paymentCalculator::prorateEarnings)
+                .map(paymentCalculator::computePayeeTax)
+                .map(paymentCalculator::computeTotalDeduction)
+                .map(paymentCalculator::computeNetPay)
+                .map(paymentCalculator::computeTotalNHF)
                 .collect(Collectors.toList());
-        return  payInfos;
     }
 }
