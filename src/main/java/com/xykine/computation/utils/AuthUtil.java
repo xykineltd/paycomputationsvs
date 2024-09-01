@@ -12,4 +12,8 @@ public class AuthUtil {
         return "test-companyId";
         //return SecurityContextHolder.getContext().getAuthentication().getName();
     }
+
+    public static String getUserName(){
+        return SecurityContextHolder.getContext().getAuthentication().getName();
+    }
 }

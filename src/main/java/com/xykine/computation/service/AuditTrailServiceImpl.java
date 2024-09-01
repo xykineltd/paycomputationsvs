@@ -19,7 +19,9 @@ import com.xykine.computation.utils.AuthUtil;
 import org.xykine.payroll.model.AuditTrailEvents;
 
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 
 @Slf4j
@@ -45,10 +47,29 @@ public class AuditTrailServiceImpl implements AuditTrailService{
         auditTrailRepo.save(auditTrail);
     }
 
+//    @Override
+//    public Map<String, Object> getUserEvents(String userId, int page, int size) {
+//        Pageable paging = PageRequest.of(page, size);
+////        Page<AuditTrail> auditTrailPage = auditTrailRepo.findAuditTrailByUserId(userId, paging);
+////        Page<AuditTrail> auditTrailPage = auditTrailRepo.findAuditTrailByUserIdContaining(userId, paging);
+//        List<AuditTrail> auditTrails = auditTrailPage.getContent();
+//        List<AuditTrailResponse> auditTrailResponses = ReportUtils.transformAuditTrail(auditTrails);
+//        Map<String, Object> response = new HashMap<>();
+//        response.put("auditTrailDetails", auditTrailResponses);
+//        response.put("currentPage", auditTrailPage.getNumber());
+//        response.put("totalItems", auditTrailPage.getTotalElements());
+//        response.put("totalPages", auditTrailPage.getTotalPages());
+//        return response;
+//    }
+
     @Override
-    public Map<String, Object> getUserEvents(String userId, int page, int size) {
+    public Map<String, Object> getUserEvents(String userId, LocalDate startDate, LocalDate endDate, int page, int size) {
         Pageable paging = PageRequest.of(page, size);
-        Page<AuditTrail> auditTrailPage = auditTrailRepo.findAuditTrailByUserId(userId, paging);
+//        Page<AuditTrail> auditTrailPage = auditTrailRepo.findAuditTrailByUserId(userId, paging);
+        LocalDateTime startDateTime = startDate.atStartOfDay(); // Start of the day (00:00:00)
+        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX); //
+
+        Page<AuditTrail> auditTrailPage = auditTrailRepo.findByUserIdContainingAndDateTimeBetween(userId, startDateTime, endDateTime, paging);
         List<AuditTrail> auditTrails = auditTrailPage.getContent();
         List<AuditTrailResponse> auditTrailResponses = ReportUtils.transformAuditTrail(auditTrails);
         Map<String, Object> response = new HashMap<>();

@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 @RestController
@@ -20,12 +21,24 @@ public class Audit {
 
     private final AuditTrailService auditTrailService;
 
+//    @GetMapping("/user-trail")
+//    public ResponseEntity<?> getUserTrail(
+//            @RequestParam() String userId,
+//            @RequestParam(defaultValue = "0") int page,
+//            @RequestParam(defaultValue = "3") int size) {
+//        Map<String, Object> response = auditTrailService.getUserEvents(userId,page, size);
+//        return new ResponseEntity<>(response, HttpStatus.OK);
+//    }
+
     @GetMapping("/user-trail")
-    public ResponseEntity<?> getUserTrail(
+    public ResponseEntity<?> getUserTrailByDate(
             @RequestParam() String userId,
+            @RequestParam() String startDate,
+            @RequestParam() String endDate,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "3") int size) {
-        Map<String, Object> response = auditTrailService.getUserEvents(userId,page, size);
+
+        Map<String, Object> response = auditTrailService.getUserEvents(userId, LocalDate.parse(startDate), LocalDate.parse(endDate), page, size);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

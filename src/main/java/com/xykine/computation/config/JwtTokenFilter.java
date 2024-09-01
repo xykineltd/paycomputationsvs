@@ -46,7 +46,7 @@ public class JwtTokenFilter extends OncePerRequestFilter {
 
             // Create a JwtAuthenticationToken with the userDetails and the Jwt token
 //            JwtAuthenticationToken authentication = new JwtAuthenticationToken(jwt, userDetails.getAuthorities(), userDetails);
-            JwtAuthenticationToken authentication = new JwtAuthenticationToken(jwt, null, email);
+            JwtAuthenticationToken authentication = new JwtAuthenticationToken(jwt, null, name);
 
 
             // Set the authentication in the SecurityContextHolder

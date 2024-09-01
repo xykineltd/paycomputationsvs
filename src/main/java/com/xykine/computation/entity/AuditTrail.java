@@ -22,7 +22,8 @@ public class AuditTrail {
     private String companyId;
     private AuditTrailEvents event;
     private String details;
-    @CreatedBy
     private String userId;
+    @CreatedBy
+    private String name;
     private LocalDateTime dateTime;
 }
