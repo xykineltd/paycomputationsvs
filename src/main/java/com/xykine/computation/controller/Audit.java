@@ -33,12 +33,13 @@ public class Audit {
     @GetMapping("/user-trail")
     public ResponseEntity<?> getUserTrailByDate(
             @RequestParam() String userId,
+            @RequestParam() String companyId,
             @RequestParam() String startDate,
             @RequestParam() String endDate,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "3") int size) {
 
-        Map<String, Object> response = auditTrailService.getUserEvents(userId, LocalDate.parse(startDate), LocalDate.parse(endDate), page, size);
+        Map<String, Object> response = auditTrailService.getUserEvents(userId, LocalDate.parse(startDate), LocalDate.parse(endDate), companyId, page, size);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

@@ -11,10 +11,11 @@ public interface AuditTrailRepo extends MongoRepository<AuditTrail,String> {
 
 //    Page<AuditTrail> findAuditTrailByUserId(String userId, Pageable pageable);
 //    Page<AuditTrail> findAuditTrailByUserIdContaining(String userId, Pageable pageable);
-    Page<AuditTrail> findByUserIdContainingAndDateTimeBetween(
+    Page<AuditTrail> findByUserIdContainingAndDateTimeBetweenAndCompanyId(
             String userId,
             LocalDateTime startDate,
             LocalDateTime endDate,
+            String companyId,
             Pageable pageable);
     Page<AuditTrail> findByCompanyIdOrderByDateTimeDesc(String companyId, Pageable pageable);
 }

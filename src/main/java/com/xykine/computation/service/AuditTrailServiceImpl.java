@@ -63,13 +63,13 @@ public class AuditTrailServiceImpl implements AuditTrailService{
 //    }
 
     @Override
-    public Map<String, Object> getUserEvents(String userId, LocalDate startDate, LocalDate endDate, int page, int size) {
+    public Map<String, Object> getUserEvents(String userId, LocalDate startDate, LocalDate endDate, String companyId, int page, int size) {
         Pageable paging = PageRequest.of(page, size);
 //        Page<AuditTrail> auditTrailPage = auditTrailRepo.findAuditTrailByUserId(userId, paging);
         LocalDateTime startDateTime = startDate.atStartOfDay(); // Start of the day (00:00:00)
         LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX); //
 
-        Page<AuditTrail> auditTrailPage = auditTrailRepo.findByUserIdContainingAndDateTimeBetween(userId, startDateTime, endDateTime, paging);
+        Page<AuditTrail> auditTrailPage = auditTrailRepo.findByUserIdContainingAndDateTimeBetweenAndCompanyId(userId, startDateTime, endDateTime, companyId, paging);
         List<AuditTrail> auditTrails = auditTrailPage.getContent();
         List<AuditTrailResponse> auditTrailResponses = ReportUtils.transformAuditTrail(auditTrails);
         Map<String, Object> response = new HashMap<>();
