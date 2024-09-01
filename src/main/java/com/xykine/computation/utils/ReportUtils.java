@@ -113,7 +113,8 @@ public class ReportUtils {
                 .companyId(x.getCompanyId())
                 .event(x.getEvent())
                 .details(x.getDetails())
-                .userId(x.getUserId())
+                .employeeId(x.getEmployeeId())
+                .name(x.getName())
                 .dateTime(x.getDateTime().toString())
                 .build()).collect(Collectors.toList());
     }

@@ -4,18 +4,18 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
-import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.xykine.payroll.model.UserRole;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.*;
+import java.util.stream.Collectors;
 
 
 @Component
@@ -30,6 +30,7 @@ public class JwtTokenFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws IOException, ServletException {
+
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
@@ -37,44 +38,57 @@ public class JwtTokenFilter extends OncePerRequestFilter {
 
             String email = jwt.getClaimAsString("email");
             String name = jwt.getClaimAsString("name");
+            List<String> realmRoles = jwt.getClaimAsStringList("roles");
 
-            // Create a UserDetails object with the user's information
-            UserDetails userDetails = User.withUsername(name)
-                    .authorities(Collections.emptyList()) // You can set the user's roles/authorities here
-                    .password("") // Password is not needed here
-                    .build();
+            // Filter roles based on UserRole enum
+            List<String> filteredRoles = filterRolesFromJwt(realmRoles);
 
-            // Create a JwtAuthenticationToken with the userDetails and the Jwt token
-//            JwtAuthenticationToken authentication = new JwtAuthenticationToken(jwt, userDetails.getAuthorities(), userDetails);
-            JwtAuthenticationToken authentication = new JwtAuthenticationToken(jwt, null, name);
+            // Convert roles to GrantedAuthority objects
+            Collection<SimpleGrantedAuthority> authorities = filteredRoles.stream()
+                    .map(SimpleGrantedAuthority::new)
+                    .collect(Collectors.toList());
 
+            // Retrieve custom attributes
+            Map<String, Object> customAttributes = new HashMap<>();
+            customAttributes.put("EmployeeID", jwt.getClaimAsString("EmployeeID"));
+            customAttributes.put("CompanyID", jwt.getClaimAsString("CompanyID"));
+
+            // Create CustomUserDetails object
+            CustomUserDetails userDetails = new CustomUserDetails(name, email, authorities, customAttributes);
+
+            // Create a UsernamePasswordAuthenticationToken with the userDetails and the Jwt token
+            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                    userDetails, null, userDetails.getAuthorities());
 
             // Set the authentication in the SecurityContextHolder
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
 
-            System.out.println("authentication==>" + SecurityContextHolder.getContext().getAuthentication().getName());
+            CustomUserDetails userDetails1 = (CustomUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            String emailFromJwt = userDetails1.getEmail();
+            String employeeID = (String) userDetails1.getCustomAttribute("EmployeeID");
+            String companyID = (String) userDetails1.getCustomAttribute("CompanyID");
+
+            // Now you can use these values in your application logic
+            System.out.println("Email: " + emailFromJwt);
+            System.out.println("roles: " + Arrays.toString(userDetails1.getAuthorities().toArray()));
+            System.out.println("EmployeeID: " + employeeID);
+            System.out.println("CompanyID: " + companyID);
         }
         // Continue the filter chain
         filterChain.doFilter(request, response);
     }
 
-//    @Override
-//    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-//            throws IOException, ServletException {
-//        String authHeader = request.getHeader("Authorization");
-//        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-//            String token = authHeader.substring(7);
-//            Jwt jwt = jwtDecoder.decode(token);
-//
-//            JwtAuthenticationToken authentication = new JwtAuthenticationToken(jwt);
-//            String email = jwt.getClaimAsString("email");
-//            String name = jwt.getClaimAsString("name");
-//            System.out.println("authentication==>" + email + ", ===>"+ name);
-//            SecurityContextHolder.getContext().setAuthentication(authentication);
-//        }
-//        // Continue the filter chain
-//        filterChain.doFilter(request, response);
-//    }
+    private List<String> filterRolesFromJwt(List<String> realmRoles) {
+        final Set<String> ALLOWED_ROLES = EnumSet.allOf(UserRole.class)
+                .stream()
+                .map(UserRole::name)
+                .collect(Collectors.toSet());
+
+        // Filter the roles based on those defined in the UserRole enum
+        return realmRoles.stream()
+                .filter(ALLOWED_ROLES::contains)
+                .collect(Collectors.toList());
+    }
 }
 

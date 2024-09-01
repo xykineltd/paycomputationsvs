@@ -4,14 +4,28 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
+import java.util.Map;
 
 public class CustomUserDetails implements UserDetails {
-    private final String username;
-    private final Collection<? extends GrantedAuthority> authorities;
 
-    public CustomUserDetails(String username, Collection<? extends GrantedAuthority> authorities) {
+    private String username;
+    private String email;
+    private Collection<? extends GrantedAuthority> authorities;
+    private Map<String, Object> customAttributes;
+
+    public CustomUserDetails(String username, String email, Collection<? extends GrantedAuthority> authorities, Map<String, Object> customAttributes) {
         this.username = username;
+        this.email = email;
         this.authorities = authorities;
+        this.customAttributes = customAttributes;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public Object getCustomAttribute(String key) {
+        return customAttributes.get(key);
     }
 
     @Override
@@ -21,7 +35,7 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public String getPassword() {
-        return null;
+        return "";  // Password is not needed for JWT-based authentication
     }
 
     @Override

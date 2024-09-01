@@ -34,12 +34,14 @@ public class AuditTrailServiceImpl implements AuditTrailService{
 
     @Override
     public void logEvent(AuditTrailEvents eventType, String detail) {
-        String userId = AuthUtil.getCurrentUser();
+        String employeeId = AuthUtil.getCurrentUser();
+        String name = AuthUtil.getUserName();
         String companyId = AuthUtil.getCompanyId();
         AuditTrail auditTrail = AuditTrail.builder()
                 .id(UUID.randomUUID().toString())
                 .companyId(companyId)
-                .userId(userId)
+                .employeeId(employeeId)
+                .name(name)
                 .event(eventType)
                 .details(detail)
                 .dateTime(LocalDateTime.now())
@@ -63,13 +65,13 @@ public class AuditTrailServiceImpl implements AuditTrailService{
 //    }
 
     @Override
-    public Map<String, Object> getUserEvents(String userId, LocalDate startDate, LocalDate endDate, String companyId, int page, int size) {
+    public Map<String, Object> getUserEvents(String name, LocalDate startDate, LocalDate endDate, String companyId, int page, int size) {
         Pageable paging = PageRequest.of(page, size);
 //        Page<AuditTrail> auditTrailPage = auditTrailRepo.findAuditTrailByUserId(userId, paging);
         LocalDateTime startDateTime = startDate.atStartOfDay(); // Start of the day (00:00:00)
         LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX); //
 
-        Page<AuditTrail> auditTrailPage = auditTrailRepo.findByUserIdContainingAndDateTimeBetweenAndCompanyId(userId, startDateTime, endDateTime, companyId, paging);
+        Page<AuditTrail> auditTrailPage = auditTrailRepo.findByNameContainingIgnoreCaseAndDateTimeBetweenAndCompanyId(name, startDateTime, endDateTime, companyId, paging);
         List<AuditTrail> auditTrails = auditTrailPage.getContent();
         List<AuditTrailResponse> auditTrailResponses = ReportUtils.transformAuditTrail(auditTrails);
         Map<String, Object> response = new HashMap<>();

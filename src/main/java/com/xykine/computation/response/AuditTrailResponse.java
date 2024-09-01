@@ -14,6 +14,7 @@ public class AuditTrailResponse {
     private String companyId;
     private AuditTrailEvents event;
     private String details;
-    private String userId;
+    private String employeeId;
+    private String name;
     private String dateTime;
 }
