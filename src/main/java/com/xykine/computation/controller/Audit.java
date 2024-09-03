@@ -34,12 +34,18 @@ public class Audit {
     public ResponseEntity<?> getUserTrailByDate(
             @RequestParam() String name,
             @RequestParam() String companyId,
-            @RequestParam() String startDate,
-            @RequestParam() String endDate,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "3") int size) {
 
-        Map<String, Object> response = auditTrailService.getUserEvents(name, LocalDate.parse(startDate), LocalDate.parse(endDate), companyId, page, size);
+        // Set default startDate to a very early date (or the earliest date in your data range)
+        LocalDate startLocalDate = (startDate != null) ? LocalDate.parse(startDate) : LocalDate.of(1900, 1, 1);
+
+        // Set default endDate to the current date
+        LocalDate endLocalDate = (endDate != null) ? LocalDate.parse(endDate) : LocalDate.now();
+
+        Map<String, Object> response = auditTrailService.getUserEvents(name, startLocalDate, endLocalDate, companyId, page, size);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
