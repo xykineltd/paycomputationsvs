@@ -32,7 +32,7 @@ public class Audit {
 
     @GetMapping("/user-trail")
     public ResponseEntity<?> getUserTrailByDate(
-            @RequestParam() String name,
+            @RequestParam(defaultValue = "") String name,
             @RequestParam() String companyId,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
