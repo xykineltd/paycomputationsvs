@@ -85,7 +85,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         }
         long endTime = System.currentTimeMillis();
         LOGGER.info(" Process time ===> {} ms", endTime - startTime );
-        auditTrailService.logEvent(AuditTrailEvents.GENERATE_REPORT, "report id: " + reportResponse.getReportId());
+        auditTrailService.logEvent(AuditTrailEvents.GENERATE_REPORT, "report id: " + reportResponse.getReportId(), companyId);
         return reportResponse;
     }
 
@@ -296,7 +296,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         Page<PayrollReportDetail> payrollReportDetailPage = payrollReportDetailRepo.findPayrollReportDetailByEmployeeIdAndCompanyId(companyId, employeeID, paging);
 
         Map<String, Object> response = retrievePayrolDetails(payrollReportDetailPage);
-        auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Pulled payroll report for company id :" + companyId + "and employee id: " + employeeID);
+        auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Pulled payroll report for company id :" + companyId + "and employee id: " + employeeID, companyId);
         return response;
     }
 
@@ -334,12 +334,12 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         existingSummaryReport.setPayrollApproved(request.isPayrollApproved());
         payrollReportSummaryRepo.save(existingSummaryReport);
         //TODO update the detail report once the payroll is approved
-        auditTrailService.logEvent(AuditTrailEvents.APPROVE_PAYROLL, "Approved report with detail start date: " + request.getStartDate() + " and company id: " + request.getCompanyId() );
+        auditTrailService.logEvent(AuditTrailEvents.APPROVE_PAYROLL, "Approved report with detail start date: " + request.getStartDate() + " and company id: " + request.getCompanyId(), request.getCompanyId() );
         return  existingSummaryReport;
     }
 
     public boolean deleteReport(UpdateReportRequest request) {
-        auditTrailService.logEvent(AuditTrailEvents.DELETE_REPORT, "Deleted report with start date : " + request.getStartDate() + " company id : " + request.getCompanyId());
+        auditTrailService.logEvent(AuditTrailEvents.DELETE_REPORT, "Deleted report with start date : " + request.getStartDate() + " company id : " + request.getCompanyId(), request.getCompanyId());
         return deleteReportByDate(request.getStartDate(),
                 request.getCompanyId(),
                 request.isOffCycle(),
@@ -356,7 +356,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         payrollReportSummaryRepo.save(existingSummaryReport);
         auditTrailService.logEvent(AuditTrailEvents.POST_TO_FINANCE,
                 "Posted payroll report with detail start date : " + request.getStartDate()
-                        + " and company id : " + request.getCompanyId());
+                        + " and company id : " + request.getCompanyId(), request.getCompanyId());
         return  existingSummaryReport;
     }
 

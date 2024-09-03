@@ -33,10 +33,10 @@ public class AuditTrailServiceImpl implements AuditTrailService{
     private static final Logger LOGGER = LoggerFactory.getLogger(PaymentCalculatorImpl.class);
 
     @Override
-    public void logEvent(AuditTrailEvents eventType, String detail) {
+    public void logEvent(AuditTrailEvents eventType, String detail, String companyId) {
         String employeeId = AuthUtil.getCurrentUser();
         String name = AuthUtil.getUserName();
-        String companyId = AuthUtil.getCompanyId();
+//        String companyId = AuthUtil.getCompanyId();
         AuditTrail auditTrail = AuditTrail.builder()
                 .id(UUID.randomUUID().toString())
                 .companyId(companyId)
