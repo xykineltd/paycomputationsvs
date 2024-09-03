@@ -51,17 +51,7 @@ public class DashboardDataService {
         DashboardCard dashboardCard;
         Optional<DashboardCard> dashboardCardOptional = dashboardCardRepo.findByCompanyId(payrollReportSummary.getCompanyId());
         if (dashboardCardOptional.isEmpty()) {
-            dashboardCard =  DashboardCard.builder()
-                    .id(UUID.randomUUID().toString())
-                    .companyId(payrollReportSummary.getCompanyId())
-                    .totalOffCyclePayroll(0L)
-                    .totalRegularPayroll(0L)
-                    .totalPayrollCost(BigDecimal.ZERO)
-                    .averageEmployeeCost(BigDecimal.ZERO)
-                    .lastUpdatedAt(LocalDateTime.now())
-                    .build();
-
-            dashboardCardRepo.save(dashboardCard);
+            dashboardCard = saveFreshDashboardCard(payrollReportSummary.getCompanyId());
         } else {
             dashboardCard = dashboardCardOptional.get();
         }
@@ -72,7 +62,15 @@ public class DashboardDataService {
     }
 
     public void updatePayrollCountTypeRegular(PayrollReportSummary payrollReportSummary) {
-        DashboardCard dashboardCard = dashboardCardRepo.findByCompanyId(payrollReportSummary.getCompanyId()).get();
+        DashboardCard dashboardCard;
+        Optional<DashboardCard> dashboardCardOptional = dashboardCardRepo.findByCompanyId(payrollReportSummary.getCompanyId());
+
+        if (dashboardCardOptional.isEmpty()) {
+            dashboardCard = saveFreshDashboardCard(payrollReportSummary.getCompanyId());
+        } else {
+            dashboardCard = dashboardCardOptional.get();
+        }
+
         long currentCount = dashboardCard.getTotalRegularPayroll();
         dashboardCard.setTotalRegularPayroll(++currentCount);
         updateDashboardData(dashboardCard, payrollReportSummary);
@@ -232,6 +230,20 @@ public class DashboardDataService {
     private BigDecimal extractNetPayFromReport(PayrollReportSummary payrollReportSummary){
         ReportResponse reportResponse = ReportUtils.transform(payrollReportSummary);
         return reportResponse.getSummary().getSummary().get(MapKeys.TOTAL_NET_PAY);
+    }
+
+    private DashboardCard saveFreshDashboardCard(String companyId){
+        DashboardCard dashboardCard =  DashboardCard.builder()
+                .id(UUID.randomUUID().toString())
+                .companyId(companyId)
+                .totalOffCyclePayroll(0L)
+                .totalRegularPayroll(0L)
+                .totalPayrollCost(BigDecimal.ZERO)
+                .averageEmployeeCost(BigDecimal.ZERO)
+                .lastUpdatedAt(LocalDateTime.now())
+                .build();
+        dashboardCardRepo.save(dashboardCard);
+        return dashboardCard;
     }
 }
 
