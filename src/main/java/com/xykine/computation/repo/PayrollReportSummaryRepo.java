@@ -1,6 +1,8 @@
 package com.xykine.computation.repo;
 
 import com.xykine.computation.entity.PayrollReportSummary;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.time.LocalDate;
@@ -12,7 +14,7 @@ public interface PayrollReportSummaryRepo extends MongoRepository<PayrollReportS
 
     PayrollReportSummary findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(String startDate, String companyId, boolean simulation);
     List<PayrollReportSummary> findAllByCompanyIdAndPayrollSimulationAndOffCycle(String companyId, boolean simulation, boolean offCycle);
-    List<PayrollReportSummary> findAllByCompanyIdAndStartDateBetweenAndOffCycle(String companyId, String startDateLow, String startDateHigh, boolean offCycle);
+    Page<PayrollReportSummary> findAllByCompanyIdAndStartDateBetweenAndOffCycle(String companyId, String startDateLow, String startDateHigh, boolean offCycle, Pageable pageable);
     PayrollReportSummary findPayrollReportSummaryByCompanyIdAndOffCycleId(String companyId, String offCycleId);
     List<PayrollReportSummary> findAllByCompanyIdOrderByCreatedDateAsc(String companyId);
     void deletePayrollReportSummaryByStartDateAndCompanyId(String startDate, String companyId);

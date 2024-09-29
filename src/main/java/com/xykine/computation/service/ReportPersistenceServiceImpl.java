@@ -260,17 +260,16 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     }
 
     @Override
-    public List<ReportResponse> getPayRollReportByType(ReportByTypeRequest request){
+    public Map<String, Object> getPayRollReportByType(ReportByTypeRequest request, int page, int size){
         var isOffCycle = request.getCategory().equals(PayrollCategory.OFFCYLE);
-        return payrollReportSummaryRepo
+        Pageable paging = PageRequest.of(page, size);
+        var payrollReportReportPage = payrollReportSummaryRepo
             .findAllByCompanyIdAndStartDateBetweenAndOffCycle(
                     request.getCompanyId(),
                     getStartDateRange(request.getStart()),
                     getEndDateRange(request.getEnd()),
-                    isOffCycle)
-                .stream()
-                .map(ReportUtils::transform)
-                .collect(Collectors.toList());
+                    isOffCycle, paging);
+        return retrievePayroll(payrollReportReportPage);
     }
 
     @Override
@@ -286,6 +285,10 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 .stream()
                 .map(ReportUtils::transform)
                 .collect(Collectors.toList());
+//
+//        Map<String, Object> response = retrievePayroll(payrollReportReportPage);
+//        auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Pulled payroll report for company id :" + companyId + "and employee id: " + employeeID, companyId);
+//        return response;
     }
 
 
@@ -338,6 +341,19 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         response.put("currentPage", payrollReportDetailPage.getNumber());
         response.put("totalItems", payrollReportDetailPage.getTotalElements());
         response.put("totalPages", payrollReportDetailPage.getTotalPages());
+        return response;
+    }
+
+    private Map<String, Object> retrievePayroll(Page<PayrollReportSummary> payrollReportSummaryPage) {
+        List<PayrollReportSummary> payrollReportSummaryList;
+        payrollReportSummaryList = payrollReportSummaryPage.getContent();
+        List<ReportResponse> reportResponses = ReportUtils.transformSummary(payrollReportSummaryList);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("payrollReportSummary", reportResponses);
+        response.put("currentPage", payrollReportSummaryPage.getNumber());
+        response.put("totalItems", payrollReportSummaryPage.getTotalElements());
+        response.put("totalPages", payrollReportSummaryPage.getTotalPages());
         return response;
     }
 

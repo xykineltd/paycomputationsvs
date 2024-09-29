@@ -36,6 +36,27 @@ public class ReportUtils {
                 .build()).collect(Collectors.toList());
     }
 
+    public static List<ReportResponse> transformSummary(List<PayrollReportSummary> payrollReportSummaryList){
+        return payrollReportSummaryList.stream().map(payrollReportSummary -> {
+            PayComputeSummaryResponse summary =  SerializationUtils.deserialize(payrollReportSummary.getReport());
+            return ReportResponse.builder()
+                    .reportId(payrollReportSummary.getId().toString())
+                    .companyId(payrollReportSummary.getCompanyId())
+                    .offCycleId(payrollReportSummary.getOffCycleId())
+                    .payrollApproved(payrollReportSummary.isPayrollApproved())
+                    .startDate(payrollReportSummary.getStartDate().toString())
+                    .endDate(payrollReportSummary.getEndDate().toString())
+                    .createdDate(String.valueOf(payrollReportSummary.getCreatedDate()))
+                    .payrollApproved(payrollReportSummary.isPayrollApproved())
+                    .payrollSimulated(payrollReportSummary.isPayrollSimulation())
+                    .payrollCompleted(payrollReportSummary.isPayrollCompleted())
+                    .offCycle(payrollReportSummary.isOffCycle())
+                    .summary(summary)
+                    .build();
+        }).collect(Collectors.toList());
+
+    }
+
     public static ReportResponse transform(PayrollReportDetail x){
             return ReportResponse.builder()
                     .reportId(x.getId())

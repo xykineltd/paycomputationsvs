@@ -26,6 +26,6 @@ public interface ReportPersistenceService {
     List<ReportAnalytics> getReportAnalytics(String companyId);
     YTDReport getYTDReport(String employeeId, String companyId);
     Map<String, Object> getPaymentDetailForDates(String employeeId, String companyId, List<String> endDates,  int page, int size);
-    List<ReportResponse> getPayRollReportByType(ReportByTypeRequest request);
+    Map<String, Object> getPayRollReportByType(ReportByTypeRequest request, int page, int size);
     List<ReportResponse> getPayRollReportDetailByType(ReportByTypeRequest request);
 }

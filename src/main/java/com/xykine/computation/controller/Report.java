@@ -51,8 +51,12 @@ public class Report {
     }
 
     @PostMapping("/get-by-start-date-and-category")
-    public List<ReportResponse> getReportByType(@RequestBody ReportByTypeRequest request) {
-        return reportPersistenceService.getPayRollReportByType(request);
+    public Map<String, Object> getReportByType(
+            @RequestBody ReportByTypeRequest request,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return reportPersistenceService.getPayRollReportByType(request, page, size);
     }
 
     @PostMapping("/get-by-start-date-and-employeeId")
