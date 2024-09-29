@@ -55,6 +55,11 @@ public class Report {
         return reportPersistenceService.getPayRollReportByType(request);
     }
 
+    @PostMapping("/get-by-start-date-and-employeeId")
+    public List<ReportResponse> getPayRollReportDetailByType(@RequestBody ReportByTypeRequest request) {
+        return reportPersistenceService.getPayRollReportDetailByType(request);
+    }
+
     @PutMapping("/approve")
     public boolean approveReport(@RequestBody UpdateReportRequest request) {
         PayrollReportSummary payrollReport = reportPersistenceService.approveReport(request);

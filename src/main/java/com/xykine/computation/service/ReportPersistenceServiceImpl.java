@@ -270,7 +270,21 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                     isOffCycle)
                 .stream()
                 .map(ReportUtils::transform)
-//                .filter(response -> response.getEmployeeId().equals(request.getEmployeeID()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ReportResponse> getPayRollReportDetailByType(ReportByTypeRequest request){
+        var isOffCycle = request.getCategory().equals(PayrollCategory.OFFCYLE);
+        return payrollReportDetailRepo
+                .findPayrollReportDetailByCompanyIdAndEmployeeIdAndStartDateBetweenAndOffCycle(
+                        request.getCompanyId(),
+                        request.getEmployeeID(),
+                        getStartDateRange(request.getStart()),
+                        getEndDateRange(request.getEnd()),
+                        isOffCycle)
+                .stream()
+                .map(ReportUtils::transform)
                 .collect(Collectors.toList());
     }
 
