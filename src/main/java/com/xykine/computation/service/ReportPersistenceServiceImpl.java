@@ -6,6 +6,7 @@ import com.xykine.computation.repo.PayrollReportSummaryRepo;
 import com.xykine.computation.repo.YTDReportRepo;
 import com.xykine.computation.repo.simulate.PayrollReportDetailSimulateRepo;
 import com.xykine.computation.repo.simulate.PayrollReportSummarySimulateRepo;
+import com.xykine.computation.request.ReportByTypeRequest;
 import com.xykine.computation.request.UpdateReportRequest;
 import com.xykine.computation.response.*;
 
@@ -18,15 +19,13 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.xykine.payroll.model.AuditTrailEvents;
-import org.xykine.payroll.model.MapKeys;
-import org.xykine.payroll.model.PaymentFrequencyEnum;
-import org.xykine.payroll.model.PaymentInfo;
+import org.xykine.payroll.model.*;
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -97,7 +96,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     private ReportResponse getReportResponse(PaymentComputeResponse paymentComputeResponse, String companyId, String startDate) {
         // TODO process the variance
         var previousDate = LocalDate.parse(startDate).minusMonths(1);
-        var reportSummary = payrollReportSummaryRepo.findPayrollReportSummaryByStartDateAndCompanyId(previousDate, companyId);
+        var reportSummary = payrollReportSummaryRepo.findPayrollReportSummaryByStartDateAndCompanyId(previousDate.toString(), companyId);
         PaymentInfo paymentInfo = paymentComputeResponse.getReport().get(0);
         long totalNumberOfEmployees = paymentInfo.getTotalNumberOfEmployees();
         PaymentFrequencyEnum paymentFrequency = paymentInfo.getSalaryFrequency();
@@ -112,8 +111,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 .id(paymentComputeResponse.getId())
                 .companyId(companyId)
                 .offCycleId(paymentComputeResponse.getOffCycleId())
-                .startDate(LocalDate.parse(startDate))
-                .endDate(LocalDate.parse(paymentComputeResponse.getEnd()))
+                .startDate(startDate)
+                .endDate(paymentComputeResponse.getEnd())
                 .report(ReportUtils.serializeResponse(payComputeSummaryResponse))
                 .createdDate(LocalDateTime.now())
                 .payrollSimulation(paymentComputeResponse.isPayrollSimulation())
@@ -252,12 +251,27 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     @Override
     public ReportResponse getPayRollReport(String starDate, String companyId){
        PayrollReportSummary payrollReportSummary = payrollReportSummaryRepo
-                .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(LocalDate.parse(starDate), companyId, false);
+                .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(starDate, companyId, false);
        if(payrollReportSummary == null){
            return null;
        }
        //auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Get payroll report with start date :" + starDate + " for company id : " + companyId);
         return ReportUtils.transform(payrollReportSummary);
+    }
+
+    @Override
+    public List<ReportResponse> getPayRollReportByType(ReportByTypeRequest request){
+        var isOffCycle = request.getCategory().equals(PayrollCategory.OFFCYLE);
+        return payrollReportSummaryRepo
+            .findAllByCompanyIdAndStartDateBetweenAndOffCycle(
+                    request.getCompanyId(),
+                    getStartDateRange(request.getStart()),
+                    getEndDateRange(request.getEnd()),
+                    isOffCycle)
+                .stream()
+                .map(ReportUtils::transform)
+//                .filter(response -> response.getEmployeeId().equals(request.getEmployeeID()))
+                .collect(Collectors.toList());
     }
 
 
@@ -328,7 +342,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             updateDashboardData(AppConstants.payrollCountOffCycle, existingSummaryReport);
         } else {
             existingSummaryReport = payrollReportSummaryRepo
-                    .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(LocalDate.parse(request.getStartDate()), request.getCompanyId(), false);
+                    .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(request.getStartDate(), request.getCompanyId(), false);
             updateDashboardData(AppConstants.payrollCountRegular, existingSummaryReport);
         }
         existingSummaryReport.setPayrollApproved(request.isPayrollApproved());
@@ -351,7 +365,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     @Override
     public PayrollReportSummary completeReport(UpdateReportRequest request) {
         var  existingSummaryReport = payrollReportSummaryRepo
-                .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(LocalDate.parse(request.getStartDate()), request.getCompanyId(), false);
+                .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(request.getStartDate(), request.getCompanyId(), false);
         existingSummaryReport.setPayrollCompleted(request.isPayrollCompleted());
         payrollReportSummaryRepo.save(existingSummaryReport);
         auditTrailService.logEvent(AuditTrailEvents.POST_TO_FINANCE,
@@ -375,13 +389,13 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         }
 
         var payroll = payrollReportSummaryRepo
-                .findPayrollReportSummaryByPayrollApprovedAndStartDateAndCompanyId(true, LocalDate.parse(startDate), companyId);
+                .findPayrollReportSummaryByPayrollApprovedAndStartDateAndCompanyId(true, startDate, companyId);
         if(payroll != null && payroll.isPayrollApproved()) {
             throw new PayrollUnmodifiableException(startDate);
         }
 
         //canceling regular payroll
-        payrollReportSummaryRepo.deletePayrollReportSummaryByStartDateAndCompanyId(LocalDate.parse(startDate), companyId);
+        payrollReportSummaryRepo.deletePayrollReportSummaryByStartDateAndCompanyId(startDate, companyId);
         payrollReportDetailRepo.deleteAllByStartDateAndCompanyId(LocalDate.parse(startDate), companyId);
         return true;
     }
@@ -596,11 +610,35 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             throw new RuntimeException(e);
         }
     }
-
     private void updateDashboardData(String updateType, PayrollReportSummary payrollReportSummary) {
         switch (updateType) {
             case(AppConstants.payrollCountOffCycle) : dashboardDataService.updatePayrollCountTypeOffCycle(payrollReportSummary); break;
             case(AppConstants.payrollCountRegular) : dashboardDataService.updatePayrollCountTypeRegular(payrollReportSummary); break;
         }
+    }
+
+    private String getStartDateRange(String dateString) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");  // Define the date format
+
+        // Parse the string into a LocalDate
+        LocalDate date = LocalDate.parse(dateString, formatter);
+
+        // Subtract one month from the date
+        LocalDate result = date.minusMonths(1);
+
+        // Convert the result back to a string
+        return result.format(formatter);
+    }
+    private String getEndDateRange(String dateString) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");  // Define the date format
+
+        // Parse the string into a LocalDate
+        LocalDate date = LocalDate.parse(dateString, formatter);
+
+        // Subtract one month from the date
+        LocalDate result = date.plusMonths(1);
+
+        // Convert the result back to a string
+        return result.format(formatter);
     }
 }

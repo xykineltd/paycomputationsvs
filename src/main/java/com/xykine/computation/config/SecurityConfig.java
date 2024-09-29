@@ -6,9 +6,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.resource.OAuth2ResourceServerConfigurer;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -40,23 +38,5 @@ public class SecurityConfig {
 
 		return http.build();
 	}
-
-//	@Bean
-//	public JwtAuthenticationConverter customJwtAuthenticationConverter() {
-//		JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
-//
-//		// Set your custom authorities converter
-//		jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(new CustomJwtGrantedAuthoritiesConverter());
-//
-//		// Optionally, set the principal claim name if it's not the default (e.g., "sub")
-//		jwtAuthenticationConverter.setPrincipalClaimName("preferred_username");
-//
-//		return jwtAuthenticationConverter;
-//	}
-
-//	@Bean
-//	public JwtAuthenticationConverter customJwtAuthenticationConverter() {
-//		return new CustomJwtAuthenticationConverter();
-//	}
 
 }

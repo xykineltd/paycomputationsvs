@@ -37,7 +37,7 @@ public class Audit {
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "3") int size) {
+            @RequestParam(defaultValue = "2") int size) {
 
         // Set default startDate to a very early date (or the earliest date in your data range)
         LocalDate startLocalDate = (startDate != null && !startDate.isBlank()) ? LocalDate.parse(startDate) : LocalDate.of(1900, 1, 1);

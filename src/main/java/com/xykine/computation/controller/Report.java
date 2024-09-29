@@ -2,6 +2,7 @@ package com.xykine.computation.controller;
 
 import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.entity.YTDReport;
+import com.xykine.computation.request.ReportByTypeRequest;
 import com.xykine.computation.request.UpdateReportRequest;
 import com.xykine.computation.response.ReportAnalytics;
 import com.xykine.computation.response.ReportResponse;
@@ -47,6 +48,11 @@ public class Report {
     @GetMapping("/get-by-start-date/{companyId}/{startDate}")
     public ReportResponse getReport(@PathVariable String startDate, @PathVariable String companyId) {
         return reportPersistenceService.getPayRollReport(startDate, companyId);
+    }
+
+    @PostMapping("/get-by-start-date-and-category")
+    public List<ReportResponse> getReportByType(@RequestBody ReportByTypeRequest request) {
+        return reportPersistenceService.getPayRollReportByType(request);
     }
 
     @PutMapping("/approve")

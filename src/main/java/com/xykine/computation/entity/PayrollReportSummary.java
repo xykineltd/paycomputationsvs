@@ -9,7 +9,6 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.xykine.payroll.model.PaymentFrequencyEnum;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -24,8 +23,8 @@ public class PayrollReportSummary {
     private String companyId;
     private String offCycleId;
     private byte[] report;
-    private LocalDate startDate;
-    private LocalDate endDate;
+    private String startDate;
+    private String endDate;
     private boolean payrollSimulation;
     private boolean payrollApproved;
     private boolean payrollCompleted;

@@ -1,6 +1,7 @@
 package com.xykine.computation.service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -211,8 +212,10 @@ public class DashboardDataService {
         BigDecimal netPay = extractNetPayFromReport(payrollReportSummary);
         BigDecimal currentNetPay = dashboardCard.getTotalPayrollCost();
         dashboardCard.setTotalPayrollCost(currentNetPay.add(netPay));
-        dashboardCard.setAverageEmployeeCost(ComputationUtils.roundToTwoDecimalPlaces(currentNetPay.add(netPay)
-                .divide(BigDecimal.valueOf(payrollReportSummary.getTotalNumberOfEmployees()))));
+        dashboardCard.setAverageEmployeeCost(ComputationUtils.roundToTwoDecimalPlaces(
+                currentNetPay.add(netPay)
+                        .divide(BigDecimal.valueOf(payrollReportSummary.getTotalNumberOfEmployees()), 2, RoundingMode.HALF_UP)
+        ));
         dashboardCardRepo.save(dashboardCard);
         DashboardGraph dashboardGraph = DashboardGraph.builder()
                 .id(UUID.randomUUID().toString())
