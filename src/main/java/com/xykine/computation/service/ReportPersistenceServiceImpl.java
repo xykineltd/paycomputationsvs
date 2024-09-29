@@ -273,22 +273,19 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     }
 
     @Override
-    public List<ReportResponse> getPayRollReportDetailByType(ReportByTypeRequest request){
+    public Map<String, Object> getPayRollReportDetailByType(ReportByTypeRequest request, int page, int size){
         var isOffCycle = request.getCategory().equals(PayrollCategory.OFFCYLE);
-        return payrollReportDetailRepo
+        Pageable paging = PageRequest.of(page, size);
+        Page<PayrollReportDetail> payrollReportDetailPage = payrollReportDetailRepo
                 .findPayrollReportDetailByCompanyIdAndEmployeeIdAndStartDateBetweenAndOffCycle(
                         request.getCompanyId(),
                         request.getEmployeeID(),
                         getStartDateRange(request.getStart(), request.getEnd()),
                         getEndDateRange(request.getEnd()),
-                        isOffCycle)
-                .stream()
-                .map(ReportUtils::transform)
-                .collect(Collectors.toList());
-//
-//        Map<String, Object> response = retrievePayroll(payrollReportReportPage);
-//        auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Pulled payroll report for company id :" + companyId + "and employee id: " + employeeID, companyId);
-//        return response;
+                        isOffCycle, paging);
+
+        return retrievePayrolDetails(payrollReportDetailPage);
+
     }
 
 

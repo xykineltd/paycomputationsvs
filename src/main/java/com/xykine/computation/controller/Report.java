@@ -60,8 +60,11 @@ public class Report {
     }
 
     @PostMapping("/get-by-start-date-and-employeeId")
-    public List<ReportResponse> getPayRollReportDetailByType(@RequestBody ReportByTypeRequest request) {
-        return reportPersistenceService.getPayRollReportDetailByType(request);
+    public Map<String, Object> getPayRollReportDetailByType(
+            @RequestBody ReportByTypeRequest request,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return reportPersistenceService.getPayRollReportDetailByType(request, page, size);
     }
 
     @PutMapping("/approve")
