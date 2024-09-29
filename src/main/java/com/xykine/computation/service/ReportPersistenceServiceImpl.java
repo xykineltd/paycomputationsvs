@@ -266,7 +266,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         var payrollReportReportPage = payrollReportSummaryRepo
             .findAllByCompanyIdAndStartDateBetweenAndOffCycle(
                     request.getCompanyId(),
-                    getStartDateRange(request.getStart()),
+                    getStartDateRange(request.getStart(), request.getEnd()),
                     getEndDateRange(request.getEnd()),
                     isOffCycle, paging);
         return retrievePayroll(payrollReportReportPage);
@@ -279,7 +279,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 .findPayrollReportDetailByCompanyIdAndEmployeeIdAndStartDateBetweenAndOffCycle(
                         request.getCompanyId(),
                         request.getEmployeeID(),
-                        getStartDateRange(request.getStart()),
+                        getStartDateRange(request.getStart(), request.getEnd()),
                         getEndDateRange(request.getEnd()),
                         isOffCycle)
                 .stream()
@@ -647,17 +647,15 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         }
     }
 
-    private String getStartDateRange(String dateString) {
+    private String getStartDateRange(String dateStringStart, String dateStringEnd) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");  // Define the date format
-
-        // Parse the string into a LocalDate
-        LocalDate date = LocalDate.parse(dateString, formatter);
-
-        // Subtract one month from the date
-        LocalDate result = date.minusMonths(1);
-
-        // Convert the result back to a string
-        return result.format(formatter);
+        if(dateStringStart == null) {
+            LocalDate date = LocalDate.parse(dateStringEnd, formatter);
+            return date.minusMonths(11).format(formatter);
+        } else {
+            LocalDate date = LocalDate.parse(dateStringStart, formatter);
+            return date.minusMonths(1).format(formatter);
+        }
     }
     private String getEndDateRange(String dateString) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");  // Define the date format
