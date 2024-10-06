@@ -6,6 +6,8 @@ import java.util.List;
 
 import com.xykine.computation.config.CurrentUser;
 import com.xykine.computation.config.CustomUserDetails;
+import com.xykine.computation.exceptions.PayrollUnmodifiableException;
+import com.xykine.computation.exceptions.PayrollValidationException;
 import com.xykine.computation.repo.ComputationConstantsRepo;
 import com.xykine.computation.repo.TaxRepo;
 import com.xykine.computation.response.ReportResponse;
@@ -45,29 +47,19 @@ public class Compute {
     private SessionCalculationObject sessionCalculationObject;
 
     @PostMapping("/payroll")
-    public ResponseEntity<ReportResponse> computePayroll(
+    public ReportResponse computePayroll(
             @RequestHeader("Authorization") String authorizationHeader,
             @RequestBody PaymentInfoRequest paymentRequest) throws IOException, ClassNotFoundException {
-
-        sessionCalculationObject = OperationUtils.doPreflight(sessionCalculationObject, computationConstantsRepo, taxRepo);
-        ResponseEntity<List> responseEntity = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
-        List<PaymentInfo> rawInfo = responseEntity.getBody();
-        // Extract Payroll-Errors header
-        String payrollErrors = responseEntity.getHeaders().getFirst("Payroll-Errors");
-        HttpHeaders responseHeaders = new HttpHeaders();
-
-        // Check for Payroll-Errors and return an error response if necessary
-        if (payrollErrors != null && !payrollErrors.isEmpty() && !payrollErrors.equals("No Errors found")) {
-            ReportResponse errorResponse = new ReportResponse();
-            errorResponse.setPayrollValidationError(payrollErrors);
-            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+        try{
+            sessionCalculationObject = OperationUtils.doPreflight(sessionCalculationObject, computationConstantsRepo, taxRepo);
+            List rawInfo = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
+            assert rawInfo != null;
+            PaymentComputeResponse paymentComputeResponse = computeService.computePayroll(rawInfo);
+            paymentComputeResponse = OperationUtils.refineResponse(paymentComputeResponse, sessionCalculationObject, paymentRequest);
+            return reportPersistenceService.serializeAndSaveReport(paymentComputeResponse, paymentRequest.getCompanyId());
+        } catch (Exception ex) {
+            throw new PayrollValidationException(ex.getMessage());
         }
 
-        assert rawInfo != null;
-        PaymentComputeResponse paymentComputeResponse = computeService.computePayroll(rawInfo);
-        paymentComputeResponse = OperationUtils.refineResponse(paymentComputeResponse, sessionCalculationObject, paymentRequest);
-
-        var responseBody = reportPersistenceService.serializeAndSaveReport(paymentComputeResponse, paymentRequest.getCompanyId());
-        return new ResponseEntity<>(responseBody, responseHeaders, HttpStatus.OK);
     }
 }
