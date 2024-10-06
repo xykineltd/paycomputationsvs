@@ -285,7 +285,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                         isOffCycle, paging);
 
         return retrievePayrolDetails(payrollReportDetailPage);
-
     }
 
 
@@ -345,7 +344,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         List<PayrollReportSummary> payrollReportSummaryList;
         payrollReportSummaryList = payrollReportSummaryPage.getContent();
         List<ReportResponse> reportResponses = ReportUtils.transformSummary(payrollReportSummaryList);
-
+//        getReportAnalytics(reportResponses, payrollReportSummaryList.get(0).getCompanyId());
         Map<String, Object> response = new HashMap<>();
         response.put("payrollReportSummary", reportResponses);
         response.put("currentPage", payrollReportSummaryPage.getNumber());

@@ -14,6 +14,9 @@ import com.xykine.computation.service.ReportPersistenceService;
 import com.xykine.computation.utils.OperationUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.annotation.CurrentSecurityContext;
@@ -42,19 +45,29 @@ public class Compute {
     private SessionCalculationObject sessionCalculationObject;
 
     @PostMapping("/payroll")
-    public ReportResponse computePayroll(
-            @CurrentUser CustomUserDetails userDetails,
+    public ResponseEntity<ReportResponse> computePayroll(
             @RequestHeader("Authorization") String authorizationHeader,
             @RequestBody PaymentInfoRequest paymentRequest) throws IOException, ClassNotFoundException {
 
-
-        System.out.println("currentUserEmail===>currentUserEmail: ---->" +
-                SecurityContextHolder.getContext().getAuthentication().getName());
-
         sessionCalculationObject = OperationUtils.doPreflight(sessionCalculationObject, computationConstantsRepo, taxRepo);
-        List<PaymentInfo> rawInfo = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
+        ResponseEntity<List> responseEntity = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
+        List<PaymentInfo> rawInfo = responseEntity.getBody();
+        // Extract Payroll-Errors header
+        String payrollErrors = responseEntity.getHeaders().getFirst("Payroll-Errors");
+        HttpHeaders responseHeaders = new HttpHeaders();
+
+        // Check for Payroll-Errors and return an error response if necessary
+        if (payrollErrors != null && !payrollErrors.isEmpty() && !payrollErrors.equals("No Errors found")) {
+            ReportResponse errorResponse = new ReportResponse();
+            errorResponse.setPayrollValidationError(payrollErrors);
+            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        assert rawInfo != null;
         PaymentComputeResponse paymentComputeResponse = computeService.computePayroll(rawInfo);
         paymentComputeResponse = OperationUtils.refineResponse(paymentComputeResponse, sessionCalculationObject, paymentRequest);
-        return reportPersistenceService.serializeAndSaveReport(paymentComputeResponse, paymentRequest.getCompanyId());
+
+        var responseBody = reportPersistenceService.serializeAndSaveReport(paymentComputeResponse, paymentRequest.getCompanyId());
+        return new ResponseEntity<>(responseBody, responseHeaders, HttpStatus.OK);
     }
 }
