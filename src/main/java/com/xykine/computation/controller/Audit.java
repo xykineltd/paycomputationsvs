@@ -32,7 +32,7 @@ public class Audit {
 
     @GetMapping("/user-trail")
     public ResponseEntity<?> getUserTrailByDate(
-            @RequestParam(defaultValue = "") String name,
+            @RequestParam(defaultValue = "") String employeeId,
             @RequestParam() String companyId,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
@@ -45,7 +45,7 @@ public class Audit {
         // Set default endDate to the current date
         LocalDate endLocalDate = (startDate != null && !startDate.isBlank()) ? LocalDate.parse(endDate) : LocalDate.now();
 
-        Map<String, Object> response = auditTrailService.getUserEvents(name, startLocalDate, endLocalDate, companyId, page, size);
+        Map<String, Object> response = auditTrailService.getUserEvents(employeeId, startLocalDate, endLocalDate, companyId, page, size);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

@@ -12,8 +12,8 @@ public interface AuditTrailRepo extends MongoRepository<AuditTrail,String> {
 
 //    Page<AuditTrail> findAuditTrailByUserId(String userId, Pageable pageable);
 //    Page<AuditTrail> findAuditTrailByUserIdContaining(String userId, Pageable pageable);
-    Page<AuditTrail> findByNameContainingIgnoreCaseAndDateTimeBetweenAndCompanyId(
-            String name,
+    Page<AuditTrail> findByEmployeeIdContainingIgnoreCaseAndDateTimeBetweenAndCompanyId(
+            String userId,
             LocalDateTime startDate,
             LocalDateTime endDate,
             String companyId,
