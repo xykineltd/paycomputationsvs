@@ -60,6 +60,5 @@ public class Compute {
         } catch (Exception ex) {
             throw new PayrollValidationException(ex.getMessage());
         }
-
     }
 }

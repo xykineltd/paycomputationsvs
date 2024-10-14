@@ -64,10 +64,7 @@ public class AdminService {
 //                }).block(); // Block to wait for the response
 //    }
 
-
     public List getPaymentInfoList(PaymentInfoRequest paymentComputeRequest, String token) {
-        LOGGER.info("Flying request {} ", paymentComputeRequest);
-
         return webClient
                 .post()
                 .uri("admin/paymentinfo/compute")

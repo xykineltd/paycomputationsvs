@@ -365,10 +365,13 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         if(request.isOffCycle()) {
             existingSummaryReport = payrollReportSummaryRepo
                     .findPayrollReportSummaryByCompanyIdAndOffCycleId(request.getCompanyId(), request.getOffCycleId());
+            LOGGER.info("existingSummaryReport ====> {} offcycle ", existingSummaryReport);
+
             updateDashboardData(AppConstants.payrollCountOffCycle, existingSummaryReport);
         } else {
             existingSummaryReport = payrollReportSummaryRepo
                     .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(request.getStartDate(), request.getCompanyId(), false);
+            LOGGER.info("existingSummaryReport ====> {} ", existingSummaryReport);
             updateDashboardData(AppConstants.payrollCountRegular, existingSummaryReport);
         }
         existingSummaryReport.setPayrollApproved(request.isPayrollApproved());
@@ -637,6 +640,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         }
     }
     private void updateDashboardData(String updateType, PayrollReportSummary payrollReportSummary) {
+        LOGGER.info(" ====> payrollReportSummary  {} ",  payrollReportSummary);
         switch (updateType) {
             case(AppConstants.payrollCountOffCycle) : dashboardDataService.updatePayrollCountTypeOffCycle(payrollReportSummary); break;
             case(AppConstants.payrollCountRegular) : dashboardDataService.updatePayrollCountTypeRegular(payrollReportSummary); break;
