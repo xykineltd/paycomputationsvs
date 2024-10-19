@@ -261,8 +261,20 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
     @Override
     public Map<String, Object> getPayRollReportByType(ReportByTypeRequest request, int page, int size){
-        var isOffCycle = request.getCategory().equals(PayrollCategory.OFFCYLE);
+        var category = request.getCategory();
         Pageable paging = PageRequest.of(page, size);
+
+        if(category == null) {
+            var payrollReportReportPage = payrollReportSummaryRepo
+                    .findAllByCompanyIdAndStartDateBetween(
+                            request.getCompanyId(),
+                            getStartDateRange(request.getStart(), request.getEnd()),
+                            getEndDateRange(request.getEnd()) , paging);
+            return retrievePayroll(payrollReportReportPage);
+        }
+
+        var isOffCycle = category.equals(PayrollCategory.OFFCYLE);
+
         var payrollReportReportPage = payrollReportSummaryRepo
             .findAllByCompanyIdAndStartDateBetweenAndOffCycle(
                     request.getCompanyId(),
