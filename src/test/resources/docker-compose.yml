@@ -9,13 +9,15 @@ services:
       - MONGO_INITDB_DATABASE=test
     ports:
       - "27017:27017"
+    volumes:
+      - ./mongo-init:/docker-entrypoint-initdb.d
 
-  admin-service-mock:
-    image: kacytunde/admin-service-mock:v1
-    ports:
-      - "8081:8081"
-    depends_on:
-      - mongo
+#  admin-service-mock:
+#    image: kacytunde/admin-service-mock:v1
+#    ports:
+#      - "8081:8081"
+#    depends_on:
+#      - mongo
 
 #  polar-redis:
 #    image: "redis:7.0"

@@ -1,8 +1,12 @@
 package com.xykine.computation.utils;
 
+import com.xykine.computation.entity.AuditTrail;
+import com.xykine.computation.entity.DashboardGraph;
 import com.xykine.computation.entity.PayrollReportDetail;
 import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.entity.simulate.PayrollReportSummarySimulate;
+import com.xykine.computation.response.AuditTrailResponse;
+import com.xykine.computation.response.DashboardGraphResponse;
 import com.xykine.computation.response.PayComputeSummaryResponse;
 import com.xykine.computation.response.ReportResponse;
 import org.apache.commons.lang3.SerializationUtils;
@@ -30,6 +34,27 @@ public class ReportUtils {
                 .offCycle(x.isOffCycle())
                 .detail(SerializationUtils.deserialize(x.getReport()))
                 .build()).collect(Collectors.toList());
+    }
+
+    public static List<ReportResponse> transformSummary(List<PayrollReportSummary> payrollReportSummaryList){
+        return payrollReportSummaryList.stream().map(payrollReportSummary -> {
+            PayComputeSummaryResponse summary =  SerializationUtils.deserialize(payrollReportSummary.getReport());
+            return ReportResponse.builder()
+                    .reportId(payrollReportSummary.getId().toString())
+                    .companyId(payrollReportSummary.getCompanyId())
+                    .offCycleId(payrollReportSummary.getOffCycleId())
+                    .payrollApproved(payrollReportSummary.isPayrollApproved())
+                    .startDate(payrollReportSummary.getStartDate().toString())
+                    .endDate(payrollReportSummary.getEndDate().toString())
+                    .createdDate(String.valueOf(payrollReportSummary.getCreatedDate()))
+                    .payrollApproved(payrollReportSummary.isPayrollApproved())
+                    .payrollSimulated(payrollReportSummary.isPayrollSimulation())
+                    .payrollCompleted(payrollReportSummary.isPayrollCompleted())
+                    .offCycle(payrollReportSummary.isOffCycle())
+                    .summary(summary)
+                    .build();
+        }).collect(Collectors.toList());
+
     }
 
     public static ReportResponse transform(PayrollReportDetail x){
@@ -84,7 +109,35 @@ public class ReportUtils {
                 .build();
     }
 
+    public static List<DashboardGraphResponse> transformToResponse(List<DashboardGraph> dashboardGraphList) {
+        return  dashboardGraphList.stream()
+                .map(x -> transformToResponse(x))
+                .collect(Collectors.toList());
+    }
+
     public static <T extends Serializable> byte[] serializeResponse(T report) {
         return SerializationUtils.serialize(report);
     }
+
+    private static DashboardGraphResponse transformToResponse(DashboardGraph x){
+        return DashboardGraphResponse.builder()
+                .startDate(x.getStartDate())
+                .endDate(x.getEndDate())
+                .paymentFrequency(x.getPaymentFrequency())
+                .netPay(x.getNetPay())
+                .dateAdded(x.getDateAdded().toString())
+                .build();
+    }
+
+    public static List<AuditTrailResponse> transformAuditTrail(List<AuditTrail> auditTrails){
+        return auditTrails.stream().map(x -> AuditTrailResponse.builder()
+                .companyId(x.getCompanyId())
+                .event(x.getEvent())
+                .details(x.getDetails())
+                .employeeId(x.getEmployeeId())
+                .name(x.getName())
+                .dateTime(x.getDateTime().toString())
+                .build()).collect(Collectors.toList());
+    }
 }
+

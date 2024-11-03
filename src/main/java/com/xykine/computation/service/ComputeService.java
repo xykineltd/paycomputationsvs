@@ -5,13 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.xykine.computation.request.PaymentInfoRequest;
 import com.xykine.computation.response.PaymentComputeResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.function.client.WebClient;
 import org.xykine.payroll.model.PaymentInfo;
 
 import java.util.ArrayList;
@@ -48,7 +45,7 @@ public class ComputeService {
                 .build();
     }
 
-    public List<PaymentInfo> generateReport(List<PaymentInfo> rawInfo) {
+    private List<PaymentInfo> generateReport(List<PaymentInfo> rawInfo) {
         int size = rawInfo.size();
         List<PaymentInfo> job1 = new ArrayList<>();
         List<PaymentInfo> job2 = new ArrayList<>();

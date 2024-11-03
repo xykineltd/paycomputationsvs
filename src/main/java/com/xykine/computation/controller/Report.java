@@ -1,6 +1,8 @@
 package com.xykine.computation.controller;
 
 import com.xykine.computation.entity.PayrollReportSummary;
+import com.xykine.computation.entity.YTDReport;
+import com.xykine.computation.request.ReportByTypeRequest;
 import com.xykine.computation.request.UpdateReportRequest;
 import com.xykine.computation.response.ReportAnalytics;
 import com.xykine.computation.response.ReportResponse;
@@ -26,6 +28,18 @@ public class Report {
         return reportPersistenceService.getPayRollReports(companyId);
     }
 
+    @GetMapping("/{companyId}/{employeeId}")
+    public ResponseEntity<?> getReportByEmployeeID(
+            @PathVariable String companyId,
+            @PathVariable String employeeId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "3") int size
+            ) {
+        //TODO add summaryVariance field that give the difference between the current and previuos summary values
+        Map<String, Object> response =  reportPersistenceService.getReportByEmployeeID(companyId,  employeeId, page, size);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
     @GetMapping("/analytics/{companyId}")
     public List<ReportAnalytics> getAnalyticsReports(@PathVariable String companyId) {
         return reportPersistenceService.getReportAnalytics(companyId);
@@ -34,6 +48,23 @@ public class Report {
     @GetMapping("/get-by-start-date/{companyId}/{startDate}")
     public ReportResponse getReport(@PathVariable String startDate, @PathVariable String companyId) {
         return reportPersistenceService.getPayRollReport(startDate, companyId);
+    }
+
+    @PostMapping("/get-by-start-date-and-category")
+    public Map<String, Object> getReportByType(
+            @RequestBody ReportByTypeRequest request,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return reportPersistenceService.getPayRollReportByType(request, page, size);
+    }
+
+    @PostMapping("/get-by-start-date-and-employeeId")
+    public Map<String, Object> getPayRollReportDetailByType(
+            @RequestBody ReportByTypeRequest request,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return reportPersistenceService.getPayRollReportDetailByType(request, page, size);
     }
 
     @PutMapping("/approve")
@@ -68,14 +99,36 @@ public class Report {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @GetMapping("/paymentDetails/get-by-employee/by-end-dates")
+    public ResponseEntity<?> getPaymentDetailsByEmployeeByDates(
+            @RequestParam() String employeeId,
+            @RequestParam() String companyId,
+            @RequestParam() List<String> endDates,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "3") int size
+            ) {
+        Map<String, Object> response  = reportPersistenceService
+                .getPaymentDetailForDates(employeeId, companyId, endDates, page, size);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
     @GetMapping("/paymentDetails/get-by-employee")
     public ResponseEntity<?> getPaymentDetailsByEmployee(
             @RequestParam() String companyId,
             @RequestParam() String startDate,
             @RequestParam() String employeeId
-            ) {
+    ) {
         ReportResponse response = reportPersistenceService
                 .getPaymentDetailsByEmployee(employeeId, startDate, companyId);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping("/ytdReport")
+    public ResponseEntity<?> getYtdReport(
+            @RequestParam() String employeeId,
+            @RequestParam() String companyId
+    ) {
+        YTDReport response = reportPersistenceService.getYTDReport(employeeId, companyId);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

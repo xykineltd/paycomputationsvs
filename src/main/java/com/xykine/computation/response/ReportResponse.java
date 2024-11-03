@@ -25,4 +25,5 @@ public class ReportResponse {
     boolean payrollSimulated;
     boolean payrollCompleted;
     boolean offCycle;
+    String payrollValidationError;
 }
