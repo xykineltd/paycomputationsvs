@@ -652,7 +652,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         }
     }
     private void updateDashboardData(String updateType, PayrollReportSummary payrollReportSummary) {
-        LOGGER.info(" ====> payrollReportSummary  {} ",  payrollReportSummary);
         switch (updateType) {
             case(AppConstants.payrollCountOffCycle) : dashboardDataService.updatePayrollCountTypeOffCycle(payrollReportSummary); break;
             case(AppConstants.payrollCountRegular) : dashboardDataService.updatePayrollCountTypeRegular(payrollReportSummary); break;

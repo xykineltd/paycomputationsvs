@@ -63,8 +63,6 @@ public class DashboardDataService {
     }
 
     public void updatePayrollCountTypeRegular(PayrollReportSummary payrollReportSummary) {
-        LOGGER.info(" ====> payrollReportSummary  {} ",  payrollReportSummary);
-
         DashboardCard dashboardCard;
         Optional<DashboardCard> dashboardCardOptional = dashboardCardRepo.findByCompanyId(payrollReportSummary.getCompanyId());
 

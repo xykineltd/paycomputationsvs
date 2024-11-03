@@ -16,7 +16,7 @@ import java.util.Map;
 
 
 @RestController
-@RequestMapping("/dashboard")
+@RequestMapping("/compute/dashboard")
 @RequiredArgsConstructor
 public class Dashboard {
 
