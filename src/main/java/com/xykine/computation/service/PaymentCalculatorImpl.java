@@ -253,7 +253,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         var deductions = getDeductionsForEmployee(paymentInfo);
 
         deductions.stream()
-                .filter(PaymentSettingsResponse::isActive)
+//                .filter(PaymentSettingsResponse::isActive)
                 .forEach(x -> {
                     deductionMap.put(x.getName(), x.getValue());
                     ComputationUtils.updateReportSummary(paymentInfo, sessionCalculationObject, MapKeys.TOTAL_PERSONAL_DEDUCTION, x.getValue());
@@ -275,7 +275,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
             Set<PaymentSettingsResponse> allowance = getAllowanceForEmployee(paymentInfo);
             allowance.stream()
-                    .filter(PaymentSettingsResponse::isActive)
+//                    .filter(PaymentSettingsResponse::isActive)
                     .forEach(x -> {
                         earningMap.put(x.getName(), x.getValue());
                     });
