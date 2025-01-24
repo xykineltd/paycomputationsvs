@@ -25,6 +25,7 @@ public class PaymentComputeResponse implements Serializable {
     private String offCycleId;
     private String fullName;
     private List<PaymentInfo> report;
+    private Map<String, BigDecimal> generalLedger;
     private Map<String, BigDecimal> summary;
     private Map<String, BigDecimal> summaryVariance;
     private Map<String, List<SummaryDetail>> summaryDetails;

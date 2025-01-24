@@ -86,6 +86,7 @@ public class ComputeService {
                 .map(x -> paymentCalculator.computeTotalDeduction(x))
                 .map(x -> paymentCalculator.computeNetPay(x))
                 .map(x -> paymentCalculator.computeTotalNHF(x))
+                .map(x -> paymentCalculator.prepareGeneralLedger(x))
                 .collect(Collectors.toList());
         return  payInfos;
     }

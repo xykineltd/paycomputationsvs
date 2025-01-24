@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @NoArgsConstructor
 public class SessionCalculationObject {
 
+    private ConcurrentHashMap<String, BigDecimal> generalLedger;
     private ConcurrentHashMap<String, BigDecimal> summary;
     private ConcurrentHashMap<String, List<SummaryDetail>> summaryDetails;
     private Map<String, BigDecimal> computationConstants;

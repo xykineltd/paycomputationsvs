@@ -16,6 +16,7 @@ import java.util.Map;
 @AllArgsConstructor
 public class PayComputeSummaryResponse implements Serializable {
     private String message;
+    private Map<String, BigDecimal> generalLedger;
     private Map<String, BigDecimal> summary;
     private Map<String, BigDecimal> summaryVariance;
     private Map<String, List<SummaryDetail>> summaryDetails;

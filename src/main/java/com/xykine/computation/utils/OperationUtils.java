@@ -17,6 +17,7 @@ public class OperationUtils {
     public static SessionCalculationObject doPreflight(SessionCalculationObject sessionCalculationObject, ComputationConstantsRepo computationConstantsRepo, TaxRepo taxRepo){
 
         ConcurrentHashMap<String, BigDecimal> sessionSummary = new ConcurrentHashMap<>();
+        ConcurrentHashMap<String, BigDecimal> sessionLedger = new ConcurrentHashMap<>();
         ConcurrentHashMap<String, List<SummaryDetail>> sessionSummaryDetails = new ConcurrentHashMap<>();
         Map<String, BigDecimal> computationConstants = new HashMap<>();
 
@@ -38,6 +39,15 @@ public class OperationUtils {
         sessionSummaryDetails.put(MapKeys.TOTAL_EMPLOYER_PENSION_CONTRIBUTION, new ArrayList<>());
         sessionCalculationObject.setSummaryDetails(sessionSummaryDetails);
 
+        sessionLedger.put(MapKeys.BASIC_SALARY, BigDecimal.ZERO);
+        sessionLedger.put(MapKeys.TRANSPORT, BigDecimal.ZERO);
+        sessionLedger.put(MapKeys.HOUSING, BigDecimal.ZERO);
+        sessionLedger.put(MapKeys.LEAVE, BigDecimal.ZERO);
+        sessionLedger.put(MapKeys.PENSION_PAYABLE, BigDecimal.ZERO);
+        sessionLedger.put(MapKeys.NET_PAY, BigDecimal.ZERO);
+        sessionLedger.put(MapKeys.INDUSTRIAL_TRAINING_FUND, BigDecimal.ZERO);
+        sessionCalculationObject.setGeneralLedger(sessionLedger);
+
         taxRepo.findAllByOrderByTaxClass().stream().forEach(x -> {
             computationConstants.put(x.getTaxClass(), x.getPercentage());
         });
@@ -52,6 +62,7 @@ public class OperationUtils {
                                                         SessionCalculationObject sessionCalculationObject,
                                                         PaymentInfoRequest paymentRequest) {
         paymentComputeResponse.setId(UUID.randomUUID());
+        paymentComputeResponse.setGeneralLedger(sessionCalculationObject.getGeneralLedger());
         paymentComputeResponse.setSummary(sessionCalculationObject.getSummary());
         paymentComputeResponse.setSummaryDetails(sessionCalculationObject.getSummaryDetails());
         paymentComputeResponse.setStart(paymentRequest.getStart().toString());

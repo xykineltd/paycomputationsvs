@@ -307,6 +307,19 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         return paymentInfo;
     }
 
+    @Override
+    public PaymentInfo prepareGeneralLedger(PaymentInfo paymentInfo) {
+        ComputationUtils.updateGeneralLedger(sessionCalculationObject, MapKeys.BASIC_SALARY, paymentInfo.getGrossPay().get(MapKeys.BASIC_SALARY));
+        ComputationUtils.updateGeneralLedger(sessionCalculationObject, MapKeys.TRANSPORT, paymentInfo.getGrossPay().get(MapKeys.TRANSPORT_ALLOWANCE));
+        ComputationUtils.updateGeneralLedger(sessionCalculationObject, MapKeys.HOUSING, paymentInfo.getGrossPay().get(MapKeys.HOUSING_ALLOWANCE));
+        ComputationUtils.updateGeneralLedger(sessionCalculationObject, MapKeys.LEAVE, paymentInfo.getGrossPay().get(MapKeys.LEAVE));
+        ComputationUtils.updateGeneralLedger(sessionCalculationObject, MapKeys.PENSION_PAYABLE, paymentInfo.getPension().get(MapKeys.TOTAL_PENSION_FOR_EMPLOYEE));
+        ComputationUtils.updateGeneralLedger(sessionCalculationObject, MapKeys.NET_PAY, paymentInfo.getNetPay());
+        ComputationUtils.updateGeneralLedger(sessionCalculationObject, MapKeys.INDUSTRIAL_TRAINING_FUND, paymentInfo.getDeduction().get(MapKeys.INDUSTRIAL_TRAINING_FUND));
+        return paymentInfo;
+    }
+
+
     private BigDecimal getTotal(Map<String, BigDecimal> input){
         BigDecimal total = BigDecimal.ZERO;
         for(Map.Entry<String, BigDecimal> entry : input.entrySet()) {

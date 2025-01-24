@@ -62,6 +62,13 @@ public class ComputationUtils {
         sessionCalculationObject.getSummaryDetails().put(key, summaryDetailsList);
     }
 
+    public static synchronized void updateGeneralLedger(SessionCalculationObject sessionCalculationObject, String key, BigDecimal value){
+        BigDecimal currentValue = sessionCalculationObject.getGeneralLedger().get(key);
+        value = value != null ? value : BigDecimal.ZERO;
+        currentValue = currentValue.add(value);
+        sessionCalculationObject.getGeneralLedger().put(key, currentValue);
+    }
+
     public static BigDecimal getPaymentValueFromPaymentSetting(PaymentSettingsResponse paymentSettings){
         var paymentSettingValue = paymentSettings.getValue() == null ? BigDecimal.valueOf(0.0) : paymentSettings.getValue();
         return paymentSettingValue;

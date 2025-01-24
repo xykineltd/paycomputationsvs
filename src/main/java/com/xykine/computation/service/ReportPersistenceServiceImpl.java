@@ -101,6 +101,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         long totalNumberOfEmployees = paymentInfo.getTotalNumberOfEmployees();
         PaymentFrequencyEnum paymentFrequency = paymentInfo.getSalaryFrequency();
         PayComputeSummaryResponse payComputeSummaryResponse = PayComputeSummaryResponse.builder()
+                .generalLedger(paymentComputeResponse.getGeneralLedger())
                 .summary(paymentComputeResponse.getSummary())
                 .summaryDetails(paymentComputeResponse.getSummaryDetails())
                 // TODO update the variance values
@@ -228,6 +229,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     private ReportResponse getReportResponseSimulate(PaymentComputeResponse paymentComputeResponse, String companyId, String startDate) {
         // TODO process the variance
         PayComputeSummaryResponse payComputeSummaryResponse = PayComputeSummaryResponse.builder()
+                .generalLedger(paymentComputeResponse.getGeneralLedger())
                 .summary(paymentComputeResponse.getSummary())
                 .summaryDetails(paymentComputeResponse.getSummaryDetails())
                 // TODO update the variance values
