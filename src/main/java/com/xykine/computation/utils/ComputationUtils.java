@@ -66,28 +66,22 @@ public class ComputationUtils {
     }
 
     public static synchronized void updateGeneralLedger(PaymentInfo paymentInfo, SessionCalculationObject sessionCalculationObject) {
-        Map<String, BigDecimal> grossElements = paymentInfo.getGrossPay();
-        grossElements.keySet().stream()
-                .filter(x -> !Objects.equals(x, MapKeys.GROSS_PAY))
-                .forEach(x -> {
-                    BigDecimal value = paymentInfo.getGrossPay().get(x);
-                    value = value != null ? value : BigDecimal.ZERO;
-                    BigDecimal currentValue = sessionCalculationObject.getGeneralLedger().computeIfAbsent(x, k -> BigDecimal.ZERO);
-                    currentValue = currentValue.add(value);
-                    sessionCalculationObject.getGeneralLedger().put(x, currentValue);
-                });
+        // Update General Ledger for gross elements
+        updateLedgerElements(paymentInfo.getGrossPay(), MapKeys.GROSS_PAY, sessionCalculationObject);
 
-        Map<String, BigDecimal> deductionElements = paymentInfo.getDeduction();
-        deductionElements.keySet().stream()
-                .filter(x -> !Objects.equals(x, MapKeys.TOTAL_DEDUCTION))
-                .forEach(x -> {
-                    BigDecimal value = paymentInfo.getDeduction().get(x);
-                    value = value != null ? value : BigDecimal.ZERO;
-                    BigDecimal currentValue = sessionCalculationObject.getGeneralLedger().computeIfAbsent(x, k -> BigDecimal.ZERO);
-                    currentValue = currentValue.add(value);
-                    sessionCalculationObject.getGeneralLedger().put(x, currentValue);
-                });
+        // Update General Ledger for deduction elements
+        updateLedgerElements(paymentInfo.getDeduction(), MapKeys.TOTAL_DEDUCTION, sessionCalculationObject);
     }
+
+    private static void updateLedgerElements(Map<String, BigDecimal> elements, String excludedKey, SessionCalculationObject sessionCalculationObject) {
+        elements.forEach((key, value) -> {
+            if (!Objects.equals(key, excludedKey)) {
+                value = value != null ? value : BigDecimal.ZERO;
+                sessionCalculationObject.getGeneralLedger().merge(key, value, BigDecimal::add);
+            }
+        });
+    }
+
 
     public static BigDecimal getPaymentValueFromPaymentSetting(PaymentSettingsResponse paymentSettings){
         var paymentSettingValue = paymentSettings.getValue() == null ? BigDecimal.valueOf(0.0) : paymentSettings.getValue();
