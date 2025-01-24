@@ -60,8 +60,7 @@
 		<dependency>
 			<groupId>org.xykine.payroll</groupId>
 			<artifactId>payment-settings-model</artifactId>
-			<version>7</version>
-			<!--	<version>${paymentsetting.version}</version>  -->
+			<version>${paymentsetting.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.projectlombok</groupId>

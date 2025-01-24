@@ -39,13 +39,6 @@ public class OperationUtils {
         sessionSummaryDetails.put(MapKeys.TOTAL_EMPLOYER_PENSION_CONTRIBUTION, new ArrayList<>());
         sessionCalculationObject.setSummaryDetails(sessionSummaryDetails);
 
-        sessionLedger.put(MapKeys.BASIC_SALARY, BigDecimal.ZERO);
-        sessionLedger.put(MapKeys.TRANSPORT, BigDecimal.ZERO);
-        sessionLedger.put(MapKeys.HOUSING, BigDecimal.ZERO);
-        sessionLedger.put(MapKeys.LEAVE, BigDecimal.ZERO);
-        sessionLedger.put(MapKeys.PENSION_PAYABLE, BigDecimal.ZERO);
-        sessionLedger.put(MapKeys.NET_PAY, BigDecimal.ZERO);
-        sessionLedger.put(MapKeys.INDUSTRIAL_TRAINING_FUND, BigDecimal.ZERO);
         sessionCalculationObject.setGeneralLedger(sessionLedger);
 
         taxRepo.findAllByOrderByTaxClass().stream().forEach(x -> {

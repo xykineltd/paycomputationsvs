@@ -5,6 +5,7 @@ import com.xykine.computation.service.PaymentCalculatorImpl;
 import com.xykine.computation.session.SessionCalculationObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xykine.payroll.model.MapKeys;
 import org.xykine.payroll.model.PaymentFrequencyEnum;
 import org.xykine.payroll.model.PaymentInfo;
 import org.xykine.payroll.model.PaymentSettingsResponse;
@@ -12,6 +13,8 @@ import org.xykine.payroll.model.PaymentSettingsResponse;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 
 public class ComputationUtils {
@@ -62,11 +65,28 @@ public class ComputationUtils {
         sessionCalculationObject.getSummaryDetails().put(key, summaryDetailsList);
     }
 
-    public static synchronized void updateGeneralLedger(SessionCalculationObject sessionCalculationObject, String key, BigDecimal value){
-        BigDecimal currentValue = sessionCalculationObject.getGeneralLedger().get(key);
-        value = value != null ? value : BigDecimal.ZERO;
-        currentValue = currentValue.add(value);
-        sessionCalculationObject.getGeneralLedger().put(key, currentValue);
+    public static synchronized void updateGeneralLedger(PaymentInfo paymentInfo, SessionCalculationObject sessionCalculationObject) {
+        Map<String, BigDecimal> grossElements = paymentInfo.getGrossPay();
+        grossElements.keySet().stream()
+                .filter(x -> !Objects.equals(x, MapKeys.GROSS_PAY))
+                .forEach(x -> {
+                    BigDecimal value = paymentInfo.getGrossPay().get(x);
+                    value = value != null ? value : BigDecimal.ZERO;
+                    BigDecimal currentValue = sessionCalculationObject.getGeneralLedger().computeIfAbsent(x, k -> BigDecimal.ZERO);
+                    currentValue = currentValue.add(value);
+                    sessionCalculationObject.getGeneralLedger().put(x, currentValue);
+                });
+
+        Map<String, BigDecimal> deductionElements = paymentInfo.getDeduction();
+        deductionElements.keySet().stream()
+                .filter(x -> !Objects.equals(x, MapKeys.TOTAL_DEDUCTION))
+                .forEach(x -> {
+                    BigDecimal value = paymentInfo.getDeduction().get(x);
+                    value = value != null ? value : BigDecimal.ZERO;
+                    BigDecimal currentValue = sessionCalculationObject.getGeneralLedger().computeIfAbsent(x, k -> BigDecimal.ZERO);
+                    currentValue = currentValue.add(value);
+                    sessionCalculationObject.getGeneralLedger().put(x, currentValue);
+                });
     }
 
     public static BigDecimal getPaymentValueFromPaymentSetting(PaymentSettingsResponse paymentSettings){
