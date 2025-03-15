@@ -81,11 +81,8 @@ public class Report {
     }
 
     @PutMapping("/post-to-finance")
-    public boolean completeReport(@RequestBody UpdateReportRequest request) {
-        PayrollReportSummary payrollReport = reportPersistenceService.completeReport(request);
-        if (payrollReport.isPayrollCompleted() != request.isPayrollCompleted())
-            return false;
-        return true;
+    public PayrollReportSummary completeReport(@RequestBody UpdateReportRequest request) {
+        return reportPersistenceService.completeReport(request);
     }
 
     @GetMapping("/paymentDetails")

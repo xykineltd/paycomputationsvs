@@ -92,6 +92,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     @Override
     public PaymentInfo computeNonTaxableIncomeExempt(PaymentInfo paymentInfo) {
+        System.out.println( paymentInfo.getFullName() + " paymentInfo----> " + paymentInfo.getNumberOfDaysOfUnpaidAbsence());
         PaymentFrequencyEnum salaryFrequency = paymentInfo.getSalaryFrequency();
 
         if (paymentInfo.isOffCycle())

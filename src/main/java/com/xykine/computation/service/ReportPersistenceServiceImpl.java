@@ -405,8 +405,22 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
     @Override
     public PayrollReportSummary completeReport(UpdateReportRequest request) {
-        var  existingSummaryReport = payrollReportSummaryRepo
-                .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(request.getStartDate(), request.getCompanyId(), false);
+        PayrollReportSummary existingSummaryReport;
+        if(request.isOffCycle()){
+            existingSummaryReport = payrollReportSummaryRepo.findPayrollReportSummaryByStartDateAndCompanyIdAndOffCycleIdAndPayrollSimulation(
+                    request.getStartDate(),
+                    request.getCompanyId(),
+                    request.getOffCycleId(),
+                    false);
+        } else {
+            existingSummaryReport = payrollReportSummaryRepo
+                    .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(request.getStartDate(), request.getCompanyId(), false);
+        }
+
+        if(existingSummaryReport == null) {
+            throw new RuntimeException("Unable to pull payroll report");
+        }
+
         existingSummaryReport.setPayrollCompleted(request.isPayrollCompleted());
         payrollReportSummaryRepo.save(existingSummaryReport);
         auditTrailService.logEvent(AuditTrailEvents.POST_TO_FINANCE,
