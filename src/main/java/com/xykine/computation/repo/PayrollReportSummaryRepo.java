@@ -13,6 +13,7 @@ import java.util.UUID;
 public interface PayrollReportSummaryRepo extends MongoRepository<PayrollReportSummary, UUID> {
 
     PayrollReportSummary findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(String startDate, String companyId, boolean simulation);
+    PayrollReportSummary findPayrollReportSummaryByStartDateAndCompanyIdAndOffCycleIdAndPayrollSimulation(String startDate, String companyId, String offCycleId, boolean simulation);
     List<PayrollReportSummary> findAllByCompanyIdAndPayrollSimulationAndOffCycle(String companyId, boolean simulation, boolean offCycle);
     Page<PayrollReportSummary> findAllByCompanyIdAndStartDateBetweenAndOffCycle(String companyId, String startDateLow, String startDateHigh, boolean offCycle, Pageable pageable);
     Page<PayrollReportSummary> findAllByCompanyIdAndStartDateBetween(String companyId, String startDateLow, String startDateHigh, Pageable pageable);
