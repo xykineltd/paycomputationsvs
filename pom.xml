@@ -15,6 +15,7 @@
 	<description>Staff payment computation microservice</description>
 	<properties>
 		<java.version>17</java.version>
+		<paymentsetting.version>1.0.1</paymentsetting.version>
 	</properties>
 	<dependencies>
 <!--		<dependency>-->
@@ -59,7 +60,7 @@
 		<dependency>
 			<groupId>org.xykine.payroll</groupId>
 			<artifactId>payment-settings-model</artifactId>
-			<version>7</version>
+			<version>${paymentsetting.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.projectlombok</groupId>
