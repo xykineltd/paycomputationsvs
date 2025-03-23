@@ -336,11 +336,12 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         }
         //'COMPLETED. |. PENDING. |. APPROVED. |. SIMULATED'
         if(status != null && status.equalsIgnoreCase("COMPLETED")) {
-            reports = payrollReportSummaryRepo.findAllByPayrollCompletedAndCompanyIdOrderByCreatedDateAsc(true,companyId).stream()
-                    .map(ReportUtils::transform).toList();
+            ReportResponse firstReport = payrollReportSummaryRepo.findAllByPayrollCompletedAndPayrollApprovedAndCompanyIdOrderByCreatedDateAsc(true,true,companyId).stream()
+                    .map(ReportUtils::transform).toList().get(0);
+            reports.add(firstReport);
         }
         if(status != null && status.equalsIgnoreCase("APPROVED")) {
-            reports = payrollReportSummaryRepo.findAllByPayrollApprovedAndCompanyIdOrderByCreatedDateAsc(true,companyId).stream()
+            reports = payrollReportSummaryRepo.findAllByPayrollCompletedAndPayrollApprovedAndCompanyIdOrderByCreatedDateAsc(false,true,companyId).stream()
                     .map(ReportUtils::transform).toList();
         }
         if(status != null && status.equalsIgnoreCase("PENDING")) {
@@ -477,6 +478,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         payrollReportDetailRepo.deleteAllByStartDateAndCompanyId(LocalDate.parse(startDate), companyId);
         return true;
     }
+
+
 
     @Override
     public Map<String, Object> getPaymentDetails(String summaryId, String companyId, String fullName, int page, int size) {
