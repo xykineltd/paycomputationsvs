@@ -329,6 +329,29 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     }
 
     @Override
+    public List<ReportResponse> getPayRollReportsByStatus(String companyId, String status) {
+        List<ReportResponse> reports = new ArrayList<>();
+        if(status != null && status.equalsIgnoreCase("SIMULATED")) {
+            reports = getPayRollReportSimulates(companyId);
+        }
+        //'COMPLETED. |. PENDING. |. APPROVED. |. SIMULATED'
+        if(status != null && status.equalsIgnoreCase("COMPLETED")) {
+            reports = payrollReportSummaryRepo.findAllByPayrollCompletedAndCompanyIdOrderByCreatedDateAsc(true,companyId).stream()
+                    .map(ReportUtils::transform).toList();
+        }
+        if(status != null && status.equalsIgnoreCase("APPROVED")) {
+            reports = payrollReportSummaryRepo.findAllByPayrollApprovedAndCompanyIdOrderByCreatedDateAsc(true,companyId).stream()
+                    .map(ReportUtils::transform).toList();
+        }
+        if(status != null && status.equalsIgnoreCase("PENDING")) {
+            reports = payrollReportSummaryRepo.findAllByPayrollCompletedAndPayrollApprovedAndCompanyIdOrderByCreatedDateAsc(false,false,companyId).stream()
+                    .map(ReportUtils::transform).toList();
+        }
+        //auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Pulled payroll report for company id :" + companyId);
+        return reports;
+    }
+
+    @Override
     public Map<String, Object> getReportByEmployeeID(String companyId, String employeeID, int page, int size) {
         List<PayrollReportDetail> payrollDetails;
         Pageable paging = PageRequest.of(page, size);

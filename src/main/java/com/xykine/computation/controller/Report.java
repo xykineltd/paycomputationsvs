@@ -22,8 +22,14 @@ public class Report {
 
     private final ReportPersistenceService reportPersistenceService;
 
-    @GetMapping("/{companyId}")
+    @GetMapping("/{companyId}/")
     public List<ReportResponse> getReports(@PathVariable String companyId) {
+        //TODO add summaryVariance field that give the difference between the current and previuos summary values
+        return reportPersistenceService.getPayRollReports(companyId);
+    }
+
+    @GetMapping("/{companyId}/{status}")
+    public List<ReportResponse> getReportsByStatus(@PathVariable String companyId, @PathVariable String status) {
         //TODO add summaryVariance field that give the difference between the current and previuos summary values
         return reportPersistenceService.getPayRollReports(companyId);
     }
