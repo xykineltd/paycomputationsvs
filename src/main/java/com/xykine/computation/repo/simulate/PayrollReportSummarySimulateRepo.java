@@ -1,5 +1,6 @@
 package com.xykine.computation.repo.simulate;
 
+import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.entity.simulate.PayrollReportSummarySimulate;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
@@ -14,4 +15,6 @@ public interface PayrollReportSummarySimulateRepo extends MongoRepository<Payrol
     List<PayrollReportSummarySimulate> findAllByCompanyIdOrderByCreatedDateAsc(String companyId);
     void deleteAllByStartDate(LocalDate startDate);
     void deletePayrollReportSummaryByPayrollSimulation(Boolean simulation);
+
+    PayrollReportSummarySimulate findPayrollReportSummaryById(UUID id);
 }

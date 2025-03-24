@@ -252,7 +252,8 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
         var deductions = getDeductionsForEmployee(paymentInfo);
 
-        deductions.stream()
+        deductions
+                //TODO uncomment this once the paymentSetting logic to toggle status is fixed
 //                .filter(PaymentSettingsResponse::isActive)
                 .forEach(x -> {
                     deductionMap.put(x.getName(), x.getValue());
@@ -274,11 +275,10 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
             earningMap.put(MapKeys.BASIC_SALARY, paymentInfo.getBasicSalary());
 
             Set<PaymentSettingsResponse> allowance = getAllowanceForEmployee(paymentInfo);
-            allowance.stream()
+            allowance
+                    //TODO uncomment this once the paymentSetting logic to toggle status is fixed
 //                    .filter(PaymentSettingsResponse::isActive)
-                    .forEach(x -> {
-                        earningMap.put(x.getName(), x.getValue());
-                    });
+                    .forEach(x -> earningMap.put(x.getName(), x.getValue()));
         }
         return earningMap;
     }

@@ -122,7 +122,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 .build();
         payrollReportSummaryRepo.save(payrollReportSummary);
         saveReportDetails(paymentComputeResponse, companyId, payrollReportSummary.isPayrollApproved());
-        return getPayRollReport(paymentComputeResponse.getId());
+        return getPayRollReport(paymentComputeResponse.getId(), false);
     }
 
     private Map<String, List<SummaryDetail>> processSummaryDetailsVariance(Map<String, List<SummaryDetail>> currentSummaryDetails, PayrollReportSummary previousPayrollReportSummary) {
@@ -218,12 +218,21 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         return summaryVariance;
     }
 
-    public ReportResponse getPayRollReport(UUID id){
-        PayrollReportSummary payrollReportSummary = payrollReportSummaryRepo.findPayrollReportSummaryById(id);
-        if(payrollReportSummary == null){
-            throw new RuntimeException("Report with id: " + id + " was not found");
+    public ReportResponse getPayRollReport(UUID id, boolean isSimulate){
+
+        if(isSimulate){
+            PayrollReportSummarySimulate payrollReportSimulateSummary = payrollReportSummaryRepoSimulate.findPayrollReportSummaryById(id);
+            if(payrollReportSimulateSummary == null){
+                throw new RuntimeException("Report with id: " + id + " was not found");
+            }
+            return ReportUtils.transform(payrollReportSimulateSummary);
+        }else{
+            PayrollReportSummary payrollReportSummary = payrollReportSummaryRepo.findPayrollReportSummaryById(id);
+            if(payrollReportSummary == null){
+                throw new RuntimeException("Report with id: " + id + " was not found");
+            }
+            return ReportUtils.transform(payrollReportSummary);
         }
-        return ReportUtils.transform(payrollReportSummary);
     }
     private ReportResponse getReportResponseSimulate(PaymentComputeResponse paymentComputeResponse, String companyId, String startDate) {
         // TODO process the variance
@@ -326,6 +335,31 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         summary.addAll(reports);
         //auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Pulled payroll report for company id :" + companyId);
         return summary;
+    }
+
+    @Override
+    public List<ReportResponse> getPayRollReportsByStatus(String companyId, String status) {
+        List<ReportResponse> reports = new ArrayList<>();
+        if(status != null && status.equalsIgnoreCase("SIMULATED")) {
+            reports = getPayRollReportSimulates(companyId);
+        }
+        // TODO create enum for this strings
+        //'COMPLETED. |. PENDING. |. APPROVED. |. SIMULATED'
+        if(status != null && status.equalsIgnoreCase("COMPLETED")) {
+            ReportResponse firstReport = payrollReportSummaryRepo.findAllByPayrollCompletedAndPayrollApprovedAndCompanyIdOrderByCreatedDateAsc(true,true,companyId).stream()
+                    .map(ReportUtils::transform).toList().get(0);
+            reports.add(firstReport);
+        }
+        if(status != null && status.equalsIgnoreCase("APPROVED")) {
+            reports = payrollReportSummaryRepo.findAllByPayrollCompletedAndPayrollApprovedAndCompanyIdOrderByCreatedDateAsc(false,true,companyId).stream()
+                    .map(ReportUtils::transform).toList();
+        }
+        if(status != null && status.equalsIgnoreCase("PENDING")) {
+            reports = payrollReportSummaryRepo.findAllByPayrollCompletedAndPayrollApprovedAndCompanyIdOrderByCreatedDateAsc(false,false,companyId).stream()
+                    .map(ReportUtils::transform).toList();
+        }
+        //auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Pulled payroll report for company id :" + companyId);
+        return reports;
     }
 
     @Override
@@ -454,6 +488,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         payrollReportDetailRepo.deleteAllByStartDateAndCompanyId(LocalDate.parse(startDate), companyId);
         return true;
     }
+
+
 
     @Override
     public Map<String, Object> getPaymentDetails(String summaryId, String companyId, String fullName, int page, int size) {

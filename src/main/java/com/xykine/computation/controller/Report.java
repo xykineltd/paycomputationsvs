@@ -1,5 +1,6 @@
 package com.xykine.computation.controller;
 
+import com.xykine.computation.entity.PayrollReportDetail;
 import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.entity.YTDReport;
 import com.xykine.computation.request.ReportByTypeRequest;
@@ -14,6 +15,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/compute/reports")
@@ -22,10 +25,22 @@ public class Report {
 
     private final ReportPersistenceService reportPersistenceService;
 
-    @GetMapping("/{companyId}")
+    @GetMapping("/{companyId}/")
     public List<ReportResponse> getReports(@PathVariable String companyId) {
         //TODO add summaryVariance field that give the difference between the current and previuos summary values
         return reportPersistenceService.getPayRollReports(companyId);
+    }
+
+    @GetMapping("/{companyId}/status/{status}")
+    public List<ReportResponse> getReportsByStatus(@PathVariable String companyId, @PathVariable String status) {
+        //TODO add summaryVariance field that give the difference between the current and previuos summary values
+        return reportPersistenceService.getPayRollReportsByStatus(companyId, status);
+    }
+
+    @GetMapping("/by-reportId/{reportId}/isSimulate/{isSimulate}")
+    public ReportResponse getReportsByStatus( @PathVariable UUID reportId, @PathVariable boolean isSimulate) {
+        //TODO add summaryVariance field that give the difference between the current and previuos summary values
+        return reportPersistenceService.getPayRollReport(reportId, isSimulate);
     }
 
     @GetMapping("/{companyId}/{employeeId}")
