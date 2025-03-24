@@ -37,10 +37,10 @@ public class Report {
         return reportPersistenceService.getPayRollReportsByStatus(companyId, status);
     }
 
-    @GetMapping("/by-reportId/{reportId}")
-    public ReportResponse getReportsByStatus( @PathVariable UUID reportId) {
+    @GetMapping("/by-reportId/{reportId}/isSimulate/{isSimulate}")
+    public ReportResponse getReportsByStatus( @PathVariable UUID reportId, @PathVariable boolean isSimulate) {
         //TODO add summaryVariance field that give the difference between the current and previuos summary values
-        return reportPersistenceService.getPayRollReport(reportId);
+        return reportPersistenceService.getPayRollReport(reportId, isSimulate);
     }
 
     @GetMapping("/{companyId}/{employeeId}")
