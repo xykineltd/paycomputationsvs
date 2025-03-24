@@ -257,8 +257,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 //                .filter(PaymentSettingsResponse::isActive)
                 .forEach(x -> {
                     deductionMap.put(x.getName(), x.getValue());
-                    LOGGER.info("x.getName()=====>{} and value ==>{}", x.getName(), x.getValue());
-                    LOGGER.info("deductionMap=====>{}", deductionMap);
                     ComputationUtils.updateReportSummary(paymentInfo, sessionCalculationObject, MapKeys.TOTAL_PERSONAL_DEDUCTION, x.getValue());
                 });
 

@@ -343,6 +343,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         if(status != null && status.equalsIgnoreCase("SIMULATED")) {
             reports = getPayRollReportSimulates(companyId);
         }
+        // TODO create enum for this strings
         //'COMPLETED. |. PENDING. |. APPROVED. |. SIMULATED'
         if(status != null && status.equalsIgnoreCase("COMPLETED")) {
             ReportResponse firstReport = payrollReportSummaryRepo.findAllByPayrollCompletedAndPayrollApprovedAndCompanyIdOrderByCreatedDateAsc(true,true,companyId).stream()

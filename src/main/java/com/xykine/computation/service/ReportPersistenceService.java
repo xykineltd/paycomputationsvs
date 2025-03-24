@@ -19,6 +19,7 @@ public interface ReportPersistenceService {
     ReportResponse serializeAndSaveReport(PaymentComputeResponse paymentComputeResponse, String companyId) throws IOException, ClassNotFoundException;
     ReportResponse getPayRollReport(String startData, String companyId);
 
+    //TODO we need to accept the companyID so that we do not mix up other company reports
     ReportResponse getPayRollReport(UUID reportId, boolean isSimulate);
     List<ReportResponse> getPayRollReports(String companyId);
     List<ReportResponse> getPayRollReportsByStatus(String companyId, String status);
