@@ -346,9 +346,11 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         // TODO create enum for this strings
         //'COMPLETED. |. PENDING. |. APPROVED. |. SIMULATED'
         if(status != null && status.equalsIgnoreCase("COMPLETED")) {
-            ReportResponse firstReport = payrollReportSummaryRepo.findAllByPayrollCompletedAndPayrollApprovedAndCompanyIdOrderByCreatedDateAsc(true,true,companyId).stream()
-                    .map(ReportUtils::transform).toList().get(0);
-            reports.add(firstReport);
+            List<ReportResponse> firstReport = payrollReportSummaryRepo.findAllByPayrollCompletedAndPayrollApprovedAndCompanyIdOrderByCreatedDateAsc(true,true,companyId).stream()
+                    .map(ReportUtils::transform).toList();
+            if(!firstReport.isEmpty()) {
+                reports.add(firstReport.get(0));
+            }
         }
         if(status != null && status.equalsIgnoreCase("APPROVED")) {
             reports = payrollReportSummaryRepo.findAllByPayrollCompletedAndPayrollApprovedAndCompanyIdOrderByCreatedDateAsc(false,true,companyId).stream()
