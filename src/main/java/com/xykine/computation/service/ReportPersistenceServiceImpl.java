@@ -268,19 +268,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         return ReportUtils.transform(payrollReportSummary);
     }
 
-    /*
-    @Override
-    public ReportResponse getPayRollReport(String starDate, String companyId){
-       PayrollReportSummary payrollReportSummary = payrollReportSummaryRepo
-                .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(starDate, companyId, false);
-       if(payrollReportSummary == null){
-           return null;
-       }
-       //auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Get payroll report with start date :" + starDate + " for company id : " + companyId);
-        return ReportUtils.transform(payrollReportSummary);
-    }
-     */
-
     @Override
     public Map<String, Object> getPayRollReportByType(ReportByTypeRequest request, int page, int size) {
         var category = request.getCategory();
