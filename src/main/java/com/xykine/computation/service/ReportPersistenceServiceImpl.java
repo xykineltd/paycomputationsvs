@@ -411,13 +411,10 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         if(request.isOffCycle()) {
             existingSummaryReport = payrollReportSummaryRepo
                     .findPayrollReportSummaryByCompanyIdAndOffCycleId(request.getCompanyId(), request.getOffCycleId());
-            LOGGER.info("existingSummaryReport ====> {} offcycle ", existingSummaryReport);
-
             updateDashboardData(AppConstants.payrollCountOffCycle, existingSummaryReport);
         } else {
             existingSummaryReport = payrollReportSummaryRepo
                     .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(request.getStartDate(), request.getCompanyId(), false);
-            LOGGER.info("existingSummaryReport ====> {} ", existingSummaryReport);
             updateDashboardData(AppConstants.payrollCountRegular, existingSummaryReport);
         }
         existingSummaryReport.setPayrollApproved(request.isPayrollApproved());
