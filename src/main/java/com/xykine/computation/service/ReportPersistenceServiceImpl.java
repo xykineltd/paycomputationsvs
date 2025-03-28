@@ -596,7 +596,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                         payrollReportDetailRepo.countBySummaryId(x.getId().toString()),
                         ReportUtils.transform(x).getSummary().getSummary().get(MapKeys.TOTAL_NET_PAY),
                         //TODO put logic to get the correct status
-                        x.isPayrollApproved() ? "Approved" : "Pending",
+                        getReportStatus(x),
                         x.getId().toString(),
                         x.getCompanyId(),
                         x.isOffCycle(),
@@ -606,7 +606,14 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 ))
                 .toList();
 
-        return reportAnalytics.size() > 1 ? reportAnalytics : new ArrayList<>();
+        return reportAnalytics.size() > 0 ? reportAnalytics : new ArrayList<>();
+    }
+
+    private String getReportStatus(PayrollReportSummary report) {
+        if (report.isPayrollApproved()) {
+            return report.isPayrollCompleted() ? "Completed" : "Approved";
+        }
+        return "Pending";
     }
 
 
@@ -615,18 +622,18 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         return ytdReportRepo.findYTDReportByEmployeeIdAndCompanyId(employeeId, companyId).get();
     }
 
-    private List<LocalDate> generateDateFromJanToDecember() {
-        List<LocalDate> dates = new ArrayList<>();
-        LocalDate today = LocalDate.now();
-        int currentYear = today.getYear();
-
-        for (int month = 1; month <= 12; month++) {
-            // Create a LocalDate object for the first day of each month in the current year
-            LocalDate firstDayOfMonth = LocalDate.of(currentYear, month, 1);
-            dates.add(firstDayOfMonth);
-        }
-        return dates;
-    }
+//    private List<LocalDate> generateDateFromJanToDecember() {
+//        List<LocalDate> dates = new ArrayList<>();
+//        LocalDate today = LocalDate.now();
+//        int currentYear = today.getYear();
+//
+//        for (int month = 1; month <= 12; month++) {
+//            // Create a LocalDate object for the first day of each month in the current year
+//            LocalDate firstDayOfMonth = LocalDate.of(currentYear, month, 1);
+//            dates.add(firstDayOfMonth);
+//        }
+//        return dates;
+//    }
     /*
     private ReportAnalytics getReportAnalytics(ReportResponse reportSummary, String companyId) {
         try {
