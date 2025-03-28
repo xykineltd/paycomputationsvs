@@ -413,13 +413,13 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         if(request.isOffCycle()) {
             existingSummaryReport = payrollReportSummaryRepo
                     .findPayrollReportSummaryByCompanyIdAndOffCycleId(request.getCompanyId(), request.getOffCycleId());
-            LOGGER.info("existingSummaryReport ====> {} offcycle ", existingSummaryReport);
+//            LOGGER.info("existingSummaryReport ====> {} offcycle ", existingSummaryReport);
 
             updateDashboardData(AppConstants.payrollCountOffCycle, existingSummaryReport);
         } else {
             existingSummaryReport = payrollReportSummaryRepo
                     .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(request.getStartDate(), request.getCompanyId(), false);
-            LOGGER.info("existingSummaryReport ====> {} ", existingSummaryReport);
+//            LOGGER.info("existingSummaryReport ====> {} ", existingSummaryReport);
             updateDashboardData(AppConstants.payrollCountRegular, existingSummaryReport);
         }
         existingSummaryReport.setPayrollApproved(request.isPayrollApproved());
@@ -606,6 +606,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
             LOGGER.info("reportDetails: {}", reportDetails.getSize());
             var numberOfPays = reportDetails.getTotalElements();
+            //TODO use totalNumber of employee from paymentInfo
             var employeeCount = getDistinctEmployeesCount(reportDetails);
 
             var reportAnalytics = new ReportAnalytics(
