@@ -583,8 +583,10 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
     @Override
     public List<ReportAnalytics> getReportAnalytics(String companyId) {
-        var reportAnalytics = payrollReportSummaryRepo
-                                .findPayrollReportSummaryByCompanyIdAndPayrollSimulation(companyId, false)
+        Pageable paging = PageRequest.of(0, 12);
+        Page<PayrollReportSummary> payrollReportSummaryPage = payrollReportSummaryRepo.findPayrollReportSummaryByCompanyIdAndPayrollSimulationOrderByCreatedDateDesc(companyId, false, paging);
+        log.info(" ======> payrollReportSummaryPage list {}", payrollReportSummaryPage.getTotalElements());
+        var reportAnalytics = payrollReportSummaryPage.getContent()
                 .stream()
                 .filter(r -> r != null && r.getId() != null)
                 .map(x -> new ReportAnalytics(
