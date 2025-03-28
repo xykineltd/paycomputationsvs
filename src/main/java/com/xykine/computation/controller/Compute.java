@@ -12,6 +12,8 @@ import com.xykine.computation.service.ReportPersistenceService;
 import com.xykine.computation.session.SessionCalculationObject;
 import com.xykine.computation.utils.OperationUtils;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +24,8 @@ import java.util.List;
 @RequestMapping("/compute")
 @RequiredArgsConstructor
 public class Compute {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(Compute.class);
 
     private final ComputeService computeService;
     private final ReportPersistenceService reportPersistenceService;
@@ -39,6 +43,7 @@ public class Compute {
         try{
             sessionCalculationObject = OperationUtils.doPreflight(sessionCalculationObject, computationConstantsRepo, taxRepo);
             List rawInfo = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
+            LOGGER.info("rawInfo*****************************{}", rawInfo);
             assert rawInfo != null;
             PaymentComputeResponse paymentComputeResponse = computeService.computePayroll(rawInfo);
             paymentComputeResponse = OperationUtils.refineResponse(paymentComputeResponse, sessionCalculationObject, paymentRequest);

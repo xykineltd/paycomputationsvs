@@ -36,6 +36,7 @@ public interface PayrollReportDetailRepo extends MongoRepository<PayrollReportDe
     List<PayrollReportDetail> findByCompanyId(String companyId);
 
     long countByCompanyId(String companyId);
+    long countBySummaryId(String summaryId);
 
 }
 
