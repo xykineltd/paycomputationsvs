@@ -78,6 +78,7 @@ public class DashboardDataService {
     }
 
     public DashboardCardResponse retrieveDashboardCardData(String companyId){
+        //TODO update the logic to use optionla before get()
         DashboardCard dashboardCard =  dashboardCardRepo.findByCompanyId(companyId).get();
         return DashboardCardResponse.builder()
                 .totalOffCyclePayroll(dashboardCard.getTotalOffCyclePayroll())

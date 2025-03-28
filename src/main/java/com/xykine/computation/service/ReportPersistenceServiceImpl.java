@@ -583,22 +583,24 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
     @Override
     public List<ReportAnalytics> getReportAnalytics(String companyId) {
-        var reportAnalytics = generateDateFromJanToDecember().stream().map(
-                        date -> payrollReportSummaryRepo
-                                .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(date.toString(), companyId, false))
-                .filter(r -> r.getId() != null)
+        var reportAnalytics = payrollReportSummaryRepo
+                                .findPayrollReportSummaryByCompanyIdAndPayrollSimulation(companyId, false)
+                .stream()
+                .filter(r -> r != null && r.getId() != null)
                 .map(x -> new ReportAnalytics(
                         x.getStartDate(),
                         x.getTotalNumberOfEmployees(),
+                        // TODO test for performance
                         payrollReportDetailRepo.countBySummaryId(x.getId().toString()),
                         ReportUtils.transform(x).getSummary().getSummary().get(MapKeys.TOTAL_NET_PAY),
-                        x.isPayrollApproved() ? "Completed" : "Pending",
-                        x.getId(),
+                        //TODO put logic to get the correct status
+                        x.isPayrollApproved() ? "Approved" : "Pending",
+                        x.getId().toString(),
                         x.getCompanyId(),
                         x.isOffCycle(),
                         x.getOffCycleId(),
                         x.isOffCycle() ? "Off-Cycle" : "Regular",
-                        x.getCreatedDate()
+                        x.getCreatedDate().toString()
                 ))
                 .toList();
 
@@ -623,7 +625,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         }
         return dates;
     }
-}
     /*
     private ReportAnalytics getReportAnalytics(ReportResponse reportSummary, String companyId) {
         try {
