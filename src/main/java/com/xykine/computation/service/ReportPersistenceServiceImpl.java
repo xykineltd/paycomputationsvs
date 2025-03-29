@@ -581,8 +581,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
 
     @Override
-    public List<ReportAnalytics> getReportAnalytics(String companyId) {
-        Pageable paging = PageRequest.of(0, 12);
+    public List<ReportAnalytics> getReportAnalytics(String companyId, int page, int size) {
+        Pageable paging = PageRequest.of(page, size);
         Page<PayrollReportSummary> payrollReportSummaryPage = payrollReportSummaryRepo.findPayrollReportSummaryByCompanyIdAndPayrollSimulationOrderByCreatedDateDesc(companyId, false, paging);
         log.info(" ======> payrollReportSummaryPage list {}", payrollReportSummaryPage.getTotalElements());
         var reportAnalytics = payrollReportSummaryPage.getContent()
@@ -604,8 +604,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                         x.getCreatedDate().toString()
                 ))
                 .toList();
-
-        return reportAnalytics.size() > 0 ? reportAnalytics : new ArrayList<>();
+        return !reportAnalytics.isEmpty() ? reportAnalytics : new ArrayList<>();
     }
 
     private String getReportStatus(PayrollReportSummary report) {

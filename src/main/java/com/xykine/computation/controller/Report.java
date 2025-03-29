@@ -56,9 +56,18 @@ public class Report {
     }
 
     @GetMapping("/analytics/{companyId}")
+    public List<ReportAnalytics> getAnalyticsReports(@PathVariable String companyId,
+                                                     @RequestParam(defaultValue = "0") int page,
+                                                     @RequestParam(defaultValue = "12") int size
+    ) {
+        return reportPersistenceService.getReportAnalytics(companyId, page, size);
+    }
+  /*
+    @GetMapping("/analytics/{companyId}")
     public List<ReportAnalytics> getAnalyticsReports(@PathVariable String companyId) {
         return reportPersistenceService.getReportAnalytics(companyId);
     }
+   */
 
     @GetMapping("/get-by-start-date/{companyId}/{startDate}")
     public ReportResponse getReport(@PathVariable String startDate, @PathVariable String companyId) {
