@@ -1,6 +1,5 @@
 package com.xykine.computation.controller;
 
-import com.xykine.computation.entity.PayrollReportDetail;
 import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.entity.YTDReport;
 import com.xykine.computation.request.ReportByTypeRequest;
@@ -15,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -62,12 +60,6 @@ public class Report {
     ) {
         return reportPersistenceService.getReportAnalytics(companyId, page, size);
     }
-  /*
-    @GetMapping("/analytics/{companyId}")
-    public List<ReportAnalytics> getAnalyticsReports(@PathVariable String companyId) {
-        return reportPersistenceService.getReportAnalytics(companyId);
-    }
-   */
 
     @GetMapping("/get-by-start-date/{companyId}/{startDate}")
     public ReportResponse getReport(@PathVariable String startDate, @PathVariable String companyId) {

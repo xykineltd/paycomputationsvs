@@ -2,7 +2,9 @@ package com.xykine.computation.service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -77,16 +79,22 @@ public class DashboardDataService {
         updateDashboardData(dashboardCard, payrollReportSummary);
     }
 
-    public DashboardCardResponse retrieveDashboardCardData(String companyId){
-        //TODO update the logic to use optionla before get()
-        DashboardCard dashboardCard =  dashboardCardRepo.findByCompanyId(companyId).get();
-        return DashboardCardResponse.builder()
-                .totalOffCyclePayroll(dashboardCard.getTotalOffCyclePayroll())
-                .totalRegularPayroll(dashboardCard.getTotalRegularPayroll())
-                .totalPayrollCost(dashboardCard.getTotalPayrollCost())
-                .averageEmployeeCost(dashboardCard.getAverageEmployeeCost())
-                .lastUpdatedAt(dashboardCard.getLastUpdatedAt().toString())
-                .build();
+    public DashboardCardResponse retrieveDashboardCardData(String companyId) {
+        return dashboardCardRepo.findByCompanyId(companyId)
+                .map(dashboardCard -> DashboardCardResponse.builder()
+                        .totalOffCyclePayroll(dashboardCard.getTotalOffCyclePayroll())
+                        .totalRegularPayroll(dashboardCard.getTotalRegularPayroll())
+                        .totalPayrollCost(dashboardCard.getTotalPayrollCost())
+                        .averageEmployeeCost(dashboardCard.getAverageEmployeeCost())
+                        .lastUpdatedAt(dashboardCard.getLastUpdatedAt().toString())
+                        .build())
+                .orElseGet(() -> DashboardCardResponse.builder()
+                        .totalOffCyclePayroll(0L)  // Default values
+                        .totalRegularPayroll(0L)
+                        .totalPayrollCost(BigDecimal.valueOf(0.0))
+                        .averageEmployeeCost(BigDecimal.valueOf(0.0))
+                        .lastUpdatedAt(LocalDate.now().format(DateTimeFormatter.ISO_DATE)) // Today's date
+                        .build());
     }
 
     public Map<String, Object> getDashboardGraph(PaymentFrequencyEnum paymentFrequencyEnum, String companyId, int page, int size) {
