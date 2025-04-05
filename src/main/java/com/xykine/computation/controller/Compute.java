@@ -39,7 +39,7 @@ public class Compute {
     @PostMapping("/payroll")
     public ReportResponse computePayroll(
             @RequestHeader("Authorization") String authorizationHeader,
-            @RequestBody PaymentInfoRequest paymentRequest) throws IOException, ClassNotFoundException {
+            @RequestBody PaymentInfoRequest paymentRequest) {
         try{
             sessionCalculationObject = OperationUtils.doPreflight(sessionCalculationObject, computationConstantsRepo, taxRepo);
             List rawInfo = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
@@ -49,6 +49,7 @@ public class Compute {
             paymentComputeResponse = OperationUtils.refineResponse(paymentComputeResponse, sessionCalculationObject, paymentRequest);
             return reportPersistenceService.serializeAndSaveReport(paymentComputeResponse, paymentRequest.getCompanyId());
         } catch (Exception ex) {
+            LOGGER.info(ex.getMessage());
             throw new PayrollValidationException(ex.getMessage());
         }
     }

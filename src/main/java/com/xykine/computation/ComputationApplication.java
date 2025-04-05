@@ -26,8 +26,6 @@ public class ComputationApplication implements CommandLineRunner {
 	private final ComputationConstantsRepo computationConstantsRepo;
 	private final DashboardCardRepo dashboardCardRepo;
 
-	private String uri = "mongodb://admin:docker@localhost/payroll?tls=false&authSource=admin";
-
 	public static void main(String[] args) {
 		SpringApplication.run(ComputationApplication.class, args);
 	}

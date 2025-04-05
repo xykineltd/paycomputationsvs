@@ -83,7 +83,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             throw e;
         }
         long endTime = System.currentTimeMillis();
-        LOGGER.info(" Process time ===> {} ms", endTime - startTime);
+        LOGGER.info(" Process time {} ms", endTime - startTime);
         auditTrailService.logEvent(AuditTrailEvents.GENERATE_REPORT, "report id: " + reportResponse.getReportId(), companyId);
         return reportResponse;
     }

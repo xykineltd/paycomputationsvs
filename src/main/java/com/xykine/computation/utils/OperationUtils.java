@@ -38,10 +38,10 @@ public class OperationUtils {
         sessionSummaryDetails.put(MapKeys.TOTAL_EMPLOYER_PENSION_CONTRIBUTION, new ArrayList<>());
         sessionCalculationObject.setSummaryDetails(sessionSummaryDetails);
 
-        taxRepo.findAllByOrderByTaxClass().stream().forEach(x -> {
+        taxRepo.findAllByOrderByTaxClass().forEach(x -> {
             computationConstants.put(x.getTaxClass(), x.getPercentage());
         });
-        computationConstantsRepo.findAllByOrderById().stream().forEach(x->{
+        computationConstantsRepo.findAllByOrderById().forEach(x->{
             computationConstants.put(x.getId(), x.getValue());
         });
         sessionCalculationObject.setComputationConstants(computationConstants);
