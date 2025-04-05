@@ -79,18 +79,14 @@ public class DashboardDataService {
 
     public DashboardCardResponse retrieveDashboardCardData(String companyId){
         //TODO update the logic to use optionla before get()
-        Optional<DashboardCard> dashboardCardOptional =  dashboardCardRepo.findByCompanyId(companyId);
-        if(dashboardCardOptional.isPresent()) {
-            DashboardCard dashboardCard =  dashboardCardOptional.get();
-            return DashboardCardResponse.builder()
-                    .totalOffCyclePayroll(dashboardCard.getTotalOffCyclePayroll())
-                    .totalRegularPayroll(dashboardCard.getTotalRegularPayroll())
-                    .totalPayrollCost(dashboardCard.getTotalPayrollCost())
-                    .averageEmployeeCost(dashboardCard.getAverageEmployeeCost())
-                    .lastUpdatedAt(dashboardCard.getLastUpdatedAt().toString())
-                    .build();
-        }
-        return DashboardCardResponse.builder().build();
+        DashboardCard dashboardCard =  dashboardCardRepo.findByCompanyId(companyId).get();
+        return DashboardCardResponse.builder()
+                .totalOffCyclePayroll(dashboardCard.getTotalOffCyclePayroll())
+                .totalRegularPayroll(dashboardCard.getTotalRegularPayroll())
+                .totalPayrollCost(dashboardCard.getTotalPayrollCost())
+                .averageEmployeeCost(dashboardCard.getAverageEmployeeCost())
+                .lastUpdatedAt(dashboardCard.getLastUpdatedAt().toString())
+                .build();
     }
 
     public Map<String, Object> getDashboardGraph(PaymentFrequencyEnum paymentFrequencyEnum, String companyId, int page, int size) {
@@ -193,7 +189,7 @@ public class DashboardDataService {
                     paymentInfo.setYtdReport(ytdReportMap);
 
                     payrollReportDetail.setReport(ReportUtils.serializeResponse(payComputeDetailResponse));
-                            payrollReportDetailRepo.save(payrollReportDetail);
+                    payrollReportDetailRepo.save(payrollReportDetail);
                 });
         return true;
     }
@@ -255,4 +251,3 @@ public class DashboardDataService {
         return dashboardCard;
     }
 }
-
