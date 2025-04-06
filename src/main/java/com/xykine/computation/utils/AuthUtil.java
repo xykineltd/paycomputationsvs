@@ -17,4 +17,8 @@ public class AuthUtil {
     public static String getUserName(){
         return userDetails.getUsername();
     }
+
+    public static String getUserEmail(){
+        return userDetails.getEmail();
+    }
 }

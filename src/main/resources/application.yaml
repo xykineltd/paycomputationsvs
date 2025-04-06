@@ -8,7 +8,8 @@ server:
 spring:
   jpa:
     hibernate:
-
+  profiles:
+    active: QA
   codec:
     max-in-memory-size: 500000KB
 
