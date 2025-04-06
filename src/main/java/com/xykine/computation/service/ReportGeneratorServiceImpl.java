@@ -69,10 +69,6 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
     private Map<String, Object> extractDetail(PaymentInfo paymentInfo, List<String> selectedReports) {
         Map<String, Object> raw = extractRawDetail(paymentInfo);
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("EmployeeId", paymentInfo.getEmployeeID());
-        result.put("FullName", paymentInfo.getFullName());
-        result.put("StartDate", paymentInfo.getStartDate());
-        result.put("EndDate", paymentInfo.getEndDate());
 
         selectedReports.forEach(key -> {
             if (raw.containsKey(key)) {
