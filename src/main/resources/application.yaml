@@ -8,7 +8,8 @@ server:
 spring:
   jpa:
     hibernate:
-
+  profiles:
+    active: QA
   codec:
     max-in-memory-size: 500000KB
 
@@ -16,22 +17,20 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://xykine.com/realms/AcedPayroll
-#            issuer-uri: http://backend-keycloak-auth:8080/realms/Payroll
+            issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:http://xykine.com/realms/Payroll}
   data:
     redis:
       connect-timeout: 2s
       host: ${SPRING_REDIS_HOST:localhost}
-#      host: localhost
       port: 6379
       timeout: 1s
 
     mongodb:
       #      uri: mongodb://admin:docker@localhost/payroll?tls=false&authSource=admin
-      uri: ${ SPRING_DATA_MONGODB_URI }
+      uri: ${SPRING_DATA_MONGODB_URI}
 
 admin:
   service:
-#    url: http://localhost:9001/
-    url: http://xykinehrs.com/
+    url: ${ADMIN_SERVICE_URL:http://localhost:9001/}
+#    url: http://xykinehrs.com/
     maxBufferSize: 500000

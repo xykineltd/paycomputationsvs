@@ -1,6 +1,7 @@
 package com.xykine.computation.service;
 
 import com.xykine.computation.exceptions.ApiError;
+import com.xykine.computation.exceptions.ApiException;
 import com.xykine.computation.exceptions.PayrollValidationException;
 import com.xykine.computation.request.PaymentInfoRequest;
 import lombok.RequiredArgsConstructor;
@@ -76,10 +77,11 @@ public class AdminService {
                         return response.bodyToMono(List.class);
                     } else {
                         // Extract error message from the response body and throw custom exception
-                        return response.bodyToMono(ApiError.class)
+                        return response.bodyToMono(ApiException.class)
                                 .flatMap(errorBody -> {
                                     LOGGER.error("Non-successful response: {}", response.statusCode());
-                                    LOGGER.info("Payroll-Errors: {}", errorBody);
+                                    LOGGER.info("Error Message: {}", errorBody.getErrorMessage());
+                                    LOGGER.info("Error Code: {}", errorBody.getErrorCode());
 
                                     // Throw custom exception with the error message
                                     return Mono.error(new PayrollValidationException(errorBody.getMessage()));

@@ -10,6 +10,7 @@ import com.xykine.computation.request.ReportByTypeRequest;
 import com.xykine.computation.request.UpdateReportRequest;
 import com.xykine.computation.response.*;
 
+import com.xykine.computation.utils.AuthUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -83,11 +84,10 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             throw e;
         }
         long endTime = System.currentTimeMillis();
-        LOGGER.info(" Process time ===> {} ms", endTime - startTime);
-        auditTrailService.logEvent(AuditTrailEvents.GENERATE_REPORT, "report id: " + reportResponse.getReportId(), companyId);
+        LOGGER.info(" Process time {} ms", endTime - startTime);
+        logGenerateReportEvent(companyId, reportResponse);
         return reportResponse;
     }
-
     private void populateReportVariance(PaymentComputeResponse paymentComputeResponse) {
         paymentComputeResponse.setSummaryVariance(paymentComputeResponse.getSummary());
         paymentComputeResponse.setSummaryDetailsVariance(paymentComputeResponse.getSummaryDetails());
@@ -422,9 +422,9 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             updateDashboardData(AppConstants.payrollCountRegular, existingSummaryReport);
         }
         existingSummaryReport.setPayrollApproved(request.isPayrollApproved());
-        payrollReportSummaryRepo.save(existingSummaryReport);
+        var reportResponse = payrollReportSummaryRepo.save(existingSummaryReport);
         //TODO update the detail report once the payroll is approved
-        auditTrailService.logEvent(AuditTrailEvents.APPROVE_PAYROLL, "Approved report with detail start date: " + request.getStartDate() + " and company id: " + request.getCompanyId(), request.getCompanyId());
+        logApproveReportEvent(request.getCompanyId(), reportResponse);
         return existingSummaryReport;
     }
 
@@ -457,10 +457,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         }
 
         existingSummaryReport.setPayrollCompleted(request.isPayrollCompleted());
-        payrollReportSummaryRepo.save(existingSummaryReport);
-        auditTrailService.logEvent(AuditTrailEvents.POST_TO_FINANCE,
-                "Posted payroll report with detail start date : " + request.getStartDate()
-                        + " and company id : " + request.getCompanyId(), request.getCompanyId());
+        var payrollReportSummary = payrollReportSummaryRepo.save(existingSummaryReport);
+        logPostReportToFinanceEvent(request.getCompanyId(), payrollReportSummary);
         return existingSummaryReport;
     }
 
@@ -579,10 +577,9 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     }
      */
 
-
     @Override
-    public List<ReportAnalytics> getReportAnalytics(String companyId) {
-        Pageable paging = PageRequest.of(0, 12);
+    public List<ReportAnalytics> getReportAnalytics(String companyId, int page, int size) {
+        Pageable paging = PageRequest.of(page, size);
         Page<PayrollReportSummary> payrollReportSummaryPage = payrollReportSummaryRepo.findPayrollReportSummaryByCompanyIdAndPayrollSimulationOrderByCreatedDateDesc(companyId, false, paging);
         log.info(" ======> payrollReportSummaryPage list {}", payrollReportSummaryPage.getTotalElements());
         var reportAnalytics = payrollReportSummaryPage.getContent()
@@ -604,8 +601,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                         x.getCreatedDate().toString()
                 ))
                 .toList();
-
-        return reportAnalytics.size() > 0 ? reportAnalytics : new ArrayList<>();
+        return !reportAnalytics.isEmpty() ? reportAnalytics : new ArrayList<>();
     }
 
     private String getReportStatus(PayrollReportSummary report) {
@@ -773,5 +769,29 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
         // Convert the result back to a string
         return result.format(formatter);
+    }
+
+    private void logGenerateReportEvent(String companyId, ReportResponse reportResponse) {
+        var loggedInUserName = AuthUtil.getUserName();
+        var loggedInUserEmail = AuthUtil.getUserEmail();
+        var payPeriod = reportResponse.getStartDate() + " - " + reportResponse.getEndDate();
+        auditTrailService.logEvent(AuditTrailEvents.GENERATE_REPORT, "Payroll for the pay period " + payPeriod + " was computed by " + loggedInUserName
+                + " (" + loggedInUserEmail + ")", companyId);
+    }
+
+    private void logApproveReportEvent(String companyId, PayrollReportSummary reportResponse) {
+        var loggedInUserName = AuthUtil.getUserName();
+        var loggedInUserEmail = AuthUtil.getUserEmail();
+        var payPeriod = reportResponse.getStartDate() + " - " + reportResponse.getEndDate();
+        auditTrailService.logEvent(AuditTrailEvents.GENERATE_REPORT, "Payroll for the pay period " + payPeriod + " was approved by " + loggedInUserName
+                + " (" + loggedInUserEmail + ")", companyId);
+    }
+    private void logPostReportToFinanceEvent(String companyId, PayrollReportSummary reportResponse) {
+        var loggedInUserName = AuthUtil.getUserName();
+        var loggedInUserEmail = AuthUtil.getUserEmail();
+
+        var payPeriod = reportResponse.getStartDate() + " - " + reportResponse.getEndDate();
+        auditTrailService.logEvent(AuditTrailEvents.POST_TO_FINANCE, "Payroll for the pay period " + payPeriod + " was posted to finance by " + loggedInUserName
+                + " (" + loggedInUserEmail + ")", companyId);
     }
 }

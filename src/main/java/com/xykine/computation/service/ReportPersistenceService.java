@@ -29,7 +29,7 @@ public interface ReportPersistenceService {
     PayrollReportSummary completeReport(UpdateReportRequest updateReportRequest);
     Map<String, Object> getPaymentDetails(String id, String companyId, String fullName, int page, int size);
     ReportResponse getPaymentDetailsByEmployee(String employeeId, String startDate, String companyId);
-    List<ReportAnalytics> getReportAnalytics(String companyId);
+    List<ReportAnalytics> getReportAnalytics(String companyId, int page, int size);
     YTDReport getYTDReport(String employeeId, String companyId);
     Map<String, Object> getPaymentDetailForDates(String employeeId, String companyId, List<String> endDates,  int page, int size);
     Map<String, Object> getPayRollReportByType(ReportByTypeRequest request, int page, int size);

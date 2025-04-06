@@ -3,14 +3,15 @@ version: '3'
 services:
   mongo:
     image: mongo
+    container_name: payrolldb
     environment:
       - MONGO_INITDB_ROOT_USERNAME=admin
       - MONGO_INITDB_ROOT_PASSWORD=docker
       - MONGO_INITDB_DATABASE=test
     ports:
       - "27017:27017"
-    volumes:
-      - ./mongo-init:/docker-entrypoint-initdb.d
+volumes:
+  mongo-data:
 
 #  admin-service-mock:
 #    image: kacytunde/admin-service-mock:v1

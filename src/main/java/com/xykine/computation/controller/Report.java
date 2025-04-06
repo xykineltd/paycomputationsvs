@@ -1,21 +1,22 @@
 package com.xykine.computation.controller;
 
-import com.xykine.computation.entity.PayrollReportDetail;
 import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.entity.YTDReport;
 import com.xykine.computation.request.ReportByTypeRequest;
+import com.xykine.computation.request.ReportRequestPayload;
 import com.xykine.computation.request.UpdateReportRequest;
 import com.xykine.computation.response.ReportAnalytics;
 import com.xykine.computation.response.ReportResponse;
+import com.xykine.computation.service.ReportGeneratorService;
 import com.xykine.computation.service.ReportPersistenceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -24,6 +25,7 @@ import java.util.UUID;
 public class Report {
 
     private final ReportPersistenceService reportPersistenceService;
+    private final ReportGeneratorService reportGeneratorService;
 
     @GetMapping("/{companyId}/")
     public List<ReportResponse> getReports(@PathVariable String companyId) {
@@ -56,8 +58,11 @@ public class Report {
     }
 
     @GetMapping("/analytics/{companyId}")
-    public List<ReportAnalytics> getAnalyticsReports(@PathVariable String companyId) {
-        return reportPersistenceService.getReportAnalytics(companyId);
+    public List<ReportAnalytics> getAnalyticsReports(@PathVariable String companyId,
+                                                     @RequestParam(defaultValue = "0") int page,
+                                                     @RequestParam(defaultValue = "12") int size
+    ) {
+        return reportPersistenceService.getReportAnalytics(companyId, page, size);
     }
 
     @GetMapping("/get-by-start-date/{companyId}/{startDate}")
@@ -143,4 +148,11 @@ public class Report {
         YTDReport response = reportPersistenceService.getYTDReport(employeeId, companyId);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+
+    // fire and forget
+    @PostMapping("/upload-report")
+    public void uploadReport(@RequestBody ReportRequestPayload payload){
+        reportGeneratorService.generateReport(payload);
+    }
+
 }

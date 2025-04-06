@@ -51,11 +51,7 @@ public class DashboardDataService {
     public void updatePayrollCountTypeOffCycle(PayrollReportSummary payrollReportSummary) {
         DashboardCard dashboardCard;
         Optional<DashboardCard> dashboardCardOptional = dashboardCardRepo.findByCompanyId(payrollReportSummary.getCompanyId());
-        if (dashboardCardOptional.isEmpty()) {
-            dashboardCard = saveFreshDashboardCard(payrollReportSummary.getCompanyId());
-        } else {
-            dashboardCard = dashboardCardOptional.get();
-        }
+        dashboardCard = dashboardCardOptional.orElseGet(() -> saveFreshDashboardCard(payrollReportSummary.getCompanyId()));
 
         long currentCount = dashboardCard.getTotalOffCyclePayroll();
         dashboardCard.setTotalOffCyclePayroll(++currentCount);
@@ -66,12 +62,7 @@ public class DashboardDataService {
         DashboardCard dashboardCard;
         Optional<DashboardCard> dashboardCardOptional = dashboardCardRepo.findByCompanyId(payrollReportSummary.getCompanyId());
 
-        if (dashboardCardOptional.isEmpty()) {
-            dashboardCard = saveFreshDashboardCard(payrollReportSummary.getCompanyId());
-        } else {
-            dashboardCard = dashboardCardOptional.get();
-        }
-
+        dashboardCard = dashboardCardOptional.orElseGet(() -> saveFreshDashboardCard(payrollReportSummary.getCompanyId()));
         long currentCount = dashboardCard.getTotalRegularPayroll();
         dashboardCard.setTotalRegularPayroll(++currentCount);
         updateDashboardData(dashboardCard, payrollReportSummary);
@@ -131,7 +122,7 @@ public class DashboardDataService {
         Map<String, Map<String, BigDecimal>> newValuesForAllEmployees = new HashMap<>();
         Map<String, YTDReport> latestYTDs = new HashMap<>();
         payrollReportDetailList.stream()
-                .map(x -> ReportUtils.transform(x))
+                .map(ReportUtils::transform)
                 .forEach(x -> {
                     Map<String, BigDecimal> newValuesForEmployee = new HashMap<>();
 
@@ -171,7 +162,7 @@ public class DashboardDataService {
             latestYTDs.put(x, ytdReport);
         });
 
-        payrollReportDetailList.stream()
+        payrollReportDetailList
                 .forEach(x -> {
                     PayrollReportDetail payrollReportDetail = payrollReportDetailRepo.findById(x.getId()).get();
                     YTDReport ytdReport = latestYTDs.get(payrollReportDetail.getEmployeeId());
@@ -189,7 +180,7 @@ public class DashboardDataService {
                     paymentInfo.setYtdReport(ytdReportMap);
 
                     payrollReportDetail.setReport(ReportUtils.serializeResponse(payComputeDetailResponse));
-                            payrollReportDetailRepo.save(payrollReportDetail);
+                    payrollReportDetailRepo.save(payrollReportDetail);
                 });
         return true;
     }
@@ -251,4 +242,3 @@ public class DashboardDataService {
         return dashboardCard;
     }
 }
-
