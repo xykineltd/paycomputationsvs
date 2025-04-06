@@ -577,7 +577,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     }
      */
 
-
     @Override
     public List<ReportAnalytics> getReportAnalytics(String companyId, int page, int size) {
         Pageable paging = PageRequest.of(page, size);
