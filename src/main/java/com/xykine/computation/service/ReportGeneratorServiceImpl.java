@@ -7,6 +7,8 @@ import com.xykine.computation.response.GeneratedReportResponse;
 import com.xykine.computation.response.ReportResponse;
 import com.xykine.computation.utils.ReportUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.xykine.payroll.model.MapKeys;
 import org.xykine.payroll.model.PaymentInfo;
@@ -29,7 +31,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                 .filter(Objects::nonNull)
                 .map(ReportUtils::transform)
                 .filter(detail -> shouldIncludeEmployee(detail, reportRequestPayload))
-                .map(detail -> extractDetail(detail.getDetail().getReport(), reportRequestPayload.getSelectedReports()))
+                .map(detail -> extractDetail(detail.getDetail().getReport(), reportRequestPayload.getSelectedHeader()))
                 .toList();
 
         if (dataRows.isEmpty()) {
@@ -46,12 +48,48 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         }
     }
 
+    @Override
+    public Set<String> getHeadersForReport(String companyId, String reportId) {
+        Pageable paging = PageRequest.of(0, 1);
+
+        return payrollReportDetailRepo
+                .findPayrollReportDetailBySummaryIdAndCompanyId(reportId, companyId, paging).stream()
+                .filter(Objects::nonNull)
+                .findFirst()
+                .map(ReportUtils::transform)
+                .map(detail -> extractRawDetail(detail.getDetail().getReport()))
+                .map(Map::keySet)
+                .orElse(Collections.emptySet());
+    }
+
     private boolean shouldIncludeEmployee(ReportResponse detail, ReportRequestPayload payload) {
         return payload.isAllEmployee() || payload.getEmployeeIds().contains(detail.getEmployeeId());
     }
 
     private Map<String, Object> extractDetail(PaymentInfo paymentInfo, List<String> selectedReports) {
-        Map<String, BigDecimal> raw = new HashMap<>();
+        Map<String, Object> raw = extractRawDetail(paymentInfo);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("EmployeeId", paymentInfo.getEmployeeID());
+        result.put("FullName", paymentInfo.getFullName());
+        result.put("StartDate", paymentInfo.getStartDate());
+        result.put("EndDate", paymentInfo.getEndDate());
+
+        selectedReports.forEach(key -> {
+            if (raw.containsKey(key)) {
+                result.put(key, raw.get(key));
+            }
+        });
+
+        return result;
+    }
+
+    private Map<String, Object> extractRawDetail(PaymentInfo paymentInfo) {
+
+        Map<String, Object> raw = new HashMap<>();
+        raw.put("EmployeeId", paymentInfo.getEmployeeID());
+        raw.put("FullName", paymentInfo.getFullName());
+        raw.put("StartDate", paymentInfo.getStartDate());
+        raw.put("EndDate", paymentInfo.getEndDate());
         raw.put(MapKeys.NET_PAY, paymentInfo.getNetPay());
 
         List<Map<String, BigDecimal>> components = List.of(
@@ -67,18 +105,6 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                 .filter(Objects::nonNull)
                 .forEach(raw::putAll);
 
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("EmployeeId", paymentInfo.getEmployeeID());
-        result.put("FullName", paymentInfo.getFullName());
-        result.put("StartDate", paymentInfo.getStartDate());
-        result.put("EndDate", paymentInfo.getEndDate());
-
-        selectedReports.forEach(key -> {
-            if (raw.containsKey(key)) {
-                result.put(key, raw.get(key));
-            }
-        });
-
-        return result;
+        return raw;
     }
 }
