@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -155,4 +156,8 @@ public class Report {
         reportGeneratorService.generateReport(payload);
     }
 
+    @GetMapping("/payment-header-options/company-id/{companyID}/report-id/{reportId}")
+    public Set<String> getAllHeadersForReport(@PathVariable String companyID, @PathVariable String reportId) {
+         return reportGeneratorService.getHeadersForReport(companyID, reportId);
+    }
 }
