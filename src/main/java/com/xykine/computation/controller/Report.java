@@ -4,6 +4,7 @@ import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.entity.YTDReport;
 import com.xykine.computation.request.ReportByTypeRequest;
 import com.xykine.computation.request.ReportRequestPayload;
+import com.xykine.computation.request.RetrievePaymentElementPayload;
 import com.xykine.computation.request.UpdateReportRequest;
 import com.xykine.computation.response.ReportAnalytics;
 import com.xykine.computation.response.ReportResponse;
@@ -154,6 +155,11 @@ public class Report {
     @PostMapping("/upload-report")
     public void uploadReport(@RequestBody ReportRequestPayload payload){
         reportGeneratorService.generateReport(payload);
+    }
+
+    @PostMapping("/retrieve-payment-element")
+    public List<Map<String, Object>> getPaymentElement(@RequestBody RetrievePaymentElementPayload retrievePaymentElementPayload){
+        return reportGeneratorService.retrievePaymentElementFromReport(retrievePaymentElementPayload);
     }
 
     @GetMapping("/payment-header-options/company-id/{companyID}/report-id/{reportId}")

@@ -3,6 +3,7 @@ package com.xykine.computation.service;
 import com.xykine.computation.entity.PayrollReportDetail;
 import com.xykine.computation.repo.PayrollReportDetailRepo;
 import com.xykine.computation.request.ReportRequestPayload;
+import com.xykine.computation.request.RetrievePaymentElementPayload;
 import com.xykine.computation.response.GeneratedReportResponse;
 import com.xykine.computation.response.ReportResponse;
 import com.xykine.computation.utils.ReportUtils;
@@ -62,6 +63,17 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                 .orElse(Collections.emptySet());
     }
 
+    @Override
+    public List<Map<String, Object>> retrievePaymentElementFromReport(RetrievePaymentElementPayload retrievePaymentElementPayload) {
+
+        return payrollReportDetailRepo
+                .findPayrollReportDetailBySummaryId(retrievePaymentElementPayload.getReportId()).stream()
+                .filter(Objects::nonNull)
+                .map(ReportUtils::transform)
+                .map(detail -> extractDetail(detail.getDetail().getReport(), retrievePaymentElementPayload.getSelectedHeader()))
+                .toList();
+    }
+
     private boolean shouldIncludeEmployee(ReportResponse detail, ReportRequestPayload payload) {
         return payload.isAllEmployee() || payload.getEmployeeIds().contains(detail.getEmployeeId());
     }
@@ -80,7 +92,6 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
     }
 
     private Map<String, Object> extractRawDetail(PaymentInfo paymentInfo) {
-
         Map<String, Object> raw = new HashMap<>();
         raw.put("EmployeeId", paymentInfo.getEmployeeID());
         raw.put("FullName", paymentInfo.getFullName());
