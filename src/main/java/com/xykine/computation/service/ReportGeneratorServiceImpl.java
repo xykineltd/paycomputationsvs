@@ -82,19 +82,24 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
     public Map<String, Object> extractDataFromSummary(RetrieveSummaryElementRequest request) {
         Map<String, Object> result = new HashMap<>();
 
-        payrollReportSummaryRepo
-                .findPayrollReportSummaryByIdAndCompanyId(request.getReportId(), request.getCompanyId())
-                .ifPresentOrElse(payrollReportSummary -> {
-                    ReportResponse reportResponse = ReportUtils.transform(payrollReportSummary);
-                    result.put("Total Number of Recipients", payrollReportDetailRepo.countBySummary(request.getReportId()));
-                    result.put(MapKeys.TOTAL_NET_PAY,
-                            reportResponse.getSummary().getSummary().getOrDefault(MapKeys.TOTAL_NET_PAY, BigDecimal.valueOf(0)));
-                }, () -> {
-                    result.put("Total Number of Recipients", 0);
-                    result.put(MapKeys.TOTAL_NET_PAY, 0);
-                });
+        try {
+                payrollReportSummaryRepo
+                    .findPayrollReportSummaryByIdAndCompanyId(UUID.fromString(request.getReportId()), request.getCompanyId())
+                    .ifPresentOrElse(payrollReportSummary -> {
+                        ReportResponse reportResponse = ReportUtils.transform(payrollReportSummary);
+                        result.put("Total Number of Recipients", payrollReportDetailRepo.countBySummaryId(request.getReportId()));
+                        result.put(MapKeys.TOTAL_NET_PAY,
+                                reportResponse.getSummary().getSummary().getOrDefault(MapKeys.TOTAL_NET_PAY, BigDecimal.valueOf(0)));
+                    }, () -> {
+                        result.put("Total Number of Recipients", 0);
+                        result.put(MapKeys.TOTAL_NET_PAY, 0);
+                    });
 
-        return result;
+            return result;
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            throw new RuntimeException("Unable to get summary");
+        }
     }
 
     private boolean shouldIncludeEmployee(ReportResponse detail, ReportRequestPayload payload) {
