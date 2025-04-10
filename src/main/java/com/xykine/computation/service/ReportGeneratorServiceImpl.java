@@ -86,11 +86,11 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                 .findPayrollReportSummaryIdAndCompanyId(request.getReportId(), request.getCompanyId())
                 .ifPresentOrElse(payrollReportSummary -> {
                     ReportResponse reportResponse = ReportUtils.transform(payrollReportSummary);
-                    result.put("Total Number of Recipients", payrollReportDetailRepo.countBySummaryId(request.getReportId()));
+                    result.put("Total Number of Recipients", payrollReportDetailRepo.countBySummary(request.getReportId()));
                     result.put(MapKeys.TOTAL_NET_PAY,
                             reportResponse.getSummary().getSummary().getOrDefault(MapKeys.TOTAL_NET_PAY, BigDecimal.valueOf(0)));
                 }, () -> {
-                    result.put("Total Number of Employees", 0);
+                    result.put("Total Number of Recipients", 0);
                     result.put(MapKeys.TOTAL_NET_PAY, 0);
                 });
 
