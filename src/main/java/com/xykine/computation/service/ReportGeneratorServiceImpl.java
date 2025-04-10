@@ -83,7 +83,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         Map<String, Object> result = new HashMap<>();
 
         payrollReportSummaryRepo
-                .findPayrollReportSummaryIdAndCompanyId(request.getReportId(), request.getCompanyId())
+                .findPayrollReportBySummaryIdAndCompanyId(request.getReportId(), request.getCompanyId())
                 .ifPresentOrElse(payrollReportSummary -> {
                     ReportResponse reportResponse = ReportUtils.transform(payrollReportSummary);
                     result.put("Total Number of Recipients", payrollReportDetailRepo.countBySummaryId(request.getReportId()));
