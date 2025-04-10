@@ -94,12 +94,13 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
     private Map<String, Object> extractRawDetail(PaymentInfo paymentInfo) {
         Map<String, Object> raw = new HashMap<>();
         raw.put("EmployeeId", paymentInfo.getEmployeeID());
-        raw.put("FullName", paymentInfo.getFullName());
+        raw.put("EmployeeName", paymentInfo.getFullName());
         raw.put("StartDate", paymentInfo.getStartDate());
         raw.put("EndDate", paymentInfo.getEndDate());
+        raw.put("PayrollType", paymentInfo.isOffCycle()? "OffCycle" : "Regular");
         raw.put(MapKeys.NET_PAY, paymentInfo.getNetPay());
 
-        List<Map<String, BigDecimal>> components = List.of(
+        List<Map<String, BigDecimal>> components = Arrays.asList(
                 paymentInfo.getDeduction(),
                 paymentInfo.getTaxRelief(),
                 paymentInfo.getGrossPay(),
@@ -109,7 +110,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         );
 
         components.stream()
-                .filter(Objects::nonNull)
+                .filter(Objects::nonNull) // Ensure the component is not null
                 .forEach(raw::putAll);
 
         return raw;

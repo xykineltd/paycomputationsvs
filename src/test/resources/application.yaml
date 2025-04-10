@@ -21,7 +21,7 @@ spring:
       timeout: 1s
 
     mongodb:
-      uri: mongodb://admin:docker@localhost/test?tls=false&authSource=admin
+      uri: mongodb://xykinehrs:password@157.245.36.146:27017/default_db?authSource=admin
 
 admin:
   service:

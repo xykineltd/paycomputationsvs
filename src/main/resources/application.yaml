@@ -9,7 +9,7 @@ spring:
   jpa:
     hibernate:
   profiles:
-    active: QA
+    active: dev
   codec:
     max-in-memory-size: 500000KB
 
@@ -26,7 +26,7 @@ spring:
       timeout: 1s
 
     mongodb:
-      #      uri: mongodb://admin:docker@localhost/payroll?tls=false&authSource=admin
+#      uri: mongodb://xykinehrs:password@157.245.36.146:27017/default_db?authSource=admin
       uri: ${SPRING_DATA_MONGODB_URI}
 
 admin:
@@ -34,3 +34,7 @@ admin:
     url: ${ADMIN_SERVICE_URL:http://localhost:9001/}
 #    url: http://xykinehrs.com/
     maxBufferSize: 500000
+
+  data:
+    mongodb:
+      uuid-representation: standard
