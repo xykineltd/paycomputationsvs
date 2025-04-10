@@ -1,9 +1,12 @@
 package com.xykine.computation.service;
 
 import com.xykine.computation.entity.PayrollReportDetail;
+import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.repo.PayrollReportDetailRepo;
+import com.xykine.computation.repo.PayrollReportSummaryRepo;
 import com.xykine.computation.request.ReportRequestPayload;
 import com.xykine.computation.request.RetrievePaymentElementPayload;
+import com.xykine.computation.request.RetrieveSummaryElementRequest;
 import com.xykine.computation.response.GeneratedReportResponse;
 import com.xykine.computation.response.ReportResponse;
 import com.xykine.computation.utils.ReportUtils;
@@ -23,6 +26,7 @@ import java.util.*;
 public class ReportGeneratorServiceImpl implements ReportGeneratorService {
 
     private final PayrollReportDetailRepo payrollReportDetailRepo;
+    private final PayrollReportSummaryRepo payrollReportSummaryRepo;
     private final ExcelUploadService excelUploadService;
 
     @Override
@@ -72,6 +76,25 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                 .map(ReportUtils::transform)
                 .map(detail -> extractDetail(detail.getDetail().getReport(), retrievePaymentElementPayload.getSelectedHeader()))
                 .toList();
+    }
+
+    @Override
+    public Map<String, Object> extractDataFromSummary(RetrieveSummaryElementRequest request) {
+        Map<String, Object> result = new HashMap<>();
+
+        payrollReportSummaryRepo
+                .findPayrollReportSummaryIdAndCompanyId(request.getReportId(), request.getCompanyId())
+                .ifPresentOrElse(payrollReportSummary -> {
+                    ReportResponse reportResponse = ReportUtils.transform(payrollReportSummary);
+                    result.put("Total Number of Recipients", payrollReportDetailRepo.countBySummaryId(request.getReportId()));
+                    result.put(MapKeys.TOTAL_NET_PAY,
+                            reportResponse.getSummary().getSummary().getOrDefault(MapKeys.TOTAL_NET_PAY, BigDecimal.valueOf(0)));
+                }, () -> {
+                    result.put("Total Number of Employees", 0);
+                    result.put(MapKeys.TOTAL_NET_PAY, 0);
+                });
+
+        return result;
     }
 
     private boolean shouldIncludeEmployee(ReportResponse detail, ReportRequestPayload payload) {
