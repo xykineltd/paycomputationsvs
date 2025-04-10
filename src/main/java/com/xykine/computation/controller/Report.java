@@ -2,10 +2,7 @@ package com.xykine.computation.controller;
 
 import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.entity.YTDReport;
-import com.xykine.computation.request.ReportByTypeRequest;
-import com.xykine.computation.request.ReportRequestPayload;
-import com.xykine.computation.request.RetrievePaymentElementPayload;
-import com.xykine.computation.request.UpdateReportRequest;
+import com.xykine.computation.request.*;
 import com.xykine.computation.response.ReportAnalytics;
 import com.xykine.computation.response.ReportResponse;
 import com.xykine.computation.service.ReportGeneratorService;
@@ -166,4 +163,10 @@ public class Report {
     public Set<String> getAllHeadersForReport(@PathVariable String companyID, @PathVariable String reportId) {
          return reportGeneratorService.getHeadersForReport(companyID, reportId);
     }
+
+    @PostMapping("/total-netpay-by-report-id")
+    public Map<String, Object> getTotalNetPayByReportId(@RequestBody RetrieveSummaryElementRequest request){
+        return reportGeneratorService.extractDataFromSummary(request);
+    }
+
 }
