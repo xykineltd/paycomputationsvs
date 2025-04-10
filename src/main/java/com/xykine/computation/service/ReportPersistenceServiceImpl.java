@@ -589,7 +589,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                         x.getStartDate(),
                         x.getTotalNumberOfEmployees(),
                         // TODO test for performance
-                        payrollReportDetailRepo.countBySummaryId(x.getId().toString()),
+                        payrollReportDetailRepo.countBySummaryIdAndCompanyId(x.getId().toString(), companyId),
                         ReportUtils.transform(x).getSummary().getSummary().get(MapKeys.TOTAL_NET_PAY),
                         //TODO put logic to get the correct status
                         getReportStatus(x),
