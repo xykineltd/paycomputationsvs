@@ -14,18 +14,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
 	@Bean
-	public JwtDecoder jwtDecoder() {
-		JwtDecoder jwtDecoder = NimbusJwtDecoder.withJwkSetUri("http://backend-keycloak-auth:8080/auth/realms/payroll/protocol/openid-connect/certs").build();
-		return token -> {
-			System.out.println("token: " + token);
-			Jwt jwt = jwtDecoder.decode(token);
-			System.out.println("jwt: " + jwt);
-			return jwt;
-		};
-	}
-
-
-	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtTokenFilter keycloakJwtFilter) throws Exception {
 		http
 				.authorizeHttpRequests(authorizeRequests ->

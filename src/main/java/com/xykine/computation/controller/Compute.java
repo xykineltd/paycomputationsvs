@@ -43,7 +43,8 @@ public class Compute {
         try{
             sessionCalculationObject = OperationUtils.doPreflight(sessionCalculationObject, computationConstantsRepo, taxRepo);
             List rawInfo = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
-            LOGGER.debug("rawInfo*****************************{}", rawInfo);
+            LOGGER.info("rawInfo*****************************{}", rawInfo);
+            LOGGER.debug("authorizationHeader*****************************{}", authorizationHeader);
             assert rawInfo != null;
             PaymentComputeResponse paymentComputeResponse = computeService.computePayroll(rawInfo);
             paymentComputeResponse = OperationUtils.refineResponse(paymentComputeResponse, sessionCalculationObject, paymentRequest);
