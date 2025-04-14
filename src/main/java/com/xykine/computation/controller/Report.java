@@ -2,9 +2,8 @@ package com.xykine.computation.controller;
 
 import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.entity.YTDReport;
-import com.xykine.computation.request.ReportByTypeRequest;
-import com.xykine.computation.request.ReportRequestPayload;
-import com.xykine.computation.request.UpdateReportRequest;
+import com.xykine.computation.request.*;
+
 import com.xykine.computation.response.ReportAnalytics;
 import com.xykine.computation.response.ReportResponse;
 import com.xykine.computation.service.ReportGeneratorService;
@@ -17,6 +16,8 @@ import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
 import java.util.UUID;
 
 @RestController
@@ -155,4 +156,18 @@ public class Report {
         reportGeneratorService.generateReport(payload);
     }
 
+    @PostMapping("/retrieve-payment-element")
+    public List<Map<String, Object>> getPaymentElement(@RequestBody RetrievePaymentElementPayload retrievePaymentElementPayload){
+        return reportGeneratorService.retrievePaymentElementFromReport(retrievePaymentElementPayload);
+    }
+
+    @GetMapping("/payment-header-options/company-id/{companyID}/report-id/{reportId}")
+    public Set<String> getAllHeadersForReport(@PathVariable String companyID, @PathVariable String reportId) {
+         return reportGeneratorService.getHeadersForReport(companyID, reportId);
+    }
+
+    @PostMapping("/total-netpay-by-report-id")
+    public Map<String, Object> getTotalNetPayByReportId(@RequestBody RetrieveSummaryElementRequest request){
+        return reportGeneratorService.extractDataFromSummary(request);
+    }
 }

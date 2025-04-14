@@ -9,7 +9,8 @@ spring:
   jpa:
     hibernate:
   profiles:
-    active: QA
+    active: dev
+
   codec:
     max-in-memory-size: 500000KB
 
@@ -21,12 +22,12 @@ spring:
   data:
     redis:
       connect-timeout: 2s
-      host: ${SPRING_REDIS_HOST:localhost}
+      host: ${SPRING_REDIS_HOST}
+
       port: 6379
       timeout: 1s
 
     mongodb:
-      #      uri: mongodb://admin:docker@localhost/payroll?tls=false&authSource=admin
       uri: ${SPRING_DATA_MONGODB_URI}
 
 admin:
@@ -34,3 +35,4 @@ admin:
     url: ${ADMIN_SERVICE_URL:http://localhost:9001/}
 #    url: http://xykinehrs.com/
     maxBufferSize: 500000
+

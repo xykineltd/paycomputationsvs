@@ -1,11 +1,17 @@
 package com.xykine.computation;
 
+
+import com.mongodb.ConnectionString;
+import com.mongodb.MongoClientSettings;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.xykine.computation.entity.*;
 import com.xykine.computation.repo.*;
 import com.xykine.computation.session.SessionCalculationObject;
 import lombok.RequiredArgsConstructor;
+
+
+import org.bson.UuidRepresentation;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -19,7 +25,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @EnableCaching
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "com.xykine")
 @ConfigurationPropertiesScan
 @RequiredArgsConstructor
 public class ComputationApplication {
@@ -43,7 +49,14 @@ public class ComputationApplication {
 
 	@Bean
 	public MongoClient mongoClient() {
-		return MongoClients.create(uri);
+		ConnectionString connectionString = new ConnectionString(uri);
+		MongoClientSettings settings = MongoClientSettings.builder()
+				.applyConnectionString(connectionString)
+				.uuidRepresentation(UuidRepresentation.STANDARD)
+				.build();
+
+		return MongoClients.create(settings);
+
 	}
 
 //	@Override
