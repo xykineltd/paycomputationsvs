@@ -36,3 +36,5 @@ admin:
 #    url: http://xykinehrs.com/
     maxBufferSize: 500000
 
+xykine:
+  spa-uri: ${SPA_URL:http://localhost:3000}

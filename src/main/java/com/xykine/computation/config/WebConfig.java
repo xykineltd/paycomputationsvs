@@ -10,14 +10,13 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @EnableWebMvc
 public class WebConfig implements WebMvcConfigurer {
 
-    @Value("${admin.service.url}")
-    private String payrollUIServiceUrl;
+    @Value("${xykine.spa-uri}")
+    private String uri;
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**") // Apply CORS to all endpoints
-                .allowedOrigins("http://localhost:3000/") // Allow requests from this origin
-//                .allowedOrigins("http://xykinehrs.com") // Allow requests from this origin
+                .allowedOrigins(uri) // Allow requests from this origin
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // Allowed HTTP methods
                 .allowedHeaders("*"); // Allowed headers
     }
