@@ -24,7 +24,6 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
     @NonNull
     protected String getDatabaseName() {
         String tenantId = TenantContext.getTenantId();
-        System.out.println("tenantId ===>" + tenantId);
         return tenantId + "_db"; // e.g., aced_db, client2_db
     }
 

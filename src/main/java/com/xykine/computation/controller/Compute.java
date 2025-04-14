@@ -50,6 +50,7 @@ public class Compute {
             return reportPersistenceService.serializeAndSaveReport(paymentComputeResponse, paymentRequest.getCompanyId());
         } catch (Exception ex) {
             LOGGER.info(ex.getMessage());
+            ex.printStackTrace();
             throw new PayrollValidationException(ex.getMessage());
         }
     }

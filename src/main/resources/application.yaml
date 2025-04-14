@@ -21,7 +21,7 @@ spring:
   data:
     redis:
       connect-timeout: 2s
-      host: ${SPRING_REDIS_HOST:localhost}
+      host: ${SPRING_REDIS_HOST}
       port: 6379
       timeout: 1s
 
@@ -35,6 +35,6 @@ admin:
 #    url: http://xykinehrs.com/
     maxBufferSize: 500000
 
-  data:
-    mongodb:
-      uuid-representation: standard
+#  data:
+#    mongodb:
+#      uuid-representation: standard
