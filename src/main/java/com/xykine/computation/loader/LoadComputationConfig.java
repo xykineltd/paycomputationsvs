@@ -32,6 +32,7 @@ public class LoadComputationConfig {
     @EventListener(ApplicationReadyEvent.class)
     public void loadLegalEntityTestData() {
         System.out.println("Loading data.......");
+
         Tax taxClassA = Tax.builder()
                 .taxClass("TaxClassA")
                 .description(" <= 300,000 NGN")

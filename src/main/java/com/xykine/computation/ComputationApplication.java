@@ -1,5 +1,6 @@
 package com.xykine.computation;
 
+
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.client.MongoClient;
@@ -9,7 +10,9 @@ import com.xykine.computation.repo.*;
 import com.xykine.computation.session.SessionCalculationObject;
 import lombok.RequiredArgsConstructor;
 
+
 import org.bson.UuidRepresentation;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -53,6 +56,7 @@ public class ComputationApplication {
 				.build();
 
 		return MongoClients.create(settings);
+
 	}
 
 //	@Override

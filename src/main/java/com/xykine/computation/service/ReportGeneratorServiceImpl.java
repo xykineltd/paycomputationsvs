@@ -7,12 +7,14 @@ import com.xykine.computation.repo.PayrollReportSummaryRepo;
 import com.xykine.computation.request.ReportRequestPayload;
 import com.xykine.computation.request.RetrievePaymentElementPayload;
 import com.xykine.computation.request.RetrieveSummaryElementRequest;
+
 import com.xykine.computation.response.GeneratedReportResponse;
 import com.xykine.computation.response.ReportResponse;
 import com.xykine.computation.utils.ReportUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+
 import org.springframework.stereotype.Service;
 import org.xykine.payroll.model.MapKeys;
 import org.xykine.payroll.model.PaymentInfo;
@@ -27,6 +29,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
 
     private final PayrollReportDetailRepo payrollReportDetailRepo;
     private final PayrollReportSummaryRepo payrollReportSummaryRepo;
+
     private final ExcelUploadService excelUploadService;
 
     @Override
@@ -37,6 +40,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                 .map(ReportUtils::transform)
                 .filter(detail -> shouldIncludeEmployee(detail, reportRequestPayload))
                 .map(detail -> extractDetail(detail.getDetail().getReport(), reportRequestPayload.getSelectedHeader()))
+
                 .toList();
 
         if (dataRows.isEmpty()) {
@@ -129,6 +133,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         raw.put(MapKeys.NET_PAY, paymentInfo.getNetPay());
 
         List<Map<String, BigDecimal>> components = Arrays.asList(
+
                 paymentInfo.getDeduction(),
                 paymentInfo.getTaxRelief(),
                 paymentInfo.getGrossPay(),
@@ -142,5 +147,6 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                 .forEach(raw::putAll);
 
         return raw;
+
     }
 }

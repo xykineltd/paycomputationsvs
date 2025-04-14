@@ -51,6 +51,7 @@ public class Compute {
         } catch (Exception ex) {
             LOGGER.info(ex.getMessage());
             ex.printStackTrace();
+
             throw new PayrollValidationException(ex.getMessage());
         }
     }

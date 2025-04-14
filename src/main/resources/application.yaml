@@ -10,6 +10,7 @@ spring:
     hibernate:
   profiles:
     active: dev
+
   codec:
     max-in-memory-size: 500000KB
 
@@ -22,11 +23,11 @@ spring:
     redis:
       connect-timeout: 2s
       host: ${SPRING_REDIS_HOST}
+
       port: 6379
       timeout: 1s
 
     mongodb:
-#      uri: mongodb://xykinehrs:password@157.245.36.146:27017/default_db?authSource=admin
       uri: ${SPRING_DATA_MONGODB_URI}
 
 admin:
@@ -35,6 +36,3 @@ admin:
 #    url: http://xykinehrs.com/
     maxBufferSize: 500000
 
-#  data:
-#    mongodb:
-#      uuid-representation: standard

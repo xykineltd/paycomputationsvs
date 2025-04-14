@@ -3,6 +3,7 @@ package com.xykine.computation.controller;
 import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.entity.YTDReport;
 import com.xykine.computation.request.*;
+
 import com.xykine.computation.response.ReportAnalytics;
 import com.xykine.computation.response.ReportResponse;
 import com.xykine.computation.service.ReportGeneratorService;
@@ -16,6 +17,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import java.util.UUID;
 
 @RestController
@@ -168,5 +170,4 @@ public class Report {
     public Map<String, Object> getTotalNetPayByReportId(@RequestBody RetrieveSummaryElementRequest request){
         return reportGeneratorService.extractDataFromSummary(request);
     }
-
 }
