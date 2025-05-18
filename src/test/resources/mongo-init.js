@@ -11,3 +11,4 @@ db2.createUser({
     pwd: "docker",
     roles: [{ role: "readWrite", db: "proquore" }]
 });
+
