@@ -368,7 +368,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     public Map<String, Object> getReportByEmployeeID(String companyId, String employeeID, int page, int size) {
         List<PayrollReportDetail> payrollDetails;
         Pageable paging = PageRequest.of(page, size);
-        Page<PayrollReportDetail> payrollReportDetailPage = payrollReportDetailRepo.findPayrollReportDetailByEmployeeIdAndCompanyId(companyId, employeeID, paging);
+        Page<PayrollReportDetail> payrollReportDetailPage = payrollReportDetailRepo.findPayrollReportDetailByCompanyIdAndEmployeeId(companyId, employeeID, paging);
 
         Map<String, Object> response = retrievePayrolDetails(payrollReportDetailPage);
         auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Pulled payroll report for company id :" + companyId + "and employee id: " + employeeID, companyId);
@@ -614,7 +614,20 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
     @Override
     public YTDReport getYTDReport(String employeeId, String companyId) {
-        return ytdReportRepo.findYTDReportByEmployeeIdAndCompanyId(employeeId, companyId).get();
+        return ytdReportRepo.findYTDReportByEmployeeIdAndCompanyId(employeeId, companyId)
+                .orElseGet(() -> {
+                    YTDReport newReport = new YTDReport();
+                    newReport.setEmployeeId(employeeId);
+                    newReport.setCompanyId(companyId);
+                    newReport.setBasicSalary(BigDecimal.ZERO);
+                    newReport.setGrossPay(BigDecimal.ZERO);
+                    newReport.setNetPay(BigDecimal.ZERO);
+                    newReport.setNhf(BigDecimal.ZERO);
+                    newReport.setPayeeTax(BigDecimal.ZERO);
+                    newReport.setEmployeeContributedPension(BigDecimal.ZERO);
+                    newReport.setEmployerContributedPension(BigDecimal.ZERO);
+                    return newReport;
+                });
     }
 
 //    private List<LocalDate> generateDateFromJanToDecember() {

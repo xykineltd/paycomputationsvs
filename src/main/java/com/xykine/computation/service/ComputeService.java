@@ -24,6 +24,7 @@ public class ComputeService {
     private final PaymentCalculator paymentCalculator;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ComputeService.class);
+    private final Executor executor = Executors.newFixedThreadPool(10);
 
     public PaymentComputeResponse computePayroll(List<PaymentInfo> rawInfo) {
 
@@ -47,25 +48,17 @@ public class ComputeService {
 
     private List<PaymentInfo> generateReport(List<PaymentInfo> rawInfo) {
         int size = rawInfo.size();
-        List<PaymentInfo> job1 = new ArrayList<>();
-        List<PaymentInfo> job2 = new ArrayList<>();
+        List<PaymentInfo> job1 = rawInfo.subList(0, size / 2);
+        List<PaymentInfo> job2 = rawInfo.subList(size / 2, size);
 
-        job1.addAll(rawInfo.subList(0, size/2));
-        job2.addAll(rawInfo.subList(size/2, size));
-
-        Executor executor = Executors.newFixedThreadPool(10);
-        CompletableFuture<List<PaymentInfo>> job1Future = CompletableFuture.supplyAsync(() -> {
-            return  processReport(job1);
-        }, executor);
-
-        Executor executor2 = Executors.newFixedThreadPool(10);
-        CompletableFuture<List<PaymentInfo>> job2Future = CompletableFuture.supplyAsync(() -> {
-            return  processReport(job2);
-        }, executor2);
+        CompletableFuture<List<PaymentInfo>> job1Future = CompletableFuture.supplyAsync(() -> processReport(job1), executor);
+        CompletableFuture<List<PaymentInfo>> job2Future = CompletableFuture.supplyAsync(() -> processReport(job2), executor);
 
         CompletableFuture<List<PaymentInfo>> processReportFuture =job1Future.thenCombine(job2Future, (x, y) -> {
-            x.addAll(y);
-            return x;
+            List<PaymentInfo> combined = new ArrayList<>(x.size() + y.size());
+            combined.addAll(x);
+            combined.addAll(y);
+            return combined;
         });
         try {
             return processReportFuture.get();
@@ -75,7 +68,6 @@ public class ComputeService {
     }
 
     private List<PaymentInfo> processReport(List<PaymentInfo> job){
-
         var payInfos =  job.stream()
                 .map(x -> paymentCalculator.applyExchange(x))
                 .map(x -> paymentCalculator.harmoniseToAnnual(x))

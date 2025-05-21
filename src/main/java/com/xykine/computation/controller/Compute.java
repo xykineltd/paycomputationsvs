@@ -43,8 +43,8 @@ public class Compute {
         try{
             sessionCalculationObject = OperationUtils.doPreflight(sessionCalculationObject, computationConstantsRepo, taxRepo);
             List rawInfo = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
-            LOGGER.info("rawInfo*****************************{}", rawInfo);
-            LOGGER.debug("authorizationHeader*****************************{}", authorizationHeader);
+            LOGGER.info("rawInfo ***************************** {}", rawInfo);
+            LOGGER.debug("authorizationHeader ***************************** {}", authorizationHeader);
             assert rawInfo != null;
             PaymentComputeResponse paymentComputeResponse = computeService.computePayroll(rawInfo);
             paymentComputeResponse = OperationUtils.refineResponse(paymentComputeResponse, sessionCalculationObject, paymentRequest);
@@ -52,7 +52,6 @@ public class Compute {
         } catch (Exception ex) {
             LOGGER.info(ex.getMessage());
             ex.printStackTrace();
-
             throw new PayrollValidationException(ex.getMessage());
         }
     }

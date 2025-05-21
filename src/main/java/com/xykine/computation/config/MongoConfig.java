@@ -4,11 +4,14 @@ import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
+import com.xykine.computation.session.SessionCalculationObject;
 import lombok.AllArgsConstructor;
 import org.bson.UuidRepresentation;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.data.mongodb.config.AbstractMongoClientConfiguration;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
@@ -16,9 +19,11 @@ import org.springframework.lang.NonNull;
 
 
 @Configuration
+@Profile("!test")
 @AllArgsConstructor
 @EnableMongoRepositories(basePackages = "com.xykine.computation")
 public class MongoConfig extends AbstractMongoClientConfiguration {
+
 
     private MongoClient mongoClient;
 
@@ -41,5 +46,6 @@ public class MongoConfig extends AbstractMongoClientConfiguration {
         return new MongoTemplate(mongoClient(), getDatabaseName());
 
     }
+
 
 }

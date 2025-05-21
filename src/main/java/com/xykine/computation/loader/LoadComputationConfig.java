@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Component
-@Profile("QA")
+//@Profile({"QA"})
 @AllArgsConstructor
 public class LoadComputationConfig {
 

@@ -27,5 +27,4 @@ public class YTDReport {
     private BigDecimal payeeTax;
     private BigDecimal employeeContributedPension;
     private BigDecimal employerContributedPension;
-
 }

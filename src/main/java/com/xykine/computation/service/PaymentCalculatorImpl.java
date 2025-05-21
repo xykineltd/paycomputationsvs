@@ -24,7 +24,6 @@ import java.util.stream.Collectors;
 public class PaymentCalculatorImpl implements PaymentCalculator{
 
     private final SessionCalculationObject sessionCalculationObject;
-    private static final Logger LOGGER = LoggerFactory.getLogger(PaymentCalculatorImpl.class);
 
     @Override
     public PaymentInfo applyExchange(PaymentInfo paymentInfo) {
@@ -109,6 +108,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 .filter(x -> x.isPensionable() || x.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_HOUSING) || x.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_TRANSPORT))
                 .map(PaymentSettingsResponse::getValue)
                 .reduce(basicSalary, BigDecimal::add);
+
         BigDecimal employeePension = ComputationUtils
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("pensionFundPercent")
                         .multiply(employeePensionFund));

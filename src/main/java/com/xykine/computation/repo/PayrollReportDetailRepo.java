@@ -27,6 +27,8 @@ public interface PayrollReportDetailRepo extends MongoRepository<PayrollReportDe
 
     Page<PayrollReportDetail> findPayrollReportDetailByEmployeeIdAndCompanyId(String employeeId,String companyId, Pageable pageable);
 
+    Page<PayrollReportDetail> findPayrollReportDetailByCompanyIdAndEmployeeId(String companyId,String employeeId, Pageable pageable);
+
 //    @Query(value="{ 'companyId' : ?0, 'startDate' : ?1 }", fields="{ 'employeeId' : 1 }")
 //    List<PayrollReportDetail> findDistinctEmployeeIdByCompanyIdAndStartDate(String companyId, LocalDate startDate);
 

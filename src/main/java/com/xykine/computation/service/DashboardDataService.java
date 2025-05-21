@@ -48,6 +48,8 @@ public class DashboardDataService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PaymentCalculatorImpl.class);
 
+    private final Executor executor = Executors.newFixedThreadPool(10);
+
     public void updatePayrollCountTypeOffCycle(PayrollReportSummary payrollReportSummary) {
         DashboardCard dashboardCard;
         Optional<DashboardCard> dashboardCardOptional = dashboardCardRepo.findByCompanyId(payrollReportSummary.getCompanyId());
@@ -107,15 +109,15 @@ public class DashboardDataService {
         job1.addAll(payrollReportDetailList.subList(0, size/2));
         job2.addAll(payrollReportDetailList.subList(size/2, size));
 
-        Executor executor1 = Executors.newFixedThreadPool(10);
+
         CompletableFuture.supplyAsync(() -> {
             return  offLoadNewValuesToYTD(job1, companyId);
-        }, executor1);
+        }, executor);
 
-        Executor executor2 = Executors.newFixedThreadPool(10);
+
         CompletableFuture.supplyAsync(() -> {
             return  offLoadNewValuesToYTD(job2, companyId);
-        }, executor2);
+        }, executor);
     }
 
     private boolean offLoadNewValuesToYTD(List<PayrollReportDetail>  payrollReportDetailList, String companyId) {

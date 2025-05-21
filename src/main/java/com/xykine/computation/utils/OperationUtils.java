@@ -1,11 +1,14 @@
 package com.xykine.computation.utils;
 
+import com.xykine.computation.controller.Compute;
 import com.xykine.computation.repo.ComputationConstantsRepo;
 import com.xykine.computation.repo.TaxRepo;
 import com.xykine.computation.request.PaymentInfoRequest;
 import com.xykine.computation.response.PaymentComputeResponse;
 import com.xykine.computation.response.SummaryDetail;
 import com.xykine.computation.session.SessionCalculationObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xykine.payroll.model.MapKeys;
 
 import java.math.BigDecimal;
@@ -13,6 +16,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class OperationUtils {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(Compute.class);
 
     public static SessionCalculationObject doPreflight(SessionCalculationObject sessionCalculationObject, ComputationConstantsRepo computationConstantsRepo, TaxRepo taxRepo){
 
@@ -38,9 +43,11 @@ public class OperationUtils {
         sessionSummaryDetails.put(MapKeys.TOTAL_EMPLOYER_PENSION_CONTRIBUTION, new ArrayList<>());
         sessionCalculationObject.setSummaryDetails(sessionSummaryDetails);
 
+        LOGGER.info(" ========> tax Repo {} ", taxRepo.findAllByOrderByTaxClass());
+
         taxRepo.findAllByOrderByTaxClass().forEach(x -> {
-            computationConstants.put(x.getTaxClass(), x.getPercentage());
-        });
+                computationConstants.put(x.getTaxClass(), x.getPercentage());
+            });
         computationConstantsRepo.findAllByOrderById().forEach(x->{
             computationConstants.put(x.getId(), x.getValue());
         });
