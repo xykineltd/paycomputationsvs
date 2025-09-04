@@ -11,7 +11,8 @@ import org.xykine.payroll.model.PaymentSettingsResponse;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.List;
+import java.util.ArrayList;
+import java.util.Collections;
 
 
 public class ComputationUtils {
@@ -46,20 +47,24 @@ public class ComputationUtils {
         return input.setScale(2, RoundingMode.CEILING);
     }
 
-    public static synchronized void updateReportSummary(PaymentInfo paymentInfo, SessionCalculationObject sessionCalculationObject, String key, BigDecimal value){
-        BigDecimal currentValue = sessionCalculationObject.getSummary().get(key);
-        value = value != null ? value : BigDecimal.ZERO;
-        currentValue = currentValue.add(value);
-        sessionCalculationObject.getSummary().put(key, currentValue);
+    public static void updateReportSummary(PaymentInfo paymentInfo,
+                                           SessionCalculationObject sessionCalculationObject,
+                                           String key,
+                                           BigDecimal value) {
 
-        List<SummaryDetail> summaryDetailsList = sessionCalculationObject.getSummaryDetails().get(key);
-        SummaryDetail summaryDetail = SummaryDetail.builder()
-                .employeeName(paymentInfo.getFullName())
-                .departmentName(paymentInfo.getDepartmentName())
-                .value(value)
-                .build();
-        summaryDetailsList.add(summaryDetail);
-        sessionCalculationObject.getSummaryDetails().put(key, summaryDetailsList);
+        value = value != null ? value : BigDecimal.ZERO;
+
+        // Atomic update of summary
+        sessionCalculationObject.getSummary().merge(key, value, BigDecimal::add);
+
+        // Thread-safe update of summaryDetails
+        sessionCalculationObject.getSummaryDetails()
+                .computeIfAbsent(key, k -> Collections.synchronizedList(new ArrayList<>()))
+                .add(SummaryDetail.builder()
+                        .employeeName(paymentInfo.getFullName())
+                        .departmentName(paymentInfo.getDepartmentName())
+                        .value(value)
+                        .build());
     }
 
     public static BigDecimal getPaymentValueFromPaymentSetting(PaymentSettingsResponse paymentSettings){

@@ -29,6 +29,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
@@ -125,55 +126,79 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         return getPayRollReport(paymentComputeResponse.getId(), false);
     }
 
-    private Map<String, List<SummaryDetail>> processSummaryDetailsVariance(Map<String, List<SummaryDetail>> currentSummaryDetails, PayrollReportSummary previousPayrollReportSummary) {
-        Map<String, List<SummaryDetail>> summaryDetailsVariance = new HashMap<>();
+
+    private ConcurrentHashMap<String, List<SummaryDetail>> processSummaryDetailsVariance(
+            ConcurrentHashMap<String, List<SummaryDetail>> currentSummaryDetails,
+            PayrollReportSummary previousPayrollReportSummary) {
+
+        ConcurrentHashMap<String, List<SummaryDetail>> summaryDetailsVariance = new ConcurrentHashMap<>();
 
         if (previousPayrollReportSummary == null) {
             // If previousPayrollReportSummary is null, set all values to zero
-            for (Map.Entry<String, List<SummaryDetail>> entry : currentSummaryDetails.entrySet()) {
-                List<SummaryDetail> zeroValueDetails = entry.getValue().stream()
-                        .map(detail -> new SummaryDetail(detail.getEmployeeName(), detail.getDepartmentName(), BigDecimal.ZERO))
-                        .collect(Collectors.toList());
-                summaryDetailsVariance.put(entry.getKey(), zeroValueDetails);
-            }
+            currentSummaryDetails.forEach((key, detailsList) -> {
+                List<SummaryDetail> zeroValueDetails = Collections.synchronizedList(new ArrayList<>(
+                        detailsList.stream()
+                                .map(detail -> new SummaryDetail(
+                                        detail.getEmployeeName(),
+                                        detail.getDepartmentName(),
+                                        BigDecimal.ZERO))
+                                .toList()
+                ));
+                summaryDetailsVariance.put(key, zeroValueDetails);
+            });
         } else {
             // If previousPayrollReportSummary is not null, calculate the differences
-            var previousSummaryDetails = ReportUtils.transform(previousPayrollReportSummary).getSummary().getSummaryDetails();
+            var previousSummaryDetails = ReportUtils.transform(previousPayrollReportSummary)
+                    .getSummary()
+                    .getSummaryDetails();
 
-            for (Map.Entry<String, List<SummaryDetail>> entry : currentSummaryDetails.entrySet()) {
-                String key = entry.getKey();
-                List<SummaryDetail> currentDetailsList = entry.getValue();
+            currentSummaryDetails.forEach((key, currentDetailsList) -> {
                 List<SummaryDetail> previousDetailsList = previousSummaryDetails.get(key);
 
-                // Create a map from employee name to previous details for quick lookup
+                // Map from employee name to previous details for quick lookup
                 Map<String, SummaryDetail> previousDetailsMap = previousDetailsList != null
-                        ? previousDetailsList.stream().collect(Collectors.toMap(SummaryDetail::getEmployeeName, detail -> detail))
+                        ? previousDetailsList.stream()
+                        .collect(Collectors.toMap(SummaryDetail::getEmployeeName, detail -> detail))
                         : new HashMap<>();
 
                 // Calculate the differences
-                List<SummaryDetail> varianceDetailsList = currentDetailsList.stream()
-                        .map(detail -> {
-                            SummaryDetail previousDetail = previousDetailsMap.get(detail.getEmployeeName());
-                            BigDecimal previousValue = previousDetail != null ? previousDetail.getValue() : BigDecimal.ZERO;
-                            BigDecimal difference = detail.getValue().subtract(previousValue);
-                            return new SummaryDetail(detail.getEmployeeName(), detail.getDepartmentName(), difference);
-                        })
-                        .collect(Collectors.toList());
+                List<SummaryDetail> varianceDetailsList = Collections.synchronizedList(new ArrayList<>(
+                        currentDetailsList.stream()
+                                .map(detail -> {
+                                    SummaryDetail previousDetail = previousDetailsMap.get(detail.getEmployeeName());
+                                    BigDecimal previousValue = previousDetail != null ? previousDetail.getValue() : BigDecimal.ZERO;
+                                    BigDecimal difference = detail.getValue().subtract(previousValue);
+                                    return new SummaryDetail(detail.getEmployeeName(), detail.getDepartmentName(), difference);
+                                })
+                                .toList()
+                ));
 
                 summaryDetailsVariance.put(key, varianceDetailsList);
-            }
+            });
         }
+
         return summaryDetailsVariance;
     }
 
-    private Map<String, List<SummaryDetail>> processSummaryDetailsVarianceSimulate(Map<String, List<SummaryDetail>> currentSummaryDetails) {
-        Map<String, List<SummaryDetail>> summaryDetailsVariance = new HashMap<>();
-        for (Map.Entry<String, List<SummaryDetail>> entry : currentSummaryDetails.entrySet()) {
-            List<SummaryDetail> zeroValueDetails = entry.getValue().stream()
-                    .map(detail -> new SummaryDetail(detail.getEmployeeName(), detail.getDepartmentName(), BigDecimal.ZERO))
-                    .collect(Collectors.toList());
-            summaryDetailsVariance.put(entry.getKey(), zeroValueDetails);
-        }
+
+
+    private ConcurrentHashMap<String, List<SummaryDetail>> processSummaryDetailsVarianceSimulate(
+            ConcurrentHashMap<String, List<SummaryDetail>> currentSummaryDetails) {
+
+        ConcurrentHashMap<String, List<SummaryDetail>> summaryDetailsVariance = new ConcurrentHashMap<>();
+
+        currentSummaryDetails.forEach((key, detailsList) -> {
+            List<SummaryDetail> zeroValueDetails = Collections.synchronizedList(new ArrayList<>(
+                    detailsList.stream()
+                            .map(detail -> new SummaryDetail(
+                                    detail.getEmployeeName(),
+                                    detail.getDepartmentName(),
+                                    BigDecimal.ZERO))
+                            .toList()
+            ));
+            summaryDetailsVariance.put(key, zeroValueDetails);
+        });
+
         return summaryDetailsVariance;
     }
 

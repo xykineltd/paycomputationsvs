@@ -24,7 +24,6 @@ public class ComputeService {
     private final PaymentCalculator paymentCalculator;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ComputeService.class);
-    private final Executor executor = Executors.newFixedThreadPool(10);
 
     public PaymentComputeResponse computePayroll(List<PaymentInfo> rawInfo) {
 
@@ -47,24 +46,33 @@ public class ComputeService {
     }
 
     private List<PaymentInfo> generateReport(List<PaymentInfo> rawInfo) {
+        int cores = Runtime.getRuntime().availableProcessors();
         int size = rawInfo.size();
-        List<PaymentInfo> job1 = rawInfo.subList(0, size / 2);
-        List<PaymentInfo> job2 = rawInfo.subList(size / 2, size);
+        int chunkSize = (size + cores - 1) / cores;
+        List<List<PaymentInfo>> chunks = new ArrayList<>();
 
-        CompletableFuture<List<PaymentInfo>> job1Future = CompletableFuture.supplyAsync(() -> processReport(job1), executor);
-        CompletableFuture<List<PaymentInfo>> job2Future = CompletableFuture.supplyAsync(() -> processReport(job2), executor);
-
-        CompletableFuture<List<PaymentInfo>> processReportFuture =job1Future.thenCombine(job2Future, (x, y) -> {
-            List<PaymentInfo> combined = new ArrayList<>(x.size() + y.size());
-            combined.addAll(x);
-            combined.addAll(y);
-            return combined;
-        });
-        try {
-            return processReportFuture.get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
+        for (int i = 0; i < size; i += chunkSize) {
+            int end = Math.min(size, i + chunkSize);
+            chunks.add(rawInfo.subList(i, end));
         }
+
+        List<CompletableFuture<List<PaymentInfo>>> futures = new ArrayList<>();
+
+        for (int i = 0; i < chunks.size(); i++) {
+            List<PaymentInfo> chunk = chunks.get(i);
+            futures.add(CompletableFuture.supplyAsync(() -> processReport(chunk)));
+        }
+
+        CompletableFuture<Void> allDone = CompletableFuture.allOf(
+                futures.toArray(new CompletableFuture[0])
+        );
+
+        return allDone.thenApply(v -> futures
+                .stream()
+                .map(CompletableFuture::join)
+                .flatMap(List::stream)
+                .toList())
+                .join();
     }
 
     private List<PaymentInfo> processReport(List<PaymentInfo> job){

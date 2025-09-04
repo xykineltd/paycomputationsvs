@@ -9,6 +9,7 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Data
 @Builder
@@ -18,6 +19,6 @@ public class PayComputeSummaryResponse implements Serializable {
     private String message;
     private Map<String, BigDecimal> summary;
     private Map<String, BigDecimal> summaryVariance;
-    private Map<String, List<SummaryDetail>> summaryDetails;
-    private Map<String, List<SummaryDetail>> summaryDetailsVariance;
+    private ConcurrentHashMap<String, List<SummaryDetail>> summaryDetails;
+    private ConcurrentHashMap<String, List<SummaryDetail>> summaryDetailsVariance;
 }

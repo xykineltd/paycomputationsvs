@@ -23,7 +23,7 @@ public class OperationUtils {
 
         ConcurrentHashMap<String, BigDecimal> sessionSummary = new ConcurrentHashMap<>();
         ConcurrentHashMap<String, List<SummaryDetail>> sessionSummaryDetails = new ConcurrentHashMap<>();
-        Map<String, BigDecimal> computationConstants = new HashMap<>();
+        ConcurrentHashMap<String, BigDecimal> computationConstants = new ConcurrentHashMap<>();
 
         sessionSummary.put(MapKeys.TOTAL_NET_PAY, BigDecimal.ZERO);
         sessionSummary.put(MapKeys.TOTAL_GROSS_PAY, BigDecimal.ZERO);
@@ -34,13 +34,13 @@ public class OperationUtils {
         sessionSummary.put(MapKeys.TOTAL_EMPLOYER_PENSION_CONTRIBUTION, BigDecimal.ZERO);
         sessionCalculationObject.setSummary(sessionSummary);
 
-        sessionSummaryDetails.put(MapKeys.TOTAL_NET_PAY, new ArrayList<>());
-        sessionSummaryDetails.put(MapKeys.TOTAL_GROSS_PAY, new ArrayList<>());
-        sessionSummaryDetails.put(MapKeys.TOTAL_PAYEE_TAX, new ArrayList<>());
-        sessionSummaryDetails.put(MapKeys.TOTAL_EMPLOYEE_PENSION_CONTRIBUTION, new ArrayList<>());
-        sessionSummaryDetails.put(MapKeys.TOTAL_NHF, new ArrayList<>());
-        sessionSummaryDetails.put(MapKeys.TOTAL_PERSONAL_DEDUCTION, new ArrayList<>());
-        sessionSummaryDetails.put(MapKeys.TOTAL_EMPLOYER_PENSION_CONTRIBUTION, new ArrayList<>());
+        sessionSummaryDetails.put(MapKeys.TOTAL_NET_PAY, Collections.synchronizedList(new ArrayList<>()));
+        sessionSummaryDetails.put(MapKeys.TOTAL_GROSS_PAY, Collections.synchronizedList(new ArrayList<>()));
+        sessionSummaryDetails.put(MapKeys.TOTAL_PAYEE_TAX, Collections.synchronizedList(new ArrayList<>()));
+        sessionSummaryDetails.put(MapKeys.TOTAL_EMPLOYEE_PENSION_CONTRIBUTION, Collections.synchronizedList(new ArrayList<>()));
+        sessionSummaryDetails.put(MapKeys.TOTAL_NHF, Collections.synchronizedList(new ArrayList<>()));
+        sessionSummaryDetails.put(MapKeys.TOTAL_PERSONAL_DEDUCTION, Collections.synchronizedList(new ArrayList<>()));
+        sessionSummaryDetails.put(MapKeys.TOTAL_EMPLOYER_PENSION_CONTRIBUTION, Collections.synchronizedList(new ArrayList<>()));
         sessionCalculationObject.setSummaryDetails(sessionSummaryDetails);
 
         LOGGER.info(" ========> tax Repo {} ", taxRepo.findAllByOrderByTaxClass());
