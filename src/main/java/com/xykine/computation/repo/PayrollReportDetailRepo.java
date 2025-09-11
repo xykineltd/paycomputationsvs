@@ -13,7 +13,7 @@ public interface PayrollReportDetailRepo extends MongoRepository<PayrollReportDe
     void deletePayrollReportsByStartDate(LocalDate startDate);
     void deleteAllByStartDateAndCompanyId(LocalDate startDate, String companyId);
     void deleteAllByOffCycleIdAndCompanyId(String offCycleId, String companyId);
-    PayrollReportDetail findPayrollReportByStartDate(LocalDate startDate);
+    PayrollReportDetail findPayrollReportDetailByCompanyIdAndEmployeeIdAndStartDateAndEndDate(String companyId, String employeeId, String startDate, String endDate);
     List<PayrollReportDetail> findPayrollReportDetailBySummaryId(String id);
     Page<PayrollReportDetail> findPayrollReportDetailByCompanyIdAndEmployeeIdAndStartDateBetweenAndOffCycle(String companyId, String employeeID, String startDateLow, String startDateHigh, boolean offCycle, Pageable pageable);
 //    Page<PayrollReportDetail> findPayrollReportDetailByEmployeeIdAndCompanyId(String employeeId, String companyId, Pageable pageable);

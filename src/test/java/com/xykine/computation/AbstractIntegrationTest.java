@@ -24,6 +24,9 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.MongoDBContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.xykine.payroll.model.PaymentInfo;
+import org.xykine.payroll.model.PaymentSettingsResponse;
+import org.xykine.payroll.model.enums.PaymentTypeEnum;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -234,7 +237,7 @@ public abstract class AbstractIntegrationTest {
         String URL_PREFIX = "http://localhost:" + port + "/compute/reports/";
         String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX + "paymentDetails/get-by-employee")
                 .queryParam("employeeId", TEST_EMPLOYEE_ID)
-                .queryParam("startDate", LocalDate.now())
+                .queryParam("startDate", "2025-05-01")
                 .queryParam("companyId", TEST_COMPANY_ID)
                 .toUriString();
         return getReportDirect(url);
@@ -303,6 +306,15 @@ public abstract class AbstractIntegrationTest {
                 .queryParam("companyId", TEST_COMPANY_ID)
                 .toUriString();
         return getReportGenericDirect(url);
+    }
+
+    public PaymentSettingsResponse getOffCyclePaymentDetails (PaymentInfo paymentInfo) {
+
+        var paymentSettings = paymentInfo.getPaymentSettings();
+        return paymentSettings
+                .stream()
+                .filter(setting -> setting.getType().equals(PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT))
+                .findFirst().orElseGet(PaymentSettingsResponse::new);
     }
 
 }

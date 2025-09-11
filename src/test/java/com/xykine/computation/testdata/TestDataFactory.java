@@ -13,16 +13,14 @@ public class TestDataFactory {
     public static final String TEST_EMPLOYEE_ID = "682cf69592b07e60fa10991b";
 
     public static <T> List<T> getPaymentSettings(String type) {
-        String payload = "";
-        if ("standard".equals(type)) {
-            payload = STANDARD_PAYROLL_ENTRY;
-        } else if ("off-cycle".equals(type)) {
-            payload = OFF_CYCLE;
-        } else if ("ten-entries".equals(type)) {
-            payload = TEN_ENTRIES;
-        } else if ("one-thousand-entries".equals(type)) {
-            payload = ONE_THOUSAND_ENTRIES;
-        }
+        String payload = switch (type) {
+            case "standard" -> STANDARD_PAYROLL_ENTRY;
+            case "standard with performance bonus" -> STANDARD_PAYROLL_ENTRY_WITH_PERFORMANCE_BONUS;
+            case "off-cycle" -> OFF_CYCLE;
+            case "ten-entries" -> TEN_ENTRIES;
+            case "one-thousand-entries" -> ONE_THOUSAND_ENTRIES;
+            default -> throw new IllegalArgumentException("Unknown type: " + type);
+        };
         try {
             return MAPPER.readValue(payload, new TypeReference<>() {});
         } catch (Exception e) {

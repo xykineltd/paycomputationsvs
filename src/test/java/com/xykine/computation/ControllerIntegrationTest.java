@@ -45,8 +45,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
 
     @BeforeEach
     void setupReportTestData() {
-        when(adminService.getPaymentInfoList(any(), anyString()))
-                .thenReturn(TestDataFactory.getPaymentSettings("standard"));
+        when(adminService.getPaymentInfoList(any(), anyString())).thenReturn(TestDataFactory.getPaymentSettings("standard"));
         getReportSummary();
     }
 
@@ -169,15 +168,57 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
 
         Map<String, BigDecimal> payeeTax = paymentInfo.getPayeeTax();
         assertThat(payeeTax).isNotNull().satisfies((x) -> {
+            String payee_tax_key = "Payee Tax on " + getOffCyclePaymentDetails(paymentInfo).getName();
             assertThat(x.get("Taxable Income")).isEqualByComparingTo(BigDecimal.valueOf(206178.17));
-            assertThat(x.get("Payee Tax")).isEqualByComparingTo(BigDecimal.valueOf(33964.09));
-
+            assertThat(x.get(payee_tax_key)).isEqualByComparingTo(BigDecimal.valueOf(33964.09));
         });
 
         Map<String, BigDecimal> pension = paymentInfo.getPension();
         assertThat(pension).isNotNull().satisfies((x) -> {
             assertThat(x.get("Employer Pension Contribution")).isEqualByComparingTo(BigDecimal.valueOf(0));
             assertThat(x.get("Employee Pension Contribution")).isEqualByComparingTo(BigDecimal.valueOf(0));
+        });
+    }
+
+
+    // Test regular with performance bouns
+    @Test
+    void testStandardWithPerformanceBonusCompute() {
+        when(adminService.getPaymentInfoList(any(), anyString())).thenReturn(TestDataFactory.getPaymentSettings("standard with performance bonus"));
+        ReportResponse reportSummary = getReportSummary();
+        Map<String, Object> body = getReportDetail(reportSummary);
+        assertThat(body).isNotNull().satisfies((x) -> {
+            assertThat(x.get("totalItems")).isEqualTo(1);
+        });
+        List<ReportResponse> reportResponses = MAPPER.convertValue(body.get("payrollDetails"), new TypeReference<List<ReportResponse>>() {
+        });
+
+        PaymentInfo paymentInfo = reportResponses.get(0).getDetail().getReport();
+
+        Map<String, BigDecimal> payeeTax = paymentInfo.getPayeeTax();
+        assertThat(payeeTax).isNotNull().satisfies(x -> {
+            assertThat(x.get("Payee Tax on Performance bonus"))
+                    .isEqualByComparingTo(new BigDecimal("33964.09"));
+            assertThat(x.get("Taxable Income"))
+                    .isEqualByComparingTo(new BigDecimal("660529.41"));
+            assertThat(x.get("Payee Tax"))
+                    .isEqualByComparingTo(new BigDecimal("91710.97"));
+        });
+
+        Map<String, BigDecimal> grossPay = paymentInfo.getGrossPay();
+        assertThat(grossPay).isNotNull().satisfies(x -> {
+            assertThat(x.get("Transport Allowance"))
+                    .isEqualByComparingTo(new BigDecimal("50770.89"));
+            assertThat(x.get("Acting Allowance"))
+                    .isEqualByComparingTo(new BigDecimal("8219.55"));
+            assertThat(x.get("Performance bonus"))
+                    .isEqualByComparingTo(new BigDecimal("507722.72"));
+            assertThat(x.get("Basic Salary"))
+                    .isEqualByComparingTo(new BigDecimal("507722.72"));
+            assertThat(x.get("Gross Pay"))
+                    .isEqualByComparingTo(new BigDecimal("1160774.79"));
+            assertThat(x.get("Housing Allowance"))
+                    .isEqualByComparingTo(new BigDecimal("86338.91"));
         });
     }
 

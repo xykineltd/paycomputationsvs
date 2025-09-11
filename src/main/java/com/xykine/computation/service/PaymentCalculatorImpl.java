@@ -234,7 +234,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
         BigDecimal empPayeeTax = ComputationUtils.getTaxAmount(taxableIncome, sessionCalculationObject);
 
-        payeeTax.put(MapKeys.PAYEE_TAX, empPayeeTax);
+        payeeTax.put(!paymentInfo.isOffCycle() ?  MapKeys.PAYEE_TAX : "Payee Tax on " + getOffCyclePaymentDetails(paymentInfo).getName(), empPayeeTax);
         paymentInfo.setPayeeTax(payeeTax);
 
         ComputationUtils.updateReportSummary(paymentInfo, sessionCalculationObject, MapKeys.TOTAL_PAYEE_TAX,
@@ -245,9 +245,10 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     @Override
     public PaymentInfo computeTotalDeduction(PaymentInfo paymentInfo) {
         Map<String, BigDecimal> deductionMap = new HashMap<>();
+        String payee_tax_key = !paymentInfo.isOffCycle() ?  MapKeys.PAYEE_TAX : "Payee Tax on " + getOffCyclePaymentDetails(paymentInfo).getName();
 
         deductionMap.put(MapKeys.PENSION_FUND, paymentInfo.getTaxRelief().get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION));
-        deductionMap.put(MapKeys.PAYEE_TAX, paymentInfo.getPayeeTax().get(MapKeys.PAYEE_TAX));
+        deductionMap.put(payee_tax_key, paymentInfo.getPayeeTax().get(payee_tax_key));
         deductionMap.put(MapKeys.NATIONAL_HOUSING_FUND, paymentInfo.getNhf().get(MapKeys.NATIONAL_HOUSING_FUND));
 
         var deductions = getDeductionsForEmployee(paymentInfo);
@@ -269,11 +270,10 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     private Map<String, BigDecimal> insertRecurrentPaymentMap(Map<String, BigDecimal> earningMap, PaymentInfo paymentInfo){
         if (paymentInfo.isOffCycle()) {
-
-            earningMap.put(MapKeys.OFF_CYCLE_PAYMENT, getOffCyclePaymentAmountForEmployee(paymentInfo).getValue());
+            PaymentSettingsResponse paymentSettingsResponse = getOffCyclePaymentDetails(paymentInfo);
+            earningMap.put(paymentSettingsResponse.getName(), paymentSettingsResponse.getValue());
         } else {
             earningMap.put(MapKeys.BASIC_SALARY, paymentInfo.getBasicSalary());
-
             Set<PaymentSettingsResponse> allowance = getAllowanceForEmployee(paymentInfo);
             allowance
                     //TODO uncomment this once the paymentSetting logic to toggle status is fixed
@@ -324,7 +324,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 .collect(Collectors.toSet());
     }
 
-    private PaymentSettingsResponse getOffCyclePaymentAmountForEmployee (PaymentInfo paymentInfo) {
+    private PaymentSettingsResponse getOffCyclePaymentDetails (PaymentInfo paymentInfo) {
 
         var paymentSettings = paymentInfo.getPaymentSettings();
         return paymentSettings
