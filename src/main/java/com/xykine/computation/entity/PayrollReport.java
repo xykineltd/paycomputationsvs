@@ -20,9 +20,7 @@ import java.time.LocalDateTime;
 @Document
 public class PayrollReport {
     @Id
-//    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private String id;
-//    @Column(unique=true)
     private LocalDate startDate;
     private LocalDate endDate;
     private boolean payrollSimulation;

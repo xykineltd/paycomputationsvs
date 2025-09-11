@@ -1,5 +1,7 @@
 package com.xykine.computation.service;
 
+import com.xykine.computation.entity.EmployeeMetadata;
+import com.xykine.computation.entity.EmployeeType;
 import org.xykine.payroll.model.*;
 
 import org.xykine.payroll.model.enums.PaymentTypeEnum;
@@ -24,6 +26,7 @@ import java.util.stream.Collectors;
 public class PaymentCalculatorImpl implements PaymentCalculator{
 
     private final SessionCalculationObject sessionCalculationObject;
+    private final EmployeeMetadataService employeeMetadataService;
 
     @Override
     public PaymentInfo applyExchange(PaymentInfo paymentInfo) {
@@ -92,6 +95,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     @Override
     public PaymentInfo computeNonTaxableIncomeExempt(PaymentInfo paymentInfo) {
         PaymentFrequencyEnum salaryFrequency = paymentInfo.getSalaryFrequency();
+        EmployeeType employeeType = getEmployeeType(paymentInfo);
 
         if (paymentInfo.isOffCycle())
             return computeNonTaxableIncomeExemptForOffCycle(paymentInfo);
@@ -102,12 +106,13 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
         int numberOfUnpaidDays = paymentInfo.getNumberOfDaysOfUnpaidAbsence();
         BigDecimal basicSalary = paymentInfo.getBasicSalary();
+        boolean isNotContract = employeeType != EmployeeType.CONTRACT;
 
-        BigDecimal employeePensionFund = getAllowanceForEmployee(paymentInfo)
+        BigDecimal employeePensionFund = isNotContract ? getAllowanceForEmployee(paymentInfo)
                 .stream()
                 .filter(x -> x.isPensionable() || x.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_HOUSING) || x.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_TRANSPORT))
                 .map(PaymentSettingsResponse::getValue)
-                .reduce(basicSalary, BigDecimal::add);
+                .reduce(basicSalary, BigDecimal::add) : BigDecimal.ZERO;
 
         BigDecimal employeePension = ComputationUtils
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("pensionFundPercent")
@@ -116,11 +121,11 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         nonTaxableIncomeExemptMap.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION, ComputationUtils.prorate(employeePension,numberOfUnpaidDays, salaryFrequency));
         pension.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION, ComputationUtils.prorate(employeePension, numberOfUnpaidDays, salaryFrequency));
 
-        BigDecimal employerPensionContribution = getAllowanceForEmployee(paymentInfo)
+        BigDecimal employerPensionContribution = isNotContract ? getAllowanceForEmployee(paymentInfo)
                 .stream()
                 .filter(x -> x.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_HOUSING) || x.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_TRANSPORT))
                 .map(PaymentSettingsResponse::getValue)
-                .reduce(basicSalary, BigDecimal::add);
+                .reduce(basicSalary, BigDecimal::add) : BigDecimal.ZERO;
 
         employerPensionContribution = ComputationUtils
                 .roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("employerPensionContributionPercent")
@@ -128,7 +133,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
         pension.put(MapKeys.EMPLOYER_PENSION_CONTRIBUTION, ComputationUtils.prorate(employerPensionContribution, numberOfUnpaidDays, salaryFrequency));
         pension.put(MapKeys.TOTAL_PENSION_FOR_EMPLOYEE, getTotal(pension));
-
         ComputationUtils.updateReportSummary(paymentInfo, sessionCalculationObject, MapKeys.TOTAL_EMPLOYER_PENSION_CONTRIBUTION, ComputationUtils.prorate(employerPensionContribution,  numberOfUnpaidDays, salaryFrequency));
 
         BigDecimal nationalHousingFund = ComputationUtils
@@ -245,17 +249,17 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     @Override
     public PaymentInfo computeTotalDeduction(PaymentInfo paymentInfo) {
         Map<String, BigDecimal> deductionMap = new HashMap<>();
+        EmployeeType employeeType = getEmployeeType(paymentInfo);
         String payee_tax_key = !paymentInfo.isOffCycle() ?  MapKeys.PAYEE_TAX : "Payee Tax on " + getOffCyclePaymentDetails(paymentInfo).getName();
-
-        deductionMap.put(MapKeys.PENSION_FUND, paymentInfo.getTaxRelief().get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION));
         deductionMap.put(payee_tax_key, paymentInfo.getPayeeTax().get(payee_tax_key));
-        deductionMap.put(MapKeys.NATIONAL_HOUSING_FUND, paymentInfo.getNhf().get(MapKeys.NATIONAL_HOUSING_FUND));
+
+        if (employeeType != EmployeeType.CONTRACT) {
+            deductionMap.put(MapKeys.PENSION_FUND, paymentInfo.getTaxRelief().get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION));
+            deductionMap.put(MapKeys.NATIONAL_HOUSING_FUND, paymentInfo.getNhf().get(MapKeys.NATIONAL_HOUSING_FUND));
+        }
 
         var deductions = getDeductionsForEmployee(paymentInfo);
-
         deductions
-                //TODO uncomment this once the paymentSetting logic to toggle status is fixed
-//                .filter(PaymentSettingsResponse::isActive)
                 .forEach(x -> {
                     deductionMap.put(x.getName(), x.getValue());
                     ComputationUtils.updateReportSummary(paymentInfo, sessionCalculationObject, MapKeys.TOTAL_PERSONAL_DEDUCTION, x.getValue());
@@ -275,10 +279,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         } else {
             earningMap.put(MapKeys.BASIC_SALARY, paymentInfo.getBasicSalary());
             Set<PaymentSettingsResponse> allowance = getAllowanceForEmployee(paymentInfo);
-            allowance
-                    //TODO uncomment this once the paymentSetting logic to toggle status is fixed
-//                    .filter(PaymentSettingsResponse::isActive)
-                    .forEach(x -> earningMap.put(x.getName(), x.getValue()));
+            allowance.forEach(x -> earningMap.put(x.getName(), x.getValue()));
         }
         return earningMap;
     }
@@ -348,5 +349,12 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
             default -> multiplier = 1L;
         }
         return multiplier;
+    }
+
+    private EmployeeType getEmployeeType(PaymentInfo paymentInfo) {
+        EmployeeMetadata metadata = employeeMetadataService.getByEmployeeId(paymentInfo.getEmployeeID());
+        return (metadata != null && metadata.getEmployeeType() != null)
+                ? metadata.getEmployeeType()
+                : EmployeeType.REGULAR;
     }
 }

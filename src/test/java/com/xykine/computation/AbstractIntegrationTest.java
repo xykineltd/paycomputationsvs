@@ -74,7 +74,7 @@ public abstract class AbstractIntegrationTest {
 
     protected  PaymentInfoRequest createPayload() {
         PaymentInfoRequest paymentInfoRequest = new PaymentInfoRequest();
-        paymentInfoRequest.setCompanyId("682cf69492b07e60fa109911");
+        paymentInfoRequest.setCompanyId(TEST_COMPANY_ID);
         paymentInfoRequest.setPayrollSimulation(false);
         paymentInfoRequest.setStart(LocalDate.now());
         paymentInfoRequest.setEnd(LocalDate.now().plusDays(30));

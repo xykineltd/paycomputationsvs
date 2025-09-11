@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static com.xykine.computation.testdata.TestDataFactory.TEST_EMPLOYEE_ID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -180,8 +181,46 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         });
     }
 
+    @Test
+    void testContractStaffCompute()  {
+        when(adminService.getPaymentInfoList(any(), anyString())).thenReturn(TestDataFactory.getPaymentSettings("contract staff"));
+        ReportResponse reportSummary = getReportSummary();
+        Map<String, Object> body = getReportDetail(reportSummary);
 
-    // Test regular with performance bouns
+        assertThat(body).isNotNull().satisfies((x) -> {
+            assertThat(x.get("totalItems")).isEqualTo(1);
+        });
+
+        List<ReportResponse> reportResponses = MAPPER.convertValue(body.get("payrollDetails"), new TypeReference<List<ReportResponse>>() {
+        });
+
+        PaymentInfo paymentInfo = reportResponses.get(0).getDetail().getReport();
+        assertThat(paymentInfo).isNotNull().satisfies((x) -> {
+            assertThat(x.getNetPay()).isEqualByComparingTo(BigDecimal.valueOf( 137603.33));
+        });
+
+        Map<String, BigDecimal> grossPay = paymentInfo.getGrossPay();
+        assertThat(grossPay).isNotNull().satisfies((x) -> {
+            assertThat(x.get("Gross Pay")).isEqualByComparingTo(BigDecimal.valueOf(150000.00));
+            assertThat(x.get("Basic Salary"))
+                    .isEqualByComparingTo(new BigDecimal("150000.00"));
+        });
+
+        Map<String, BigDecimal> payeeTax = paymentInfo.getPayeeTax();
+        assertThat(payeeTax).isNotNull().satisfies((x) -> {
+            String payee_tax_key = "Payee Tax";
+            assertThat(x.get("Taxable Income")).isEqualByComparingTo(BigDecimal.valueOf(100333.33));
+            assertThat(x.get(payee_tax_key)).isEqualByComparingTo(BigDecimal.valueOf(12396.67));
+        });
+
+        Map<String, BigDecimal> pension = paymentInfo.getPension();
+        assertThat(pension).isNotNull().satisfies((x) -> {
+            assertThat(x.get("Employer Pension Contribution")).isEqualByComparingTo(BigDecimal.valueOf(0));
+            assertThat(x.get("Employee Pension Contribution")).isEqualByComparingTo(BigDecimal.valueOf(0));
+        });
+    }
+
+    // Test regular with performance bonus
     @Test
     void testStandardWithPerformanceBonusCompute() {
         when(adminService.getPaymentInfoList(any(), anyString())).thenReturn(TestDataFactory.getPaymentSettings("standard with performance bonus"));
@@ -236,7 +275,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
     void testGetReportByCompanyIdAndEmployeeId() {
         assertThat(getReportByCompanyIdAndEmployeeId()).isNotNull().satisfies(body -> {
             List<ReportResponse> reportResponses = MAPPER.convertValue(body.get("payrollDetails"), new TypeReference<>() {});
-            assertThat(reportResponses.get(0).getEmployeeId()).isEqualTo(TestDataFactory.TEST_EMPLOYEE_ID);
+            assertThat(reportResponses.get(0).getEmployeeId()).isEqualTo(TEST_EMPLOYEE_ID);
         });
     }
 
@@ -250,7 +289,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
     @Test
     void testReportDetailsByCompanyIdAndEmployeeId() {
         assertThat(getPaymentDetailsByEmployeeAndCompanyId()).isNotNull().satisfies(body -> {
-            assertThat(body.getEmployeeId()).isEqualTo(TestDataFactory.TEST_EMPLOYEE_ID);
+            assertThat(body.getEmployeeId()).isEqualTo(TEST_EMPLOYEE_ID);
             assertThat(body.getCompanyId()).isEqualTo(TestDataFactory.TEST_COMPANY_ID);
         });
     }

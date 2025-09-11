@@ -500,4 +500,121 @@ public class TestDataProvider {
                       }
                     ]               
             """;
+
+    public static String CONTRACT_STAFF =
+            """
+                    [
+                      {
+                        "id": null,
+                        "numberOfDaysOfUnpaidAbsence": 0,
+                        "startDate": "2025-05-01",
+                        "endDate": "2025-05-31",
+                        "employeeID": "8e3b6e4952e8468a84fd84556f8fdf2a",
+                        "companyID": "682cf69492b07e60fa109911",
+                        "completed": false,
+                        "employeeIsLock": false,
+                        "paymentSettings": [
+                          {
+                            "paymentSettingID": null,
+                            "employeeID": "8e3b6e4952e8468a84fd84556f8fdf2a",
+                            "type": "ALLOWANCE_ANNUAL_TRANSPORT",
+                            "name": "Transport Allowance",
+                            "value": 0,
+                            "currency": "NGN",
+                            "salaryFrequency": "MONTHLY",
+                            "active": false,
+                            "pensionable": false,
+                            "prorated": false,
+                            "createdDate": null,
+                            "lastModifiedDate": null,
+                            "createdBy": null,
+                            "lastModifiedBy": null,
+                            "version": 0
+                          },
+                          {
+                            "paymentSettingID": null,
+                            "employeeID": "8e3b6e4952e8468a84fd84556f8fdf2a",
+                            "type": "ALLOWANCE_ANNUAL",
+                            "name": "Acting Allowance",
+                            "value": 0,
+                            "currency": "NGN",
+                            "salaryFrequency": "MONTHLY",
+                            "active": false,
+                            "pensionable": false,
+                            "prorated": false,
+                            "createdDate": null,
+                            "lastModifiedDate": null,
+                            "createdBy": null,
+                            "lastModifiedBy": null,
+                            "version": 0
+                          },
+                          {
+                            "paymentSettingID": null,
+                            "employeeID": "8e3b6e4952e8468a84fd84556f8fdf2a",
+                            "type": "DEDUCTION_MONTHLY",
+                            "name": "Coop Loan",
+                            "value": 0,
+                            "currency": "NGN",
+                            "salaryFrequency": "MONTHLY",
+                            "active": false,
+                            "pensionable": false,
+                            "prorated": false,
+                            "createdDate": null,
+                            "lastModifiedDate": null,
+                            "createdBy": null,
+                            "lastModifiedBy": null,
+                            "version": 0
+                          },
+                          {
+                            "paymentSettingID": null,
+                            "employeeID": "8e3b6e4952e8468a84fd84556f8fdf2a",
+                            "type": "BASIC_SALARY_ANNUAL",
+                            "name": "Basic Salary",
+                            "value": 150000.00,
+                            "currency": "NGN",
+                            "salaryFrequency": "MONTHLY",
+                            "active": false,
+                            "pensionable": false,
+                            "prorated": false,
+                            "createdDate": null,
+                            "lastModifiedDate": null,
+                            "createdBy": null,
+                            "lastModifiedBy": null,
+                            "version": 0
+                          },
+                          {
+                            "paymentSettingID": null,
+                            "employeeID": "8e3b6e4952e8468a84fd84556f8fdf2a",
+                            "type": "ALLOWANCE_ANNUAL_HOUSING",
+                            "name": "Housing Allowance",
+                            "value": 0,
+                            "currency": "NGN",
+                            "salaryFrequency": "MONTHLY",
+                            "active": false,
+                            "pensionable": false,
+                            "prorated": false,
+                            "createdDate": null,
+                            "lastModifiedDate": null,
+                            "createdBy": null,
+                            "lastModifiedBy": null,
+                            "version": 0
+                          }
+                        ],
+                        "basicSalary": 150000.00,
+                        "fullName": "Ferondo Redondo",
+                        "offCycleID": null,
+                        "offCycle": false,
+                        "offCycleActualValueSupplied": false,
+                        "currency": "NGN",
+                        "salaryFrequency": "MONTHLY",
+                        "exchangeInfo": {
+                          "currency": "NGN",
+                          "rateDateAndTime": null,
+                          "exchangeRate": 1.0
+                        },
+                        "totalNumberOfEmployees": 1,
+                        "ytdReport": null
+                      }
+                    ]
+            """;
 }

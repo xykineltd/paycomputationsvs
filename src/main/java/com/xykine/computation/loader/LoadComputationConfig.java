@@ -1,16 +1,10 @@
 package com.xykine.computation.loader;
 
 
-import com.xykine.computation.entity.ComputationConstants;
-import com.xykine.computation.entity.DashboardCard;
-import com.xykine.computation.entity.Tax;
-import com.xykine.computation.repo.ComputationConstantsRepo;
-import com.xykine.computation.repo.DashboardCardRepo;
-import com.xykine.computation.repo.PensionFundRepo;
-import com.xykine.computation.repo.TaxRepo;
+import com.xykine.computation.entity.*;
+import com.xykine.computation.repo.*;
 import lombok.AllArgsConstructor;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
@@ -27,11 +21,11 @@ public class LoadComputationConfig {
 	private final PensionFundRepo pensionFundRepo;
 	private final ComputationConstantsRepo computationConstantsRepo;
 	private final DashboardCardRepo dashboardCardRepo;
+    private final EmployeeMetadataRepo employeeMetaDataRepo;
 
 
     @EventListener(ApplicationReadyEvent.class)
     public void loadLegalEntityTestData() {
-        System.out.println("Loading data.......");
 
         Tax taxClassA = Tax.builder()
                 .taxClass("TaxClassA")
@@ -124,5 +118,13 @@ public class LoadComputationConfig {
 
         if (dashboardCardRepo.findAll().size() == 0)
             dashboardCardRepo.save(dashboardCard);
+
+        EmployeeMetadata employeeMetadata = EmployeeMetadata.builder()
+                .employeeId("8e3b6e4952e8468a84fd84556f8fdf2a")
+                .companyId("682cf69492b07e60fa109911")
+                .employeeType(EmployeeType.CONTRACT)
+                .build();
+
+        employeeMetaDataRepo.save(employeeMetadata);
     }
 }

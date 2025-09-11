@@ -2,10 +2,12 @@ package com.xykine.computation.utils;
 
 import com.xykine.computation.controller.Compute;
 import com.xykine.computation.repo.ComputationConstantsRepo;
+import com.xykine.computation.repo.EmployeeMetadataRepo;
 import com.xykine.computation.repo.TaxRepo;
 import com.xykine.computation.request.PaymentInfoRequest;
 import com.xykine.computation.response.PaymentComputeResponse;
 import com.xykine.computation.response.SummaryDetail;
+import com.xykine.computation.service.EmployeeMetadataService;
 import com.xykine.computation.session.SessionCalculationObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +21,9 @@ public class OperationUtils {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Compute.class);
 
-    public static SessionCalculationObject doPreflight(SessionCalculationObject sessionCalculationObject, ComputationConstantsRepo computationConstantsRepo, TaxRepo taxRepo){
+    public static SessionCalculationObject doPreflight(SessionCalculationObject sessionCalculationObject,
+                                                       ComputationConstantsRepo computationConstantsRepo,
+                                                       TaxRepo taxRepo, EmployeeMetadataService employeeMetadataService, PaymentInfoRequest paymentRequest){
 
         ConcurrentHashMap<String, BigDecimal> sessionSummary = new ConcurrentHashMap<>();
         ConcurrentHashMap<String, List<SummaryDetail>> sessionSummaryDetails = new ConcurrentHashMap<>();
@@ -43,7 +47,9 @@ public class OperationUtils {
         sessionSummaryDetails.put(MapKeys.TOTAL_EMPLOYER_PENSION_CONTRIBUTION, Collections.synchronizedList(new ArrayList<>()));
         sessionCalculationObject.setSummaryDetails(sessionSummaryDetails);
 
-        LOGGER.info(" ========> tax Repo {} ", taxRepo.findAllByOrderByTaxClass());
+        LOGGER.debug(" ========> tax Repo {} ", taxRepo.findAllByOrderByTaxClass());
+
+        employeeMetadataService.preloadAllIntoCache(paymentRequest.getCompanyId());
 
         taxRepo.findAllByOrderByTaxClass().forEach(x -> {
                 computationConstants.put(x.getTaxClass(), x.getPercentage());

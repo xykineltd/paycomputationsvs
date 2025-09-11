@@ -8,6 +8,7 @@ import com.xykine.computation.response.PaymentComputeResponse;
 import com.xykine.computation.response.ReportResponse;
 import com.xykine.computation.service.AdminService;
 import com.xykine.computation.service.ComputeService;
+import com.xykine.computation.service.EmployeeMetadataService;
 import com.xykine.computation.service.ReportPersistenceService;
 import com.xykine.computation.session.SessionCalculationObject;
 import com.xykine.computation.utils.OperationUtils;
@@ -17,7 +18,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -32,6 +32,7 @@ public class Compute {
     private final ComputationConstantsRepo computationConstantsRepo;
     private final TaxRepo taxRepo;
     private final AdminService adminService;
+    private final EmployeeMetadataService employeeMetadataService;
 
     @Autowired
     private SessionCalculationObject sessionCalculationObject;
@@ -41,7 +42,7 @@ public class Compute {
             @RequestHeader("Authorization") String authorizationHeader,
             @RequestBody PaymentInfoRequest paymentRequest) {
         try{
-            sessionCalculationObject = OperationUtils.doPreflight(sessionCalculationObject, computationConstantsRepo, taxRepo);
+            sessionCalculationObject = OperationUtils.doPreflight(sessionCalculationObject, computationConstantsRepo, taxRepo, employeeMetadataService,  paymentRequest);
             List rawInfo = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
             LOGGER.info("rawInfo ***************************** {}", rawInfo);
             LOGGER.debug("authorizationHeader ***************************** {}", authorizationHeader);
