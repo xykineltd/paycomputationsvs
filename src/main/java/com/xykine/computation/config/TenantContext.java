@@ -4,11 +4,11 @@ public class TenantContext {
     private static final ThreadLocal<String> tenantId = new ThreadLocal<>();
 
     public static void setTenantId(String id) {
-        tenantId.set(id != null ? id : "aced");
+        tenantId.set(id != null ? id : "dev");
     }
 
     public static String getTenantId() {
-        return tenantId.get() != null ? tenantId.get() : "aced";
+        return tenantId.get() != null ? tenantId.get() : "dev";
     }
 
     public static void clear() {

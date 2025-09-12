@@ -18,7 +18,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-            issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:http://xykine.com/realms/Payroll}
+            issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:https://auth.acedpaydev.com/realms/local}
   data:
     redis:
       connect-timeout: 2s
@@ -28,7 +28,7 @@ spring:
       timeout: 1s
 
     mongodb:
-      uri: ${SPRING_DATA_MONGODB_URI:mongodb://admin:docker@localhost:27017/test?authSource=admin}
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://root:rootpassword@localhost:27017/dev_db?authSource=admin}
 
 admin:
   service:
