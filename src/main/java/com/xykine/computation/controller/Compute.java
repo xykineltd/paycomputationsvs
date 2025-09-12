@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.xykine.payroll.model.PaymentInfo;
 
 import java.util.List;
 
@@ -41,19 +42,35 @@ public class Compute {
     public ReportResponse computePayroll(
             @RequestHeader("Authorization") String authorizationHeader,
             @RequestBody PaymentInfoRequest paymentRequest) {
-        try{
-            sessionCalculationObject = OperationUtils.doPreflight(sessionCalculationObject, computationConstantsRepo, taxRepo, employeeMetadataService,  paymentRequest);
-            List rawInfo = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
-            LOGGER.info("rawInfo ***************************** {}", rawInfo);
-            LOGGER.debug("authorizationHeader ***************************** {}", authorizationHeader);
-            assert rawInfo != null;
-            PaymentComputeResponse paymentComputeResponse = computeService.computePayroll(rawInfo);
-            paymentComputeResponse = OperationUtils.refineResponse(paymentComputeResponse, sessionCalculationObject, paymentRequest);
-            return reportPersistenceService.serializeAndSaveReport(paymentComputeResponse, paymentRequest.getCompanyId());
+
+        try {
+            sessionCalculationObject = OperationUtils.doPreflight(
+                    sessionCalculationObject,
+                    computationConstantsRepo,
+                    taxRepo,
+                    employeeMetadataService,
+                    paymentRequest
+            );
+
+            List<PaymentInfo> paymentInfoList = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
+            if (paymentInfoList == null || paymentInfoList.isEmpty()) {
+                throw new PayrollValidationException("No payment information found for request");
+            }
+
+            PaymentComputeResponse computeResponse = computeService.computePayroll(paymentInfoList);
+
+            // Refine response
+            computeResponse = OperationUtils.refineResponse(computeResponse, sessionCalculationObject, paymentRequest);
+
+            // Persist and return final report
+            return reportPersistenceService.serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
+
+        } catch (PayrollValidationException ex) {
+            LOGGER.warn("Payroll validation failed: {}", ex.getMessage());
+            throw ex;
         } catch (Exception ex) {
-            LOGGER.info(ex.getMessage());
-            ex.printStackTrace();
-            throw new PayrollValidationException(ex.getMessage());
+            LOGGER.error("Unexpected error during payroll computation", ex);
+            throw new PayrollValidationException("Failed to compute payroll. Please contact support.");
         }
     }
 }
