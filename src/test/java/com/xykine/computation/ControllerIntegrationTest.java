@@ -150,7 +150,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         List<ReportResponse> reportResponses = MAPPER.convertValue(body.get("payrollDetails"), new TypeReference<List<ReportResponse>>() {
         });
 
-        PaymentInfo paymentInfo = reportResponses.get(0).getDetail().getReport();
+          PaymentInfo paymentInfo = reportResponses.get(0).getDetail().getReport();
         assertThat(paymentInfo).isNotNull().satisfies((x) -> {
             assertThat(x.getNetPay()).isEqualByComparingTo(BigDecimal.valueOf(473758.63));
         });
@@ -236,10 +236,10 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
 
         Map<String, BigDecimal> payeeTax = paymentInfo.getPayeeTax();
         assertThat(payeeTax).isNotNull().satisfies(x -> {
-            assertThat(x.get("Payee Tax on Performance bonus"))
-                    .isEqualByComparingTo(new BigDecimal("33964.09"));
+            assertThat(x.get("Payee Tax on Monthly Performance bonus"))
+                    .isEqualByComparingTo(new BigDecimal("8548.92"));
             assertThat(x.get("Taxable Income"))
-                    .isEqualByComparingTo(new BigDecimal("660529.41"));
+                    .isEqualByComparingTo(new BigDecimal("531344.01"));
             assertThat(x.get("Payee Tax"))
                     .isEqualByComparingTo(new BigDecimal("91710.97"));
         });
@@ -250,12 +250,12 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
                     .isEqualByComparingTo(new BigDecimal("50770.89"));
             assertThat(x.get("Acting Allowance"))
                     .isEqualByComparingTo(new BigDecimal("8219.55"));
-            assertThat(x.get("Performance bonus"))
-                    .isEqualByComparingTo(new BigDecimal("507722.72"));
+            assertThat(x.get("Monthly Performance bonus"))
+                    .isEqualByComparingTo(new BigDecimal("117074.31"));
             assertThat(x.get("Basic Salary"))
                     .isEqualByComparingTo(new BigDecimal("507722.72"));
             assertThat(x.get("Gross Pay"))
-                    .isEqualByComparingTo(new BigDecimal("1160774.79"));
+                    .isEqualByComparingTo(new BigDecimal("770126.38"));
             assertThat(x.get("Housing Allowance"))
                     .isEqualByComparingTo(new BigDecimal("86338.91"));
         });

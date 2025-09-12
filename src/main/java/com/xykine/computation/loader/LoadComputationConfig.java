@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.xykine.payroll.model.PaymentFrequencyEnum;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -22,6 +23,7 @@ public class LoadComputationConfig {
 	private final ComputationConstantsRepo computationConstantsRepo;
 	private final DashboardCardRepo dashboardCardRepo;
     private final EmployeeMetadataRepo employeeMetaDataRepo;
+    private final CompanyMetaDataRepo companyMetadataRepo;
 
 
     @EventListener(ApplicationReadyEvent.class)
@@ -100,6 +102,7 @@ public class LoadComputationConfig {
                 .description("CRA cut off")
                 .value(BigDecimal.valueOf(200000))
                 .build();
+
         computationConstantsRepo.save(pensionFundPercent);
         computationConstantsRepo.save(nationalHousingFund);
         computationConstantsRepo.save(craFraction);
@@ -124,7 +127,14 @@ public class LoadComputationConfig {
                 .companyId("682cf69492b07e60fa109911")
                 .employeeType(EmployeeType.CONTRACT)
                 .build();
-
         employeeMetaDataRepo.save(employeeMetadata);
+
+        CompanyMetadata companyMetadata = CompanyMetadata.builder()
+                .companyId("682cf69492b07e60fa109911")
+                .paymentFrequencyEnum(PaymentFrequencyEnum.MONTHLY)
+                .salaryFrequency(PaymentFrequencyEnum.MONTHLY)
+                .companyName("xykine inc")
+                .build();
+        companyMetadataRepo.save(companyMetadata);
     }
 }

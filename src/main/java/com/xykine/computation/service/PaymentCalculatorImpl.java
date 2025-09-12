@@ -1,6 +1,7 @@
 package com.xykine.computation.service;
 
 import com.xykine.computation.entity.EmployeeMetadata;
+import com.xykine.computation.entity.CompanyMetadata;
 import com.xykine.computation.entity.EmployeeType;
 import org.xykine.payroll.model.*;
 
@@ -8,16 +9,11 @@ import org.xykine.payroll.model.enums.PaymentTypeEnum;
 import com.xykine.computation.session.SessionCalculationObject;
 import com.xykine.computation.utils.ComputationUtils;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
@@ -27,6 +23,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     private final SessionCalculationObject sessionCalculationObject;
     private final EmployeeMetadataService employeeMetadataService;
+    private final CompanyMetadataService companyMetadataService;
 
     @Override
     public PaymentInfo applyExchange(PaymentInfo paymentInfo) {
@@ -47,39 +44,58 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     @Override
     public PaymentInfo harmoniseToAnnual(PaymentInfo paymentInfo) {
-        AtomicLong multiplier = new AtomicLong(1L);
 
-        if (paymentInfo.getSalaryFrequency() != null)
-            multiplier.set(getMultiplier(paymentInfo.getSalaryFrequency().getDescription()));
+        // Determine multiplier from company settings, default YEARLY
+        long multiplier = Optional.ofNullable(companyMetadataService.getByCompanyId(paymentInfo.getCompanyID()))
+                .map(CompanyMetadata::getPaymentFrequencyEnum)
+                .map(this::getMultiplier)
+                .orElse(1L);
 
-        paymentInfo.setBasicSalary(ComputationUtils.harmoniseToAnnual(multiplier.get(), paymentInfo.getBasicSalary()));
-        Set<PaymentSettingsResponse> paymentSettingsResponseSet = new HashSet<>();
+        // Annualise basic salary if frequency is provided
+        if (getSalaryFrequency(paymentInfo) != null) {
+            paymentInfo.setBasicSalary(
+                    ComputationUtils.harmoniseToAnnual(multiplier, paymentInfo.getBasicSalary())
+            );
+        }
 
-        // annualise all allowances
-        paymentInfo.getPaymentSettings()
+        Set<PaymentSettingsResponse> updatedSettings = paymentInfo.getPaymentSettings()
                 .stream()
-                .filter(x -> x.getValue() != null && (x.getType().getDescription().contains("ALLOWANCE") || x.getType().equals(PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT)))
-                .forEach(x -> {
-                    x.setValue(ComputationUtils.harmoniseToAnnual(multiplier.get(), x.getValue()));
-                    if (x.getType().getDescription().contains("HOUSING")) {
-                        x.setType(PaymentTypeEnum.ALLOWANCE_ANNUAL_HOUSING);
-                    } else  if (x.getType().getDescription().contains("TRANSPORT")) {
-                        x.setType(PaymentTypeEnum.ALLOWANCE_ANNUAL_TRANSPORT);
-                    } else  if (x.getType().getDescription().contains("OFF CYCLE")) {
-                        x.setType(PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT);
-                    }  else {
-                        x.setType(PaymentTypeEnum.ALLOWANCE_ANNUAL);
-                    }
-                    paymentSettingsResponseSet.add(x);
-                });
-        // leave personal deduction as is.
-        paymentInfo.getPaymentSettings()
-                .stream()
-                .filter(x -> x.getValue() != null && x.getType().getDescription().contains("DEDUCTION"))
-                .forEach(x -> {paymentSettingsResponseSet.add(x);
-                });
-        paymentInfo.setPaymentSettings(paymentSettingsResponseSet);
+                .filter(x -> x.getValue() != null) // ignore null values early
+                .map(setting -> harmonisePaymentSetting(setting, multiplier))
+                .collect(Collectors.toSet());
+
+        paymentInfo.setPaymentSettings(updatedSettings);
         return paymentInfo;
+    }
+
+    /**
+     * Harmonises a single payment setting into annual terms,
+     * applying business rules for allowances and off-cycle payments.
+     */
+    private PaymentSettingsResponse harmonisePaymentSetting(PaymentSettingsResponse setting, long globalMultiplier) {
+        String description = setting.getType().getDescription();
+
+        if (description.contains("ALLOWANCE")) {
+            setting.setValue(ComputationUtils.harmoniseToAnnual(globalMultiplier, setting.getValue()));
+
+            if (description.contains("HOUSING")) {
+                setting.setType(PaymentTypeEnum.ALLOWANCE_ANNUAL_HOUSING);
+            } else if (description.contains("TRANSPORT")) {
+                setting.setType(PaymentTypeEnum.ALLOWANCE_ANNUAL_TRANSPORT);
+            } else {
+                setting.setType(PaymentTypeEnum.ALLOWANCE_ANNUAL);
+            }
+        }
+        else if (description.contains("OFF CYCLE")) {
+            long customMultiplier = getMultiplier(setting.getSalaryFrequency());
+            setting.setValue(ComputationUtils.harmoniseToAnnual(customMultiplier, setting.getValue()));
+            setting.setType(PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT);
+        }
+        else if (description.contains("DEDUCTION")) {
+            // leave deductions as is
+        }
+
+        return setting;
     }
 
     @Override
@@ -94,7 +110,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     @Override
     public PaymentInfo computeNonTaxableIncomeExempt(PaymentInfo paymentInfo) {
-        PaymentFrequencyEnum salaryFrequency = paymentInfo.getSalaryFrequency();
+        PaymentFrequencyEnum salaryFrequency = paymentInfo.isOffCycle() ? getOffCyclePaymentFrequency(paymentInfo) :  getSalaryFrequency(paymentInfo);
         EmployeeType employeeType = getEmployeeType(paymentInfo);
 
         if (paymentInfo.isOffCycle())
@@ -170,8 +186,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     }
 
     private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo paymentInfo) {
-        PaymentFrequencyEnum salaryFrequency = paymentInfo.getSalaryFrequency();
-
+        PaymentFrequencyEnum salaryFrequency = paymentInfo.isOffCycle() ? getOffCyclePaymentFrequency(paymentInfo) :  getSalaryFrequency(paymentInfo);
         Map<String, BigDecimal> nonTaxableIncomeExemptMap = new HashMap<>();
         Map<String, BigDecimal> nhf = new HashMap<>();
         nhf.put(MapKeys.NATIONAL_HOUSING_FUND, BigDecimal.ZERO);
@@ -210,7 +225,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     @Override
     public PaymentInfo prorateEarnings(PaymentInfo paymentInfo){
-        PaymentFrequencyEnum salaryFrequency = paymentInfo.getSalaryFrequency();
+        PaymentFrequencyEnum salaryFrequency = paymentInfo.isOffCycle() ? getOffCyclePaymentFrequency(paymentInfo) :  getSalaryFrequency(paymentInfo);
         if (paymentInfo.isOffCycleActualValueSupplied())
             return paymentInfo;
 
@@ -339,16 +354,12 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         return paymentSettings.stream().filter(setting -> setting.getType().getDescription().contains("DEDUCTION")).collect(Collectors.toSet());
     }
 
-    private Long getMultiplier(String description) {
-        Long multiplier = null;
-        switch (description) {
-            case "Yearly" -> multiplier = 1L;
-            case "Monthly" -> multiplier = 12L;
-            case "Weekly" -> multiplier = 48L;
-            case "Bi-weekly" -> multiplier = 24L;
-            default -> multiplier = 1L;
-        }
-        return multiplier;
+    private long getMultiplier(PaymentFrequencyEnum paymentFrequencyEnum) {
+        return switch (paymentFrequencyEnum) {
+            case YEARLY -> 1L;
+            case MONTHLY -> 12L;
+            default -> 1L;
+        };
     }
 
     private EmployeeType getEmployeeType(PaymentInfo paymentInfo) {
@@ -356,5 +367,23 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         return (metadata != null && metadata.getEmployeeType() != null)
                 ? metadata.getEmployeeType()
                 : EmployeeType.REGULAR;
+    }
+
+    private PaymentFrequencyEnum getSalaryFrequency(PaymentInfo paymentInfo) {
+        CompanyMetadata metadata = companyMetadataService.getByCompanyId(paymentInfo.getCompanyID());
+        return (metadata != null && metadata.getSalaryFrequency() != null)
+                ? metadata.getSalaryFrequency()
+                : PaymentFrequencyEnum.MONTHLY;
+    }
+
+    private PaymentFrequencyEnum getOffCyclePaymentFrequency(PaymentInfo paymentInfo) {
+        return paymentInfo.getPaymentSettings()
+                .stream()
+                .filter(setting -> setting.getType() == PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT)
+                .map(PaymentSettingsResponse::getSalaryFrequency)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(PaymentFrequencyEnum.YEARLY);
+
     }
 }
