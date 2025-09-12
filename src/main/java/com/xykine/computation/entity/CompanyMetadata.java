@@ -19,6 +19,6 @@ public class CompanyMetadata {
     private String id;
     private String companyId;
     private String companyName;
-    private PaymentFrequencyEnum paymentFrequencyEnum;
+    private PaymentFrequencyEnum paymentEntryMode;
     private PaymentFrequencyEnum salaryFrequency;
 }

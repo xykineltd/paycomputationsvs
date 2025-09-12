@@ -17,5 +17,6 @@ public class EmployeeMetadata {
     private String id;
     private String employeeId;
     private String companyId;
-    private EmployeeType employeeType; // enum field
+    private EmployeeType employeeType;
+    private boolean isNHFSubscribed;
 }

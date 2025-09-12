@@ -655,60 +655,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 });
     }
 
-//    private List<LocalDate> generateDateFromJanToDecember() {
-//        List<LocalDate> dates = new ArrayList<>();
-//        LocalDate today = LocalDate.now();
-//        int currentYear = today.getYear();
-//
-//        for (int month = 1; month <= 12; month++) {
-//            // Create a LocalDate object for the first day of each month in the current year
-//            LocalDate firstDayOfMonth = LocalDate.of(currentYear, month, 1);
-//            dates.add(firstDayOfMonth);
-//        }
-//        return dates;
-//    }
-    /*
-    private ReportAnalytics getReportAnalytics(ReportResponse reportSummary, String companyId) {
-        try {
-            if(reportSummary == null) return new ReportAnalytics();
-
-            int veryHighLimit = Integer.MAX_VALUE;
-            Pageable pageable = PageRequest.of(0, veryHighLimit);
-            var reportDetails = payrollReportDetailRepo.findPayrollReportDetailBySummaryIdAndCompanyId(reportSummary.getReportId(), companyId, pageable);
-
-            LOGGER.info("reportDetails: {}", reportDetails.getSize());
-            var numberOfPays = reportDetails.getTotalElements();
-            //TODO use totalNumber of employee from paymentInfo
-            var employeeCount = getDistinctEmployeesCount(reportDetails);
-
-            var reportAnalytics = new ReportAnalytics(
-                    reportSummary.getStartDate(),
-                    employeeCount,
-                    numberOfPays,
-                    reportSummary.getSummary().getSummary().get(MapKeys.TOTAL_NET_PAY),
-                    reportSummary.isPayrollApproved() ? "Completed" : "Pending",
-                    reportSummary.getReportId(),
-                    reportSummary.getCompanyId(),
-                    reportSummary.isOffCycle(),
-                    reportSummary.getOffCycleId(),
-                    reportSummary.isOffCycle() ? "Off-Cycle" : "Regular",
-                    reportSummary.getCreatedDate()
-                    );
-            return reportAnalytics;
-        } catch (RuntimeException ex) {
-            LOGGER.info(ex.getMessage());
-            return new ReportAnalytics();
-        }
-    }
-    private static long getDistinctEmployeesCount(Page<PayrollReportDetail> reportDetails) {
-        Set<String> distinctEmployeeIds = reportDetails.stream()
-                .map(PayrollReportDetail::getEmployeeId)
-                .collect(Collectors.toSet());
-        return distinctEmployeeIds.size();
-    }
-     */
-
-
     private void saveReportDetails(PaymentComputeResponse paymentComputeResponse,
                                    String companyId,
                                    boolean isPayrollApproved) {

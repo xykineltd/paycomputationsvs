@@ -6,6 +6,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -14,16 +15,40 @@ public class EmployeeMetadataService {
     private final EmployeeMetadataRepo employeeMetadataRepo;
 
     @Cacheable(value = "employeeMetadata", key = "#employeeId")
-    public EmployeeMetadata getByEmployeeId(String employeeId) {
-        return employeeMetadataRepo.findByEmployeeId(employeeId)
-                .orElse(null);
+    public Optional<EmployeeMetadata> getByEmployeeId(String employeeId) {
+        return employeeMetadataRepo.findByEmployeeId(employeeId);
     }
 
-
     public void preloadAllIntoCache(String companyId) {
-        List<EmployeeMetadata> allEmployees = employeeMetadataRepo.findAllByCompanyId(companyId);
+        List<EmployeeMetadata> allEmployees = employeeMetadataRepo.findByCompanyId(companyId);
         for (EmployeeMetadata employee : allEmployees) {
             getByEmployeeId(employee.getEmployeeId());
         }
+    }
+
+    public List<EmployeeMetadata> findByCompanyId(String companyId) {
+        return employeeMetadataRepo.findByCompanyId(companyId);
+    }
+
+    public List<EmployeeMetadata> findAll() {
+        return employeeMetadataRepo.findAll();
+    }
+
+    public EmployeeMetadata save(EmployeeMetadata employee) {
+        return employeeMetadataRepo.save(employee);
+    }
+
+    public Optional<EmployeeMetadata> updateByEmployeeId(String employeeId, EmployeeMetadata updatedEmployee) {
+        return employeeMetadataRepo.findByEmployeeId(employeeId).map(existing -> {
+            existing.setCompanyId(updatedEmployee.getCompanyId());
+            existing.setEmployeeType(updatedEmployee.getEmployeeType());
+            existing.setNHFSubscribed(updatedEmployee.isNHFSubscribed());
+            return employeeMetadataRepo.save(existing);
+        });
+    }
+
+    public void deleteByEmployeeId(String employeeId) {
+        employeeMetadataRepo.findByEmployeeId(employeeId)
+                .ifPresent(employeeMetadataRepo::delete);
     }
 }

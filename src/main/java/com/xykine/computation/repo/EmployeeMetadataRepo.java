@@ -9,5 +9,5 @@ import java.util.Optional;
 
 public interface EmployeeMetadataRepo extends MongoRepository<EmployeeMetadata,String> {
    Optional<EmployeeMetadata> findByEmployeeId(String employeeId);
-   List<EmployeeMetadata> findAllByCompanyId(String companyId);
+   List<EmployeeMetadata> findByCompanyId(String companyId);
 }

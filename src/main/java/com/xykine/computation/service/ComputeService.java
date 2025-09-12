@@ -8,11 +8,15 @@ import org.slf4j.LoggerFactory;
 import com.xykine.computation.response.PaymentComputeResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.xykine.payroll.model.PaymentInfo;
+import org.xykine.payroll.model.PaymentSettingsResponse;
+import org.xykine.payroll.model.enums.PaymentTypeEnum;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
@@ -60,7 +64,8 @@ public class ComputeService {
 
         for (int i = 0; i < chunks.size(); i++) {
             List<PaymentInfo> chunk = chunks.get(i);
-            futures.add(CompletableFuture.supplyAsync(() -> processReport(chunk)));
+            List<PaymentInfo> finalChunk = splitOutOffCycles(chunk);
+            futures.add(CompletableFuture.supplyAsync(() -> processReport(finalChunk)));
         }
 
         CompletableFuture<Void> allDone = CompletableFuture.allOf(
@@ -89,4 +94,61 @@ public class ComputeService {
                 .collect(Collectors.toList());
         return  payInfos;
     }
+
+    private List<PaymentInfo> splitOutOffCycles(List<PaymentInfo> rawInfo) {
+        return rawInfo.stream()
+                .map(this::splitOffCyclePayments)
+                .flatMap(List::stream)
+                .toList();
+    }
+
+    public List<PaymentInfo> splitOffCyclePayments(PaymentInfo paymentInfo) {
+
+        if (paymentInfo.isOffCycle()) {
+            return List.of(paymentInfo);
+        }
+
+        // Extract off-cycle settings
+        Set<PaymentSettingsResponse> offCycleSettings = paymentInfo.getPaymentSettings().stream()
+                .filter(setting -> setting.getType() == PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT)
+                .collect(Collectors.toSet());
+
+        // ✅ If no off-cycle payments, just return the original as-is
+        if (offCycleSettings.isEmpty()) {
+            return List.of(paymentInfo);
+        }
+
+        // Extract regular settings
+        Set<PaymentSettingsResponse> regularSettings = paymentInfo.getPaymentSettings().stream()
+                .filter(setting -> setting.getType() != PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT)
+                .collect(Collectors.toSet());
+
+        // --- Original copy with off-cycle removed ---
+        PaymentInfo mainCopy = copyPaymentInfo(paymentInfo);
+        mainCopy.setPaymentSettings(regularSettings);
+        mainCopy.setOffCycle(false);
+
+        // --- New PaymentInfos for each off-cycle entry ---
+        List<PaymentInfo> offCycleCopies = offCycleSettings.stream()
+                .map(setting -> {
+                    PaymentInfo offCycleCopy = copyPaymentInfo(paymentInfo);
+                    offCycleCopy.setPaymentSettings(Set.of(setting));
+                    offCycleCopy.setOffCycle(true);
+                    return offCycleCopy;
+                })
+                .toList();
+
+        // Combine original + new copies
+        List<PaymentInfo> result = new ArrayList<>();
+        result.add(mainCopy);
+        result.addAll(offCycleCopies);
+        return result;
+    }
+
+    private PaymentInfo copyPaymentInfo(PaymentInfo original) {
+        PaymentInfo copy = new PaymentInfo();
+        BeanUtils.copyProperties(original, copy); // Spring utility (shallow copy)
+        return copy;
+    }
+
 }
