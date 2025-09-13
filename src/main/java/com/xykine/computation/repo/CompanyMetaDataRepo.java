@@ -6,5 +6,5 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import java.util.Optional;
 
 public interface CompanyMetaDataRepo extends MongoRepository<CompanyMetadata,String> {
-    Optional<CompanyMetadata> findAByCompanyId(String companyId);
+    Optional<CompanyMetadata> findByCompanyId(String companyId);
 }

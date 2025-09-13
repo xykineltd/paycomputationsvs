@@ -111,7 +111,70 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         assertThat(payeeTax).isNotNull().satisfies((x) -> {
             assertThat(x.get("Taxable Income")).isEqualByComparingTo(BigDecimal.valueOf(454351.24));
             assertThat(x.get("Payee Tax")).isEqualByComparingTo(BigDecimal.valueOf(91710.97));
+        });
 
+        Map<String, BigDecimal> pension = paymentInfo.getPension();
+        assertThat(pension).isNotNull().satisfies((x) -> {
+            assertThat(x.get("Employer Pension Contribution")).isEqualByComparingTo(BigDecimal.valueOf(64483.26));
+            assertThat(x.get("Employee Pension Contribution")).isEqualByComparingTo(BigDecimal.valueOf(51586.61));
+            assertThat(x.get("Total Employee Pension")).isEqualByComparingTo(BigDecimal.valueOf(116069.87));
+
+        });
+    }
+
+    @Test
+    void testStandardWithNoNHFCompute()  {
+        when(adminService.getPaymentInfoList(any(), anyString())).thenReturn(TestDataFactory.getPaymentSettings("standard with no NHF subscription"));
+        ReportResponse reportSummary = getReportSummary();
+        assert reportSummary != null;
+        LOGGER.debug(" standard summary ====> {}", reportSummary.getSummary());
+
+        assertThat(reportSummary).isNotNull();
+        assertThat(reportSummary.getSummary()).isNotNull();
+        assertThat(reportSummary.getSummary().getSummary().get(MapKeys.TOTAL_GROSS_PAY)).isEqualByComparingTo("653052.07");
+        assertThat(reportSummary.getSummary().getSummary().get(MapKeys.TOTAL_NHF)).isEqualByComparingTo("0");
+        assertThat(reportSummary.getSummary().getSummary().get(MapKeys.TOTAL_PERSONAL_DEDUCTION)).isEqualByComparingTo("6031.32");
+        assertThat(reportSummary.getSummary().getSummary().get(MapKeys.TOTAL_NET_PAY)).isEqualByComparingTo("501286.10");
+        assertThat(reportSummary.getSummary().getSummary().get(MapKeys.TOTAL_EMPLOYER_PENSION_CONTRIBUTION)).isEqualByComparingTo("64483.26");
+        assertThat(reportSummary.getSummary().getSummary().get(MapKeys.TOTAL_EMPLOYEE_PENSION_CONTRIBUTION)).isEqualByComparingTo("51586.61");
+        assertThat(reportSummary.getSummary().getSummary().get(MapKeys.TOTAL_PAYEE_TAX)).isEqualByComparingTo("94148.04");
+
+        Map<String, Object> body = getReportDetail(reportSummary);
+
+        assertThat(body).isNotNull().satisfies((x) -> {
+            assertThat(x.get("totalItems")).isEqualTo(1);
+        });
+
+        List<ReportResponse> reportResponses = MAPPER.convertValue(body.get("payrollDetails"), new TypeReference<List<ReportResponse>>() {
+        });
+
+        PaymentInfo paymentInfo = reportResponses.get(0).getDetail().getReport();
+        assertThat(paymentInfo).isNotNull().satisfies((x) -> {
+            assertThat(x.getNetPay()).isEqualByComparingTo(BigDecimal.valueOf(501286.1));
+        });
+
+        Map<String, BigDecimal> grossPay = paymentInfo.getGrossPay();
+        assertThat(grossPay).isNotNull().satisfies((x) -> {
+            assertThat(x.get("Transport Allowance")).isEqualByComparingTo(BigDecimal.valueOf(50770.89));
+            assertThat(x.get("Housing Allowance")).isEqualByComparingTo(BigDecimal.valueOf(86338.91));
+            assertThat(x.get("Acting Allowance")).isEqualByComparingTo(BigDecimal.valueOf(8219.55));
+            assertThat(x.get("Basic Salary")).isEqualByComparingTo(BigDecimal.valueOf(507722.72));
+            assertThat(x.get("Gross Pay")).isEqualByComparingTo(BigDecimal.valueOf(653052.07));
+        });
+
+        Map<String, BigDecimal> taxRelief = paymentInfo.getTaxRelief();
+        assertThat(taxRelief).isNotNull().satisfies((x) -> {
+            assertThat(x.get("Fixed Consolidated Relief Allowance")).isEqualByComparingTo(BigDecimal.valueOf(16666.67));
+            assertThat(x.get("National Housing Fund")).isEqualByComparingTo(BigDecimal.valueOf(0.0));
+            assertThat(x.get("Variable Consolidated Relief Allowance")).isEqualByComparingTo(BigDecimal.valueOf(120293.1));
+            assertThat(x.get("Total Tax Relief")).isEqualByComparingTo(BigDecimal.valueOf(188546.38));
+
+        });
+
+        Map<String, BigDecimal> payeeTax = paymentInfo.getPayeeTax();
+        assertThat(payeeTax).isNotNull().satisfies((x) -> {
+            assertThat(x.get("Taxable Income")).isEqualByComparingTo(BigDecimal.valueOf(464505.69));
+            assertThat(x.get("Payee Tax")).isEqualByComparingTo(BigDecimal.valueOf(94148.04));
         });
 
         Map<String, BigDecimal> pension = paymentInfo.getPension();
@@ -196,7 +259,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
 
         PaymentInfo paymentInfo = reportResponses.get(0).getDetail().getReport();
         assertThat(paymentInfo).isNotNull().satisfies((x) -> {
-            assertThat(x.getNetPay()).isEqualByComparingTo(BigDecimal.valueOf( 137603.33));
+            assertThat(x.getNetPay()).isEqualByComparingTo(BigDecimal.valueOf(137033.33));
         });
 
         Map<String, BigDecimal> grossPay = paymentInfo.getGrossPay();
@@ -209,8 +272,8 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         Map<String, BigDecimal> payeeTax = paymentInfo.getPayeeTax();
         assertThat(payeeTax).isNotNull().satisfies((x) -> {
             String payee_tax_key = "Payee Tax";
-            assertThat(x.get("Taxable Income")).isEqualByComparingTo(BigDecimal.valueOf(100333.33));
-            assertThat(x.get(payee_tax_key)).isEqualByComparingTo(BigDecimal.valueOf(12396.67));
+            assertThat(x.get("Taxable Income")).isEqualByComparingTo(BigDecimal.valueOf(103333.33));
+            assertThat(x.get(payee_tax_key)).isEqualByComparingTo(BigDecimal.valueOf(12966.67));
         });
 
         Map<String, BigDecimal> pension = paymentInfo.getPension();

@@ -16,6 +16,7 @@ public class TestDataFactory {
         String payload = switch (type) {
             case "standard" -> STANDARD_PAYROLL_ENTRY;
             case "standard with performance bonus" -> STANDARD_PAYROLL_ENTRY_WITH_PERFORMANCE_BONUS;
+            case "standard with no NHF subscription" -> STANDARD_PAYROLL_ENTRY_NO_NHF;
             case "contract staff" -> CONTRACT_STAFF;
             case "off-cycle" -> OFF_CYCLE;
             case "ten-entries" -> TEN_ENTRIES;

@@ -123,16 +123,34 @@ public class LoadComputationConfig {
         if (dashboardCardRepo.findAll().size() == 0)
             dashboardCardRepo.save(dashboardCard);
 
-        EmployeeMetadata employeeMetadata = EmployeeMetadata.builder()
+        EmployeeMetadata contractStaff = EmployeeMetadata.builder()
                 .employeeId("8e3b6e4952e8468a84fd84556f8fdf2a")
                 .companyId("682cf69492b07e60fa109911")
                 .employeeType(EmployeeType.CONTRACT)
+                .isNHFSubscribed(false)
                 .build();
-        employeeMetaDataRepo.save(employeeMetadata);
+
+        EmployeeMetadata regularStaffWithNHF = EmployeeMetadata.builder()
+                .employeeId("682cf69592b07e60fa10991b")
+                .companyId("682cf69492b07e60fa109911")
+                .employeeType(EmployeeType.REGULAR)
+                .isNHFSubscribed(true)
+                .build();
+
+        EmployeeMetadata regularStaffNoNHF = EmployeeMetadata.builder()
+                .employeeId("682cf69592b07e60fa10992a")
+                .companyId("682cf69592b07e60fa10991b")
+                .employeeType(EmployeeType.REGULAR)
+                .isNHFSubscribed(false)
+                .build();
+
+        employeeMetaDataRepo.save(contractStaff);
+        employeeMetaDataRepo.save(regularStaffWithNHF);
+        employeeMetaDataRepo.save(regularStaffNoNHF);
 
         CompanyMetadata companyMetadata = CompanyMetadata.builder()
                 .companyId("682cf69492b07e60fa109911")
-                .paymentFrequencyEnum(PaymentFrequencyEnum.MONTHLY)
+                .paymentEntryMode(PaymentFrequencyEnum.MONTHLY)
                 .salaryFrequency(PaymentFrequencyEnum.MONTHLY)
                 .companyName("xykine inc")
                 .build();
