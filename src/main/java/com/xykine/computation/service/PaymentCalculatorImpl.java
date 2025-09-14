@@ -3,6 +3,7 @@ package com.xykine.computation.service;
 import com.xykine.computation.entity.EmployeeMetadata;
 import com.xykine.computation.entity.CompanyMetadata;
 import com.xykine.computation.entity.EmployeeType;
+import com.xykine.computation.repo.TaxRepo;
 import org.xykine.payroll.model.*;
 
 import org.xykine.payroll.model.enums.PaymentTypeEnum;
@@ -26,6 +27,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     private final SessionCalculationObject sessionCalculationObject;
     private final EmployeeMetadataService employeeMetadataService;
     private final CompanyMetadataService companyMetadataService;
+    private final TaxRepo taxRepo;
 
     @Override
     public PaymentInfo applyExchange(PaymentInfo paymentInfo) {
@@ -125,7 +127,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         Map<String, BigDecimal> nhf = new HashMap<>();
 
         // === Pension ===
-        BigDecimal employeePensionFund = !isContract(paymentInfo)
+        BigDecimal pensionFund = !isContract(paymentInfo)
                 ? getAllowanceForEmployee(paymentInfo).stream()
                 .filter(x -> x.isPensionable()
                         || x.getType() == PaymentTypeEnum.ALLOWANCE_ANNUAL_HOUSING
@@ -136,24 +138,16 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
         BigDecimal employeePension = ComputationUtils.roundToTwoDecimalPlaces(
                 sessionCalculationObject.getComputationConstants().get("pensionFundPercent")
-                        .multiply(employeePensionFund));
+                        .multiply(pensionFund));
 
         nonTaxableIncomeExemptMap.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION,
                 ComputationUtils.prorate(employeePension, unpaidDays, salaryFrequency));
         pension.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION,
                 ComputationUtils.prorate(employeePension, unpaidDays, salaryFrequency));
 
-        BigDecimal employerPensionContribution = !isContract(paymentInfo)
-                ? getAllowanceForEmployee(paymentInfo).stream()
-                .filter(x -> x.getType() == PaymentTypeEnum.ALLOWANCE_ANNUAL_HOUSING
-                        || x.getType() == PaymentTypeEnum.ALLOWANCE_ANNUAL_TRANSPORT)
-                .map(PaymentSettingsResponse::getValue)
-                .reduce(basicSalary, BigDecimal::add)
-                : BigDecimal.ZERO;
-
-        employerPensionContribution = ComputationUtils.roundToTwoDecimalPlaces(
+        BigDecimal employerPensionContribution = ComputationUtils.roundToTwoDecimalPlaces(
                 sessionCalculationObject.getComputationConstants().get("employerPensionContributionPercent")
-                        .multiply(employerPensionContribution));
+                        .multiply(pensionFund));
 
         pension.put(MapKeys.EMPLOYER_PENSION_CONTRIBUTION,
                 ComputationUtils.prorate(employerPensionContribution, unpaidDays, salaryFrequency));
@@ -208,9 +202,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         return paymentInfo;
     }
 
-
-
-
     private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo paymentInfo) {
         PaymentFrequencyEnum salaryFrequency = paymentInfo.isOffCycle() ? getOffCyclePaymentFrequency(paymentInfo) :  getSalaryFrequency(paymentInfo);
         Map<String, BigDecimal> nonTaxableIncomeExemptMap = new HashMap<>();
@@ -220,7 +211,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         Map<String, BigDecimal> pension = new HashMap<>();
         pension.put(MapKeys.EMPLOYER_PENSION_CONTRIBUTION, BigDecimal.ZERO);
         pension.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION, BigDecimal.ZERO);
-
 
         BigDecimal grossIncomeForCRA  = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY);
         BigDecimal rawFXR = roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("craFraction")
@@ -270,15 +260,13 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     @Override
     public PaymentInfo computePayeeTax(PaymentInfo paymentInfo) {
+        String jsonTaxRule = taxRepo.findTaxRuleByCountry("NIGERIA");
         Map<String, BigDecimal> payeeTax = new HashMap<>();
         BigDecimal taxableIncome = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(paymentInfo.getTaxRelief().get(MapKeys.TOTAL_TAX_RELIEF));
         payeeTax.put(MapKeys.TAXABLE_INCOME, taxableIncome);
-
-        BigDecimal empPayeeTax = ComputationUtils.getTaxAmount(taxableIncome, sessionCalculationObject);
-
+        BigDecimal empPayeeTax = ComputationUtils.getTaxAmount(taxableIncome, jsonTaxRule);
         payeeTax.put(!paymentInfo.isOffCycle() ?  MapKeys.PAYEE_TAX : "Payee Tax on " + getOffCyclePaymentDetails(paymentInfo).getName(), empPayeeTax);
         paymentInfo.setPayeeTax(payeeTax);
-
         updateReportSummary(paymentInfo, sessionCalculationObject, MapKeys.TOTAL_PAYEE_TAX,
                 empPayeeTax);
         return paymentInfo;

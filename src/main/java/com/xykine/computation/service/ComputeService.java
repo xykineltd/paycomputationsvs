@@ -68,9 +68,7 @@ public class ComputeService {
             futures.add(CompletableFuture.supplyAsync(() -> processReport(finalChunk)));
         }
 
-        CompletableFuture<Void> allDone = CompletableFuture.allOf(
-                futures.toArray(new CompletableFuture[0])
-        );
+        CompletableFuture<Void> allDone = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
 
         return allDone.thenApply(v -> futures
                 .stream()

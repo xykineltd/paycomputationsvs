@@ -1,5 +1,8 @@
 package com.xykine.computation.utils;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xykine.computation.entity.TaxRule;
 import com.xykine.computation.response.SummaryDetail;
 import com.xykine.computation.service.PaymentCalculatorImpl;
 import com.xykine.computation.session.SessionCalculationObject;
@@ -13,6 +16,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
 
 public class ComputationUtils {
@@ -79,49 +83,29 @@ public class ComputationUtils {
         return paymentValue;
     }
 
-    public static BigDecimal getTaxAmount(BigDecimal aTaxableIncome, SessionCalculationObject sessionCalculationObject){
-        if(aTaxableIncome.compareTo(BigDecimal.ZERO) < 0) {
+    public static BigDecimal getTaxAmount(BigDecimal taxableIncome, String taxRuleJson){
+        if (taxableIncome.compareTo(BigDecimal.ZERO) < 0) {
             return BigDecimal.ZERO;
         }
-        aTaxableIncome = aTaxableIncome.multiply(BigDecimal.valueOf(12));
-//      7% on the first 300000
-        BigDecimal taxableIncome = aTaxableIncome.subtract(BigDecimal.valueOf(300000));
+        // Convert to annual
+        taxableIncome = taxableIncome.multiply(BigDecimal.valueOf(12));
+        List<TaxRule> rules = getTaxRuleList(taxRuleJson);
         BigDecimal taxAmount = BigDecimal.ZERO;
-        if (taxableIncome.compareTo(BigDecimal.ZERO) == -1) {
-            taxAmount = sessionCalculationObject.getComputationConstants().get("TaxClassA").multiply(aTaxableIncome).divide(BigDecimal.valueOf(100));
-            return taxAmount.divide(BigDecimal.valueOf(12), RoundingMode.CEILING).setScale(2, RoundingMode.CEILING);
-        } else {
-            taxAmount = sessionCalculationObject.getComputationConstants().get("TaxClassA").multiply(getRemnant(taxableIncome, 300000)).divide(BigDecimal.valueOf(100));
+        for (TaxRule rule : rules) {
+            if (taxableIncome.compareTo(BigDecimal.ZERO) <= 0) break;
+            BigDecimal rate = BigDecimal.valueOf(rule.getRate());
+            if (rule.getLimit() == null) {
+                // Apply on remaining income
+                taxAmount = taxAmount.add(rate.multiply(taxableIncome).divide(BigDecimal.valueOf(100)));
+                taxableIncome = BigDecimal.ZERO;
+            } else {
+                BigDecimal applicableAmount = taxableIncome.min(BigDecimal.valueOf(rule.getLimit()));
+                taxAmount = taxAmount.add(rate.multiply(applicableAmount).divide(BigDecimal.valueOf(100)));
+                taxableIncome = taxableIncome.subtract(applicableAmount);
+            }
         }
-
-//      11% on the next 3000000
-        taxAmount = taxAmount.add(sessionCalculationObject.getComputationConstants().get("TaxClassB").multiply(getRemnant(taxableIncome, 300000)).divide(BigDecimal.valueOf(100)));
-        taxableIncome = taxableIncome.subtract(BigDecimal.valueOf(300000));
-        if (taxableIncome.compareTo(BigDecimal.ZERO) == -1)
-            return taxAmount.divide(BigDecimal.valueOf(12), RoundingMode.CEILING).setScale(2, RoundingMode.CEILING);;
-
-//      15% on the next 5000000
-        taxAmount = taxAmount.add(sessionCalculationObject.getComputationConstants().get("TaxClassC").multiply(getRemnant(taxableIncome, 500000)).divide(BigDecimal.valueOf(100)));
-        taxableIncome = taxableIncome.subtract(BigDecimal.valueOf(500000));
-        if (taxableIncome.compareTo(BigDecimal.ZERO) == -1)
-            return taxAmount.divide(BigDecimal.valueOf(12), RoundingMode.CEILING).setScale(2, RoundingMode.CEILING);;
-
-//      19% on the next 3000000
-        taxAmount = taxAmount.add(sessionCalculationObject.getComputationConstants().get("TaxClassD").multiply(getRemnant(taxableIncome, 500000)).divide(BigDecimal.valueOf(100)));
-        taxableIncome = taxableIncome.subtract(BigDecimal.valueOf(500000));
-        if (taxableIncome.compareTo(BigDecimal.ZERO) == -1)
-            return taxAmount.divide(BigDecimal.valueOf(12), RoundingMode.CEILING).setScale(2, RoundingMode.CEILING);
-
-//      21% on the next 1600000
-        taxAmount = taxAmount.add(sessionCalculationObject.getComputationConstants().get("TaxClassE").multiply(getRemnant(taxableIncome, 1600000)).divide(BigDecimal.valueOf(100)));
-        taxableIncome = taxableIncome.subtract(BigDecimal.valueOf(1600000));
-        if (taxableIncome.compareTo(BigDecimal.ZERO) == -1)
-            return taxAmount.divide(BigDecimal.valueOf(12), RoundingMode.CEILING).setScale(2, RoundingMode.CEILING);;
-
-        //      24% on the remaining
-        taxAmount = taxAmount.add(sessionCalculationObject.getComputationConstants().get("TaxClassF").multiply(taxableIncome).divide(BigDecimal.valueOf(100)));
-
-        return taxAmount.divide(BigDecimal.valueOf(12), RoundingMode.CEILING).setScale(2, RoundingMode.CEILING);
+        // Convert back to monthly
+        return taxAmount.divide(BigDecimal.valueOf(12), 2, RoundingMode.CEILING);
     }
 
     public  static BigDecimal exchangeToLocalCurrency(BigDecimal exchangeRate, BigDecimal amount){
@@ -139,9 +123,20 @@ public class ComputationUtils {
         return roundToTwoDecimalPlaces(BigDecimal.valueOf(multiplier).multiply(amount));
     }
 
-    private static BigDecimal getRemnant(BigDecimal remnantTaxable, Integer nextLevel) {
-        if (remnantTaxable.compareTo(BigDecimal.valueOf(nextLevel)) == -1)
-            return remnantTaxable;
-        return BigDecimal.valueOf(nextLevel);
+    public static List<TaxRule> getTaxRuleList(String taxRuleJsonString) {
+        ObjectMapper mapper = new ObjectMapper();
+        if (taxRuleJsonString == null || taxRuleJsonString.isBlank()) {
+            LOGGER.warn("taxRule JSON string is null or empty.");
+            return Collections.emptyList();
+        }
+        try {
+            String innerTaxRuleJson = mapper.readTree(taxRuleJsonString)
+                    .get("taxRule")
+                    .asText();
+            return mapper.readValue(innerTaxRuleJson, new TypeReference<List<TaxRule>>() {});
+        } catch (Exception e) {
+            LOGGER.error("Failed to parse taxRule JSON: {}", taxRuleJsonString, e);
+            return Collections.emptyList();
+        }
     }
 }

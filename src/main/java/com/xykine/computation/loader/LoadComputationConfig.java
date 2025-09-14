@@ -28,49 +28,40 @@ public class LoadComputationConfig {
 
     @EventListener(ApplicationReadyEvent.class)
     public void loadLegalEntityTestData() {
-
-        Tax taxClassA = Tax.builder()
-                .taxClass("TaxClassA")
-                .description(" <= 300,000 NGN")
-                .percentage(BigDecimal.valueOf(7.0))
+        String oldTaxRule = """
+    [
+      {"limit": 300000, "rate": 7},
+      {"limit": 300000, "rate": 11},
+      {"limit": 500000, "rate": 15},
+      {"limit": 500000, "rate": 19},
+      {"limit": 1600000, "rate": 21},
+      {"limit": null, "rate": 24}
+    ]
+    """;
+        String newTaxRule = """
+    [
+      { "limit": 800000,    "rate": 0 },
+      { "limit": 3000000,   "rate": 15 },
+      { "limit": 12000000,  "rate": 18 },
+      { "limit": 25000000,  "rate": 21 },
+      { "limit": 50000000,  "rate": 23 },
+      { "limit": null,      "rate": 25 }
+    ]
+    """;
+        Tax nigeriaOldTaxRule = Tax.builder()
+                .country("NIGERIA")
+                .taxRule(oldTaxRule)
+                .active(true)
                 .build();
 
-        Tax taxClassB = Tax.builder()
-                .taxClass("TaxClassB")
-                .description(" > 300,000 NGN and <= 600,000 NGN")
-                .percentage(BigDecimal.valueOf(11.0))
+        Tax nigeriaNewTaxRule = Tax.builder()
+                .country("NIGERIA")
+                .taxRule(newTaxRule)
+                .active(false)
                 .build();
 
-        Tax taxClassC = Tax.builder()
-                .taxClass("TaxClassC")
-                .description(" > 600,000 NGN and <= 1,100,000 NGN")
-                .percentage(BigDecimal.valueOf(15.0))
-                .build();
-
-        Tax taxClassD = Tax.builder()
-                .taxClass("TaxClassD")
-                .description(" > 1,100,000 NGN and <= 1,600,000 NGN")
-                .percentage(BigDecimal.valueOf(19.0))
-                .build();
-
-        Tax taxClassE = Tax.builder()
-                .taxClass("TaxClassE")
-                .description(" > 1,600,000 NGN and <= 3,200,000 NGN")
-                .percentage(BigDecimal.valueOf(21.0))
-                .build();
-
-        Tax taxClassF = Tax.builder()
-                .taxClass("TaxClassF")
-                .description(" > 3,200,000 NGN")
-                .percentage(BigDecimal.valueOf(24.0))
-                .build();
-
-        taxRepo.save(taxClassA);
-        taxRepo.save(taxClassB);
-        taxRepo.save(taxClassC);
-        taxRepo.save(taxClassD);
-        taxRepo.save(taxClassE);
-        taxRepo.save(taxClassF);
+        taxRepo.save(nigeriaOldTaxRule);
+        taxRepo.save(nigeriaNewTaxRule);
 
         ComputationConstants pensionFundPercent = ComputationConstants.builder()
                 .id("pensionFundPercent")
