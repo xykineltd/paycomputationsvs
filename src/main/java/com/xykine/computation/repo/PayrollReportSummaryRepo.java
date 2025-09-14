@@ -20,7 +20,7 @@ public interface PayrollReportSummaryRepo extends MongoRepository<PayrollReportS
     Page<PayrollReportSummary> findAllByCompanyIdAndStartDateBetweenAndOffCycle(String companyId, String startDateLow, String startDateHigh, boolean offCycle, Pageable pageable);
     Page<PayrollReportSummary> findAllByCompanyIdAndStartDateBetween(String companyId, String startDateLow, String startDateHigh, Pageable pageable);
     PayrollReportSummary findPayrollReportSummaryByCompanyIdAndOffCycleId(String companyId, String offCycleId);
-    List<PayrollReportSummary> findAllByCompanyIdOrderByCreatedDateAsc(String companyId);
+    Page<PayrollReportSummary> findAllByCompanyIdOrderByCreatedDateAsc(String companyId, Pageable pageable);
 
     List<PayrollReportSummary> findAllByPayrollCompletedAndPayrollApprovedAndCompanyIdOrderByCreatedDateAsc(boolean completed, boolean approved, String companyId);
     void deletePayrollReportSummaryByStartDateAndCompanyId(String startDate, String companyId);

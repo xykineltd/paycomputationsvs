@@ -27,9 +27,14 @@ public class Report {
     private final ReportPersistenceService reportPersistenceService;
     private final ReportGeneratorService reportGeneratorService;
 
-    @GetMapping("/{companyId}/")
-    public List<ReportResponse> getReports(@PathVariable String companyId) {
-        return reportPersistenceService.getPayRollReports(companyId);
+    @PostMapping("/{companyId}")
+    public ResponseEntity<?> getReports(
+            @PathVariable String companyId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "3") int size
+    ) {
+        Map<String, Object> response = reportPersistenceService.getPayRollReports(companyId, page, size);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @GetMapping("/{companyId}/status/{status}")

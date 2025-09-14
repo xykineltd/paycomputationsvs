@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.xykine.payroll.model.*;
@@ -353,14 +354,40 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     }
 
     //Pull both all report summary for display on dashboard
-    public List<ReportResponse> getPayRollReports(String companyId) {
-        List<ReportResponse> summary = getPayRollReportSimulates(companyId);
-        var reports = payrollReportSummaryRepo.findAllByCompanyIdOrderByCreatedDateAsc(companyId).stream()
-                .map(ReportUtils::transform).toList();
-        summary.addAll(reports);
-        //auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Pulled payroll report for company id :" + companyId);
-        return summary;
+//    public List<ReportResponse> getPayRollReports(String companyId, int page, int size) {
+//        List<ReportResponse> allReports = getPayRollReportSimulates(companyId);
+//        var reports = payrollReportSummaryRepo.findAllByCompanyIdOrderByCreatedDateAsc(companyId).stream()
+//                .map(ReportUtils::transform).toList();
+//        allReports.addAll(reports);
+//        //auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Pulled payroll report for company id :" + companyId);
+//        return allReports;
+//    }
+
+    @Override
+    public Map<String, Object> getPayRollReports(String companyId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "createdDate"));
+
+        Page<PayrollReportSummary> reportsPage =
+                payrollReportSummaryRepo.findAllByCompanyIdOrderByCreatedDateAsc(companyId, pageable);
+
+        List<ReportResponse> reports = reportsPage.getContent()
+                .stream()
+                .map(ReportUtils::transform)
+                .toList();
+
+        // Keep simulations separate to avoid skewing pagination counts
+        List<ReportResponse> simulatedReports = getPayRollReportSimulates(companyId);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("reports", reports);
+        response.put("simulatedReports", simulatedReports);
+        response.put("currentPage", reportsPage.getNumber());
+        response.put("totalItems", reportsPage.getTotalElements());
+        response.put("totalPages", reportsPage.getTotalPages());
+        response.put("pageSize", reportsPage.getSize());
+        return response;
     }
+
 
     @Override
     public List<ReportResponse> getPayRollReportsByStatus(String companyId, String status) {
