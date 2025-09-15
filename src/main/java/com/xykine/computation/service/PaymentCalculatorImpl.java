@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import static com.xykine.computation.utils.ComputationUtils.*;
@@ -180,10 +179,8 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
         BigDecimal craCutOff = sessionCalculationObject.getComputationConstants().get("craCutOff");
         BigDecimal fixedCRA = rawFXR.compareTo(craCutOff) > 0 ? rawFXR : BigDecimal.valueOf(200000);
-
         nonTaxableIncomeExemptMap.put(MapKeys.FIXED_CONSOLIDATED_RELIEF_ALLOWANCE,
                 ComputationUtils.prorate(fixedCRA, unpaidDays, salaryFrequency));
-
         BigDecimal variableCRA = ComputationUtils.roundToTwoDecimalPlaces(
                 sessionCalculationObject.getComputationConstants().get("variableCRAFraction")
                         .multiply(grossIncomeForCRA));

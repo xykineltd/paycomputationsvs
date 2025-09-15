@@ -64,7 +64,6 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         ReportResponse reportSummary = getReportSummary();
         assert reportSummary != null;
         LOGGER.debug(" standard summary ====> {}", reportSummary.getSummary());
-
         assertThat(reportSummary).isNotNull();
         assertThat(reportSummary.getSummary()).isNotNull();
         assertThat(reportSummary.getSummary().getSummary().get(MapKeys.TOTAL_GROSS_PAY)).isEqualByComparingTo("653052.07");
@@ -307,6 +306,10 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
                     .isEqualByComparingTo(new BigDecimal("91710.97"));
         });
 
+        assertThat(paymentInfo).isNotNull().satisfies((x) -> {
+            assertThat(x.getNetPay()).isEqualByComparingTo(BigDecimal.valueOf(491030.10).add(BigDecimal.valueOf(117074.31).subtract(BigDecimal.valueOf(8548.92))));
+        });
+
         Map<String, BigDecimal> grossPay = paymentInfo.getGrossPay();
         assertThat(grossPay).isNotNull().satisfies(x -> {
             assertThat(x.get("Transport Allowance"))
@@ -325,7 +328,6 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
     }
 
     /****         REPORT CONTROLLER ENDPOINTS      *********/
-
     @Test
     void testGetReportByCompanyIdAndStatusAndVerifyApproveStatusIsFalse() {
         assertThat(getReportByCompanyIdAndStatus()).isNotNull().satisfies(reportResponses -> {
