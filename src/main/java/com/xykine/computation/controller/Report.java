@@ -1,6 +1,7 @@
 package com.xykine.computation.controller;
 
 import com.xykine.computation.entity.PayrollReportSummary;
+import com.xykine.computation.entity.ReportPaginationRequest;
 import com.xykine.computation.entity.YTDReport;
 import com.xykine.computation.request.*;
 
@@ -30,12 +31,14 @@ public class Report {
     @PostMapping("/{companyId}")
     public ResponseEntity<?> getReports(
             @PathVariable String companyId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "3") int size
+            @RequestBody ReportPaginationRequest request
     ) {
+        int page = request.getPage();
+        int size = request.getSize();
         Map<String, Object> response = reportPersistenceService.getPayRollReports(companyId, page, size);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+
 
     @GetMapping("/{companyId}/status/{status}")
     public List<ReportResponse> getReportsByStatus(@PathVariable String companyId, @PathVariable String status) {

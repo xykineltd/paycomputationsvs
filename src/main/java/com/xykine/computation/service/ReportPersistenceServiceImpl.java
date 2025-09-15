@@ -363,29 +363,88 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 //        return allReports;
 //    }
 
+//    @Override
+//    public Map<String, Object> getPayRollReports(String companyId, int page, int size) {
+//        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "createdDate"));
+//
+//        Page<PayrollReportSummary> reportsPage =
+//                payrollReportSummaryRepo.findAllByCompanyIdOrderByCreatedDateAsc(companyId, pageable);
+//
+//        List<ReportResponse> reports = reportsPage.getContent()
+//                .stream()
+//                .map(ReportUtils::transform)
+//                .toList();
+//
+//        // Keep simulations separate to avoid skewing pagination counts
+//        List<ReportResponse> simulatedReports = getPayRollReportSimulates(companyId);
+//
+//        Map<String, Object> response = new HashMap<>();
+//        response.put("reports", reports);
+//        response.put("simulatedReports", simulatedReports);
+//        response.put("currentPage", reportsPage.getNumber());
+//        response.put("totalItems", reportsPage.getTotalElements());
+//        response.put("totalPages", reportsPage.getTotalPages());
+//        response.put("pageSize", reportsPage.getSize());
+//        return response;
+//    }
+
+
+
     @Override
     public Map<String, Object> getPayRollReports(String companyId, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "createdDate"));
+        int safePage = Math.max(0, page);
+        int safeSize = size > 0 ? size : 10;
 
-        Page<PayrollReportSummary> reportsPage =
-                payrollReportSummaryRepo.findAllByCompanyIdOrderByCreatedDateAsc(companyId, pageable);
+        // Fetch all persisted reports for the company (unpaged)
+        Page<PayrollReportSummary> persistedPage =
+                payrollReportSummaryRepo.findAllByCompanyIdOrderByCreatedDateAsc(companyId, Pageable.unpaged());
 
-        List<ReportResponse> reports = reportsPage.getContent()
+        List<ReportResponse> persisted = persistedPage.getContent()
                 .stream()
                 .map(ReportUtils::transform)
                 .toList();
 
-        // Keep simulations separate to avoid skewing pagination counts
-        List<ReportResponse> simulatedReports = getPayRollReportSimulates(companyId);
+        // Fetch all simulated reports
+        List<ReportResponse> simulated = getPayRollReportSimulates(companyId);
+
+        // Merge both, sort by createdDate ASC
+        List<ReportResponse> combined = new ArrayList<>(persisted.size() + simulated.size());
+        combined.addAll(persisted);
+        combined.addAll(simulated);
+
+        combined.sort(Comparator.comparing(
+                rr -> parseCreated(rr.getCreatedDate()),
+                Comparator.nullsLast(Comparator.naturalOrder())
+        ));
+
+        // In-memory pagination
+        int totalItems = combined.size();
+        int fromIndex = Math.min(safePage * safeSize, totalItems);
+        int toIndex = Math.min(fromIndex + safeSize, totalItems);
+        List<ReportResponse> pageContent = combined.subList(fromIndex, toIndex);
+
+        int totalPages = (int) Math.ceil((double) totalItems / safeSize);
 
         Map<String, Object> response = new HashMap<>();
-        response.put("reports", reports);
-        response.put("simulatedReports", simulatedReports);
-        response.put("currentPage", reportsPage.getNumber());
-        response.put("totalItems", reportsPage.getTotalElements());
-        response.put("totalPages", reportsPage.getTotalPages());
-        response.put("pageSize", reportsPage.getSize());
+        response.put("reports", pageContent);
+        response.put("currentPage", safePage);
+        response.put("totalItems", totalItems);
+        response.put("totalPages", totalPages);
+        response.put("pageSize", safeSize);
         return response;
+    }
+
+    private static LocalDateTime parseCreated(String value) {
+        if (value == null || value.isEmpty()) return null;
+        try {
+            return LocalDateTime.parse(value);
+        } catch (Exception e1) {
+            try {
+                return LocalDate.parse(value).atStartOfDay();
+            } catch (Exception e2) {
+                return null;
+            }
+        }
     }
 
 
