@@ -2,6 +2,7 @@ package com.xykine.computation.utils;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xykine.computation.entity.PaymentDistribution;
 import com.xykine.computation.entity.TaxRule;
 import com.xykine.computation.response.SummaryDetail;
 import com.xykine.computation.service.PaymentCalculatorImpl;
@@ -11,12 +12,11 @@ import org.slf4j.LoggerFactory;
 import org.xykine.payroll.model.PaymentFrequencyEnum;
 import org.xykine.payroll.model.PaymentInfo;
 import org.xykine.payroll.model.PaymentSettingsResponse;
+import org.xykine.payroll.model.enums.PaymentTypeEnum;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 
 public class ComputationUtils {
@@ -114,6 +114,31 @@ public class ComputationUtils {
         return roundToTwoDecimalPlaces(exchangeRate.multiply(amount));
     }
 
+    public static BigDecimal getAnnualTaxAmount(BigDecimal taxableIncome, String taxRuleJson) {
+        if (taxableIncome.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+        List<TaxRule> rules = getTaxRuleList(taxRuleJson);
+        BigDecimal taxAmount = BigDecimal.ZERO;
+
+        for (TaxRule rule : rules) {
+            if (taxableIncome.compareTo(BigDecimal.ZERO) <= 0) break;
+            BigDecimal rate = BigDecimal.valueOf(rule.getRate());
+
+            if (rule.getLimit() == null) {
+                // Apply on remaining income
+                taxAmount = taxAmount.add(rate.multiply(taxableIncome).divide(BigDecimal.valueOf(100)));
+                taxableIncome = BigDecimal.ZERO;
+            } else {
+                BigDecimal applicableAmount = taxableIncome.min(BigDecimal.valueOf(rule.getLimit()));
+                taxAmount = taxAmount.add(rate.multiply(applicableAmount).divide(BigDecimal.valueOf(100)));
+                taxableIncome = taxableIncome.subtract(applicableAmount);
+            }
+        }
+        // ✅ Return ANNUAL tax (same as method1)
+        return taxAmount.setScale(2, RoundingMode.HALF_UP);
+    }
+
     public static BigDecimal exchangeToForeignCurrency(BigDecimal exchangeRate, BigDecimal amount){
         return roundToTwoDecimalPlaces(amount.divide(exchangeRate));
     }
@@ -138,5 +163,74 @@ public class ComputationUtils {
             LOGGER.error("Failed to parse taxRule JSON: {}", taxRuleJsonString, e);
             return Collections.emptyList();
         }
+    }
+
+    public static List<PaymentDistribution> getPaymentDistribution(String paymentDistributionJson) {
+        ObjectMapper mapper = new ObjectMapper();
+        if (paymentDistributionJson == null || paymentDistributionJson.isBlank()) {
+            LOGGER.warn("paymentDistributionJson JSON string is null or empty.");
+            return Collections.emptyList();
+        }
+        try {
+            String innerTaxRuleJson = mapper.readTree(paymentDistributionJson)
+                    .get("paymentDistribution")
+                    .asText();
+            return mapper.readValue(innerTaxRuleJson, new TypeReference<List<PaymentDistribution>>() {});
+        } catch (Exception e) {
+            LOGGER.error("Failed to parse paymentDistributionJson JSON: {}", paymentDistributionJson, e);
+            return Collections.emptyList();
+        }
+    }
+
+    public static Set<PaymentSettingsResponse> getExpandedPaymentDistribution(
+            PaymentSettingsResponse original,
+            List<PaymentDistribution> distributions
+    ) {
+        Set<PaymentSettingsResponse> result = new HashSet<>();
+
+        if (original == null || distributions == null) {
+            return result; // return empty list if null inputs
+        }
+
+        for (PaymentDistribution dist : distributions) {
+            PaymentSettingsResponse copy = new PaymentSettingsResponse();
+
+            // Copy over fields from original
+            copy.setPaymentSettingID(original.getPaymentSettingID());
+            copy.setEmployeeID(original.getEmployeeID());
+            copy.setCurrency(original.getCurrency());
+            copy.setSalaryFrequency(original.getSalaryFrequency());
+            copy.setActive(original.isActive());
+            copy.setPensionable(original.isPensionable());
+            copy.setProrated(original.isProrated());
+            copy.setCreatedDate(original.getCreatedDate());
+            copy.setLastModifiedDate(original.getLastModifiedDate());
+            copy.setCreatedBy(original.getCreatedBy());
+            copy.setLastModifiedBy(original.getLastModifiedBy());
+            copy.setVersion(original.getVersion());
+
+            // Replace the name with distribution name
+            copy.setName(dist.getName());
+            // Replace type with distribution type (convert String → PaymentTypeEnum if needed)
+            if (dist.getType() != null) {
+                copy.setType(PaymentTypeEnum.valueOf(dist.getType().toUpperCase()));
+            } else {
+                copy.setType(PaymentTypeEnum.ALLOWANCE_ANNUAL); // fallback
+            }
+
+            // Calculate distributed value (with rounding to 2 decimals)
+            BigDecimal percentage = BigDecimal.valueOf(dist.getPercentage())
+                    .divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP); // high precision interim
+
+            BigDecimal distributedValue = original.getValue()
+                    .multiply(percentage)
+                    .setScale(2, RoundingMode.HALF_UP); // round to 2 decimals
+
+            copy.setValue(distributedValue);
+
+            result.add(copy);
+        }
+
+        return result;
     }
 }

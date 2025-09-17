@@ -93,6 +93,11 @@ public class LoadComputationConfig {
                 .description("CRA cut off")
                 .value(BigDecimal.valueOf(200000))
                 .build();
+        ComputationConstants withHoldingTax = ComputationConstants.builder()
+                .id("withHoldingTax")
+                .description("WithHolding tax")
+                .value(BigDecimal.valueOf(0.05))
+                .build();
 
         computationConstantsRepo.save(pensionFundPercent);
         computationConstantsRepo.save(nationalHousingFund);
@@ -100,6 +105,7 @@ public class LoadComputationConfig {
         computationConstantsRepo.save(craCutOff);
         computationConstantsRepo.save(variableCRAFraction);
         computationConstantsRepo.save(employerPensionContributionPercent);
+        computationConstantsRepo.save(withHoldingTax);
 
         DashboardCard dashboardCard = DashboardCard.builder()
                 .id(UUID.randomUUID().toString())
@@ -123,14 +129,15 @@ public class LoadComputationConfig {
         EmployeeMetadata regularStaffWithNHF = EmployeeMetadata.builder()
                 .employeeId("682cf69592b07e60fa10991b")
                 .companyId("682cf69492b07e60fa109911")
-                .employeeType(EmployeeType.REGULAR)
-                .isNHFSubscribed(true)
+                .employeeType(EmployeeType.FULL_TIME)
+                .isNHFSubscribed(false)
+                .voluntaryPensionContribution(BigDecimal.ZERO)
                 .build();
 
         EmployeeMetadata regularStaffNoNHF = EmployeeMetadata.builder()
                 .employeeId("682cf69592b07e60fa10992a")
                 .companyId("682cf69592b07e60fa10991b")
-                .employeeType(EmployeeType.REGULAR)
+                .employeeType(EmployeeType.FULL_TIME)
                 .isNHFSubscribed(false)
                 .build();
 
@@ -138,11 +145,26 @@ public class LoadComputationConfig {
         employeeMetaDataRepo.save(regularStaffWithNHF);
         employeeMetaDataRepo.save(regularStaffNoNHF);
 
+        String xykine_payment_distribution = """
+    [
+      {"type": "BASIC SALARY ANNUAL", "percentage": 16.4, "name": "bHOUSING"},
+      {"type": "ANNUAL HOUSING ALLOWANCE", "percentage": 8.23, "name": "HOUSING"},
+      {"type": "ANNUAL TRANSPORT ALLOWANCE", "percentage": 18.23, "name": "TRANSPORT"},
+      {"type": "ANNUAL ALLOWANCE", "percentage": 10, "name": "UTILITY"},
+      {"type": "ANNUAL ALLOWANCE", "percentage": 10, "name": "ENTERTAINMENT"},
+      {"type": "ANNUAL ALLOWANCE", "percentage": 17.08, "name": "PERSONAL OUTFIT"},
+      {"type": "ANNUAL ALLOWANCE", "percentage": 10, "name": "LEAVE"},
+      {"type": "ANNUAL ALLOWANCE", "percentage": 10, "name": "MEDICAL"},
+      {"type": "ANNUAL ALLOWANCE", "percentage": 10, "name": "TRAINING"}
+    ]
+    """;
+
         CompanyMetadata companyMetadata = CompanyMetadata.builder()
                 .companyId("682cf69492b07e60fa109911")
-                .paymentEntryMode(PaymentFrequencyEnum.MONTHLY)
+                .paymentEntryMode(PaymentFrequencyEnum.YEARLY)
                 .salaryFrequency(PaymentFrequencyEnum.MONTHLY)
                 .companyName("xykine inc")
+                //.paymentDistribution(xykine_payment_distribution)
                 .build();
         companyMetadataRepo.save(companyMetadata);
     }

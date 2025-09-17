@@ -2,6 +2,7 @@ package com.xykine.computation.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xykine.computation.utils.ComputationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,10 +11,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.xykine.payroll.model.PaymentFrequencyEnum;
 import org.xykine.payroll.model.PaymentInfo;
 import org.xykine.payroll.model.PaymentSettingsResponse;
 import org.xykine.payroll.model.enums.PaymentTypeEnum;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -129,6 +132,11 @@ public class ComputeService {
         // --- New PaymentInfos for each off-cycle entry ---
         List<PaymentInfo> offCycleCopies = offCycleSettings.stream()
                 .map(setting -> {
+                    if (setting.getName().equalsIgnoreCase("MONTHLY PERFORMANCE BONUS")) {
+                        BigDecimal performanceBonus = ComputationUtils.prorate(mainCopy.getBasicSalary().multiply(setting.getValue().divide(BigDecimal.valueOf(100))),
+                                mainCopy.getNumberOfDaysOfUnpaidAbsence(), PaymentFrequencyEnum.MONTHLY);
+                        setting.setValue(performanceBonus);
+                    }
                     PaymentInfo offCycleCopy = copyPaymentInfo(paymentInfo);
                     offCycleCopy.setPaymentSettings(Set.of(setting));
                     offCycleCopy.setOffCycle(true);
