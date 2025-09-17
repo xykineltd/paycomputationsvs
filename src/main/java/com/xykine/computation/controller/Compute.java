@@ -47,7 +47,6 @@ public class Compute {
             sessionCalculationObject = OperationUtils.doPreflight(
                     sessionCalculationObject,
                     computationConstantsRepo,
-                    taxRepo,
                     employeeMetadataService,
                     paymentRequest
             );

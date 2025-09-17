@@ -29,49 +29,40 @@ public class LoadComputationConfig {
 
     @EventListener(ApplicationReadyEvent.class)
     public void loadLegalEntityTestData() {
-
-        Tax taxClassA = Tax.builder()
-                .taxClass("TaxClassA")
-                .description(" <= 300,000 NGN")
-                .percentage(BigDecimal.valueOf(7.0))
+        String oldTaxRule = """
+    [
+      {"limit": 300000, "rate": 7},
+      {"limit": 300000, "rate": 11},
+      {"limit": 500000, "rate": 15},
+      {"limit": 500000, "rate": 19},
+      {"limit": 1600000, "rate": 21},
+      {"limit": null, "rate": 24}
+    ]
+    """;
+        String newTaxRule = """
+    [
+      { "limit": 800000,    "rate": 0 },
+      { "limit": 3000000,   "rate": 15 },
+      { "limit": 12000000,  "rate": 18 },
+      { "limit": 25000000,  "rate": 21 },
+      { "limit": 50000000,  "rate": 23 },
+      { "limit": null,      "rate": 25 }
+    ]
+    """;
+        Tax nigeriaOldTaxRule = Tax.builder()
+                .country("NIGERIA")
+                .taxRule(oldTaxRule)
+                .active(true)
                 .build();
 
-        Tax taxClassB = Tax.builder()
-                .taxClass("TaxClassB")
-                .description(" > 300,000 NGN and <= 600,000 NGN")
-                .percentage(BigDecimal.valueOf(11.0))
+        Tax nigeriaNewTaxRule = Tax.builder()
+                .country("NIGERIA")
+                .taxRule(newTaxRule)
+                .active(false)
                 .build();
 
-        Tax taxClassC = Tax.builder()
-                .taxClass("TaxClassC")
-                .description(" > 600,000 NGN and <= 1,100,000 NGN")
-                .percentage(BigDecimal.valueOf(15.0))
-                .build();
-
-        Tax taxClassD = Tax.builder()
-                .taxClass("TaxClassD")
-                .description(" > 1,100,000 NGN and <= 1,600,000 NGN")
-                .percentage(BigDecimal.valueOf(19.0))
-                .build();
-
-        Tax taxClassE = Tax.builder()
-                .taxClass("TaxClassE")
-                .description(" > 1,600,000 NGN and <= 3,200,000 NGN")
-                .percentage(BigDecimal.valueOf(21.0))
-                .build();
-
-        Tax taxClassF = Tax.builder()
-                .taxClass("TaxClassF")
-                .description(" > 3,200,000 NGN")
-                .percentage(BigDecimal.valueOf(24.0))
-                .build();
-
-        taxRepo.save(taxClassA);
-        taxRepo.save(taxClassB);
-        taxRepo.save(taxClassC);
-        taxRepo.save(taxClassD);
-        taxRepo.save(taxClassE);
-        taxRepo.save(taxClassF);
+        taxRepo.save(nigeriaOldTaxRule);
+        taxRepo.save(nigeriaNewTaxRule);
 
         ComputationConstants pensionFundPercent = ComputationConstants.builder()
                 .id("pensionFundPercent")
@@ -103,6 +94,11 @@ public class LoadComputationConfig {
                 .description("CRA cut off")
                 .value(BigDecimal.valueOf(200000))
                 .build();
+        ComputationConstants withHoldingTax = ComputationConstants.builder()
+                .id("withHoldingTax")
+                .description("WithHolding tax")
+                .value(BigDecimal.valueOf(0.05))
+                .build();
 
         computationConstantsRepo.save(pensionFundPercent);
         computationConstantsRepo.save(nationalHousingFund);
@@ -110,6 +106,7 @@ public class LoadComputationConfig {
         computationConstantsRepo.save(craCutOff);
         computationConstantsRepo.save(variableCRAFraction);
         computationConstantsRepo.save(employerPensionContributionPercent);
+        computationConstantsRepo.save(withHoldingTax);
 
         DashboardCard dashboardCard = DashboardCard.builder()
                 .id(UUID.randomUUID().toString())
@@ -133,14 +130,15 @@ public class LoadComputationConfig {
         EmployeeMetadata regularStaffWithNHF = EmployeeMetadata.builder()
                 .employeeId("682cf69592b07e60fa10991b")
                 .companyId("682cf69492b07e60fa109911")
-                .employeeType(EmployeeType.REGULAR)
-                .isNHFSubscribed(true)
+                .employeeType(EmployeeType.FULL_TIME)
+                .isNHFSubscribed(false)
+                .voluntaryPensionContribution(BigDecimal.ZERO)
                 .build();
 
         EmployeeMetadata regularStaffNoNHF = EmployeeMetadata.builder()
                 .employeeId("682cf69592b07e60fa10992a")
                 .companyId("682cf69592b07e60fa10991b")
-                .employeeType(EmployeeType.REGULAR)
+                .employeeType(EmployeeType.FULL_TIME)
                 .isNHFSubscribed(false)
                 .build();
 
@@ -148,11 +146,26 @@ public class LoadComputationConfig {
         employeeMetaDataRepo.save(regularStaffWithNHF);
         employeeMetaDataRepo.save(regularStaffNoNHF);
 
+        String xykine_payment_distribution = """
+    [
+      {"type": "BASIC SALARY ANNUAL", "percentage": 16.4, "name": "bHOUSING"},
+      {"type": "ANNUAL HOUSING ALLOWANCE", "percentage": 8.23, "name": "HOUSING"},
+      {"type": "ANNUAL TRANSPORT ALLOWANCE", "percentage": 18.23, "name": "TRANSPORT"},
+      {"type": "ANNUAL ALLOWANCE", "percentage": 10, "name": "UTILITY"},
+      {"type": "ANNUAL ALLOWANCE", "percentage": 10, "name": "ENTERTAINMENT"},
+      {"type": "ANNUAL ALLOWANCE", "percentage": 17.08, "name": "PERSONAL OUTFIT"},
+      {"type": "ANNUAL ALLOWANCE", "percentage": 10, "name": "LEAVE"},
+      {"type": "ANNUAL ALLOWANCE", "percentage": 10, "name": "MEDICAL"},
+      {"type": "ANNUAL ALLOWANCE", "percentage": 10, "name": "TRAINING"}
+    ]
+    """;
+
         CompanyMetadata companyMetadata = CompanyMetadata.builder()
                 .companyId("682cf69492b07e60fa109911")
-                .paymentEntryMode(PaymentFrequencyEnum.MONTHLY)
+                .paymentEntryMode(PaymentFrequencyEnum.YEARLY)
                 .salaryFrequency(PaymentFrequencyEnum.MONTHLY)
                 .companyName("xykine inc")
+                //.paymentDistribution(xykine_payment_distribution)
                 .build();
         companyMetadataRepo.save(companyMetadata);
     }
