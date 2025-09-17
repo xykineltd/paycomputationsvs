@@ -237,7 +237,7 @@ public abstract class AbstractIntegrationTest {
         String URL_PREFIX = "http://localhost:" + port + "/compute/reports/";
         String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX + "paymentDetails/get-by-employee")
                 .queryParam("employeeId", TEST_EMPLOYEE_ID)
-                .queryParam("startDate", "2025-05-01")
+                .queryParam("startDate", "2025-06-01")
                 .queryParam("companyId", TEST_COMPANY_ID)
                 .toUriString();
         return getReportDirect(url);

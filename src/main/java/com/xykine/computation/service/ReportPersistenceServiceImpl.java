@@ -777,6 +777,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                             oldPaymentInfo.setNhf(mergeMaps(oldPaymentInfo.getNhf(), x.getNhf()));
                             oldPaymentInfo.setOthers(mergeMaps(oldPaymentInfo.getOthers(), x.getOthers()));
                             oldPaymentInfo.setPension(mergeMaps(oldPaymentInfo.getPension(), x.getPension()));
+                            oldPaymentInfo.setNetPay(oldPaymentInfo.getNetPay().add(paymentInfoToSave.getNetPay()));
                             paymentInfoToSave = oldPaymentInfo;
                         }
                     }

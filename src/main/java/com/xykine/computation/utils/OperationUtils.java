@@ -23,7 +23,7 @@ public class OperationUtils {
 
     public static SessionCalculationObject doPreflight(SessionCalculationObject sessionCalculationObject,
                                                        ComputationConstantsRepo computationConstantsRepo,
-                                                       TaxRepo taxRepo, EmployeeMetadataService employeeMetadataService, PaymentInfoRequest paymentRequest){
+                                                       EmployeeMetadataService employeeMetadataService, PaymentInfoRequest paymentRequest){
 
         ConcurrentHashMap<String, BigDecimal> sessionSummary = new ConcurrentHashMap<>();
         ConcurrentHashMap<String, List<SummaryDetail>> sessionSummaryDetails = new ConcurrentHashMap<>();
@@ -47,16 +47,12 @@ public class OperationUtils {
         sessionSummaryDetails.put(MapKeys.TOTAL_EMPLOYER_PENSION_CONTRIBUTION, Collections.synchronizedList(new ArrayList<>()));
         sessionCalculationObject.setSummaryDetails(sessionSummaryDetails);
 
-        LOGGER.debug(" ========> tax Repo {} ", taxRepo.findAllByOrderByTaxClass());
-
         employeeMetadataService.preloadAllIntoCache(paymentRequest.getCompanyId());
 
-        taxRepo.findAllByOrderByTaxClass().forEach(x -> {
-                computationConstants.put(x.getTaxClass(), x.getPercentage());
-            });
         computationConstantsRepo.findAllByOrderById().forEach(x->{
             computationConstants.put(x.getId(), x.getValue());
         });
+
         sessionCalculationObject.setComputationConstants(computationConstants);
         return sessionCalculationObject;
     }

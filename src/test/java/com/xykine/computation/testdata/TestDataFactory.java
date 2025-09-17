@@ -15,10 +15,8 @@ public class TestDataFactory {
     public static <T> List<T> getPaymentSettings(String type) {
         String payload = switch (type) {
             case "standard" -> STANDARD_PAYROLL_ENTRY;
-            case "standard with performance bonus" -> STANDARD_PAYROLL_ENTRY_WITH_PERFORMANCE_BONUS;
-            case "standard with performance bonus 2" -> STANDARD_PAYROLL_ENTRY_WITH_PERFORMANCE_BONUS_2;
-            case "standard with no NHF subscription" -> STANDARD_PAYROLL_ENTRY_NO_NHF;
             case "contract staff" -> CONTRACT_STAFF;
+            case "standard with performance bonus" -> STANDARD_PAYROLL_ENTRY_WITH_PERFORMANCE_BONUS;
             case "off-cycle" -> OFF_CYCLE;
             case "ten-entries" -> TEN_ENTRIES;
             case "one-thousand-entries" -> ONE_THOUSAND_ENTRIES;
