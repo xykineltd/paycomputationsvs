@@ -123,36 +123,36 @@ public class LoadComputationConfig {
         if (dashboardCardRepo.findAll().size() == 0)
             dashboardCardRepo.save(dashboardCard);
 
-//        EmployeeMetadata contractStaff = EmployeeMetadata.builder()
-//                .employeeId("8e3b6e4952e8468a84fd84556f8fdf2a")
-//                .companyId("68c60d2737df275fc8b53262")
-//                .employeeType(EmployeeType.CONTRACT)
-//                .isNHFSubscribed(false)
-//                .build();
-
-        EmployeeMetadata regularStaffWithNHF = EmployeeMetadata.builder()
-                .employeeId("68c60d2737df275fc8b5326d")
-                .companyId("68c60d2737df275fc8b53262")
-                .employeeType(EmployeeType.REGULAR)
-                .isNHFSubscribed(true)
+        EmployeeMetadata contractStaff = EmployeeMetadata.builder()
+                .employeeId("8e3b6e4952e8468a84fd84556f8fdf2a")
+                .companyId("682cf69492b07e60fa109911")
+                .employeeType(EmployeeType.CONTRACT)
+                .isNHFSubscribed(false)
                 .build();
 
-        EmployeeMetadata regularStaffNoNHF = EmployeeMetadata.builder()
-                .employeeId("68c60d2737df275fc8b5326c")
-                .companyId("68c60d2737df275fc8b53262")
+        EmployeeMetadata regularStaffWithNHF = EmployeeMetadata.builder()
+                .employeeId("682cf69592b07e60fa10991b")
+                .companyId("682cf69492b07e60fa109911")
                 .employeeType(EmployeeType.REGULAR)
                 .isNHFSubscribed(false)
                 .build();
 
-//        employeeMetaDataRepo.save(contractStaff);
+        EmployeeMetadata regularStaffNoNHF = EmployeeMetadata.builder()
+                .employeeId("682cf69592b07e60fa10992a")
+                .companyId("682cf69592b07e60fa10991b")
+                .employeeType(EmployeeType.REGULAR)
+                .isNHFSubscribed(false)
+                .build();
+
+        employeeMetaDataRepo.save(contractStaff);
         employeeMetaDataRepo.save(regularStaffWithNHF);
         employeeMetaDataRepo.save(regularStaffNoNHF);
 
         CompanyMetadata companyMetadata = CompanyMetadata.builder()
-                .companyId("68c60d2737df275fc8b53262")
-                .paymentEntryMode(PaymentFrequencyEnum.YEARLY)
+                .companyId("682cf69492b07e60fa109911")
+                .paymentEntryMode(PaymentFrequencyEnum.MONTHLY)
                 .salaryFrequency(PaymentFrequencyEnum.MONTHLY)
-                .companyName("xykine")
+                .companyName("xykine inc")
                 .build();
         companyMetadataRepo.save(companyMetadata);
     }

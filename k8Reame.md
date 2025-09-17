@@ -9,3 +9,12 @@
      	 -Dspring-boot.build-image.imageName=kacytunde/paycomputation-service:1.9
 
 ```
+
+### run tests
+./mvnw -Dtest=com.xykine.adminservice.domain.attendance.AttendanceServiceTest test
+
+./mvnw -Dtest=com.xykine.adminservice.keycloak.KeycloakUserServiceIntegrationTest test
+
+./mvnw -Dtest=com.xykine.adminservice.web.paymentinfo.PaymentInfoControllerIntegrationTest test
+./mvnw -Dtest=com.xykine.adminservice.web.paymentinfo.PaymentInfoControllerTest test
+mvn -Dtest=com.xykine.computation.ControllerIntegrationTest test 

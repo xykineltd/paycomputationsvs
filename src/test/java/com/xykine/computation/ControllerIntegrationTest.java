@@ -324,6 +324,49 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         });
     }
 
+
+    @Test
+    void testStandardWithPerformanceBonusCompute2() {
+        when(adminService.getPaymentInfoList(any(), anyString())).thenReturn(TestDataFactory.getPaymentSettings("standard with performance bonus 2"));
+        ReportResponse reportSummary = getReportSummary();
+        Map<String, Object> body = getReportDetail(reportSummary);
+        assertThat(body).isNotNull().satisfies((x) -> {
+            assertThat(x.get("totalItems")).isEqualTo(1);
+        });
+        List<ReportResponse> reportResponses = MAPPER.convertValue(body.get("payrollDetails"), new TypeReference<List<ReportResponse>>() {
+        });
+
+        PaymentInfo paymentInfo = reportResponses.get(0).getDetail().getReport();
+        LOGGER.info("paymentInfo: {}", paymentInfo);
+
+//        Map<String, BigDecimal> payeeTax = paymentInfo.getPayeeTax();
+//        assertThat(payeeTax).isNotNull().satisfies(x -> {
+//            assertThat(x.get("Payee Tax on Monthly Performance bonus"))
+//                    .isEqualByComparingTo(new BigDecimal("8548.92"));
+//            assertThat(x.get("Taxable Income"))
+//                    .isEqualByComparingTo(new BigDecimal("531344.01"));
+//            assertThat(x.get("Payee Tax"))
+//                    .isEqualByComparingTo(new BigDecimal("91710.97"));
+//        });
+//
+//        Map<String, BigDecimal> grossPay = paymentInfo.getGrossPay();
+//        assertThat(grossPay).isNotNull().satisfies(x -> {
+//            assertThat(x.get("Transport Allowance"))
+//                    .isEqualByComparingTo(new BigDecimal("50770.89"));
+//            assertThat(x.get("Leave"))
+//                    .isEqualByComparingTo(new BigDecimal("8219.55"));
+//            assertThat(x.get("Monthly Performance bonus"))
+//                    .isEqualByComparingTo(new BigDecimal("117074.31"));
+//            assertThat(x.get("Basic Salary"))
+//                    .isEqualByComparingTo(new BigDecimal("507722.72"));
+//            assertThat(x.get("Gross Pay"))
+//                    .isEqualByComparingTo(new BigDecimal("770126.38"));
+//            assertThat(x.get("Housing Allowance"))
+//                    .isEqualByComparingTo(new BigDecimal("86338.91"));
+//        });
+    }
+
+
     /****         REPORT CONTROLLER ENDPOINTS      *********/
 
     @Test

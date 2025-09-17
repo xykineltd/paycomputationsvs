@@ -59,7 +59,7 @@ public abstract class AbstractIntegrationTest {
     protected static final Logger LOGGER = LoggerFactory.getLogger(ControllerIntegrationTest.class);
 
     @Container
-    protected static final MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:6.0");
+    protected static final MongoDBContainer mongoDBContainer = new MongoDBContainer("mongo:7.0");
 
     @Container
     protected static final GenericContainer<?> redisContainer = new GenericContainer<>("redis:7.0")
