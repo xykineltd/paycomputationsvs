@@ -5,6 +5,8 @@ import com.xykine.computation.repo.EmployeeMetadataRepo;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
+
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,6 +38,10 @@ public class EmployeeMetadataService {
 
     public EmployeeMetadata save(EmployeeMetadata employee) {
         return employeeMetadataRepo.save(employee);
+    }
+
+    public List<EmployeeMetadata> saveAll(List<EmployeeMetadata> employees) {
+        return employeeMetadataRepo.saveAll(employees);
     }
 
     public Optional<EmployeeMetadata> updateByEmployeeId(String employeeId, EmployeeMetadata updatedEmployee) {
