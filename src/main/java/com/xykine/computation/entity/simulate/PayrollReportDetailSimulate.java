@@ -1,6 +1,7 @@
 package com.xykine.computation.entity.simulate;
 
 
+import com.xykine.computation.entity.PayrollStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -28,7 +29,7 @@ public class PayrollReportDetailSimulate {
     private String startDate;
     private String endDate;
     private boolean payrollSimulation;
-    private boolean payrollApproved;
+    private PayrollStatus payrollStatus;
     private String currency;
     private ExchangeInfo exchangeInfo;
     private LocalDateTime createdDate;

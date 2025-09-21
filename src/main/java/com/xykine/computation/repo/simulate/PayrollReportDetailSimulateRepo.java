@@ -13,5 +13,6 @@ public interface PayrollReportDetailSimulateRepo extends MongoRepository<Payroll
     Page<PayrollReportDetail> findPayrollReportDetailById(String id, Pageable pageable);
     Page<PayrollReportDetail> findPayrollReportDetailBySummaryIdAndCompanyId(String summaryId, String companyId, Pageable pageable);
     Page<PayrollReportDetail> findPayrollReportDetailBySummaryIdAndCompanyIdAndFullNameContainingIgnoreCase(String summaryId, String companyId, String fullName, Pageable pageable);
+    PayrollReportDetailSimulate findPayrollReportDetailByCompanyIdAndEmployeeIdAndStartDateAndEndDate(String companyId, String employeeId, String startDate, String endDate);
 }
 

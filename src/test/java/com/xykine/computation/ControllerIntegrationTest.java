@@ -70,10 +70,8 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         assertThat(body).isNotNull().satisfies((x) -> {
             assertThat(x.get("totalItems")).isEqualTo(1);
         });
-
         List<ReportResponse> reportResponses = MAPPER.convertValue(body.get("payrollDetails"), new TypeReference<List<ReportResponse>>() {
         });
-
         PaymentInfo paymentInfo = reportResponses.get(0).getDetail().getReport();
         assertThat(paymentInfo).isNotNull().satisfies((x) -> {
                  assertThat(x.getNetPay()).isEqualByComparingTo(BigDecimal.valueOf(633334.0));
