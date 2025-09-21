@@ -86,8 +86,6 @@ public class Report {
     @PutMapping("/approve")
     public boolean approveReport(@RequestBody UpdateReportRequest request) {
         PayrollReportSummary payrollReport = reportPersistenceService.approveReport(request);
-        if (payrollReport.isPayrollApproved() != request.isPayrollApproved())
-            return false;
         return true;
     }
 

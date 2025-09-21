@@ -1,5 +1,6 @@
 package com.xykine.computation.request;
 
+import com.xykine.computation.entity.PayrollStatus;
 import lombok.Data;
 import org.xykine.payroll.model.PayrollCategory;
 
@@ -9,5 +10,6 @@ public class ReportByTypeRequest {
     String employeeID;
     String start;
     String end;
+    PayrollStatus payrollStatus;
     PayrollCategory category;
 }

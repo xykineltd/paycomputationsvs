@@ -29,8 +29,7 @@ public class PayrollReportDetail {
     private String startDate;
     private String endDate;
     private boolean payrollSimulation;
-    private boolean payrollApproved;
-    private boolean payrollCompleted;
+    private PayrollStatus payrollStatus;
     private boolean offCycle;
     private String currency;
     private ExchangeInfo exchangeInfo;

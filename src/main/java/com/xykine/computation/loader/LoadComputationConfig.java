@@ -146,27 +146,35 @@ public class LoadComputationConfig {
         employeeMetaDataRepo.save(regularStaffWithNHF);
         employeeMetaDataRepo.save(regularStaffNoNHF);
 
-        String xykine_payment_distribution = """
+        String morufoye_international_payment_distribution = """
     [
-      {"type": "BASIC SALARY ANNUAL", "percentage": 16.4, "name": "bHOUSING"},
-      {"type": "ANNUAL HOUSING ALLOWANCE", "percentage": 8.23, "name": "HOUSING"},
-      {"type": "ANNUAL TRANSPORT ALLOWANCE", "percentage": 18.23, "name": "TRANSPORT"},
-      {"type": "ANNUAL ALLOWANCE", "percentage": 10, "name": "UTILITY"},
-      {"type": "ANNUAL ALLOWANCE", "percentage": 10, "name": "ENTERTAINMENT"},
-      {"type": "ANNUAL ALLOWANCE", "percentage": 17.08, "name": "PERSONAL OUTFIT"},
-      {"type": "ANNUAL ALLOWANCE", "percentage": 10, "name": "LEAVE"},
-      {"type": "ANNUAL ALLOWANCE", "percentage": 10, "name": "MEDICAL"},
-      {"type": "ANNUAL ALLOWANCE", "percentage": 10, "name": "TRAINING"}
+      {"type": "BASIC_SALARY_ANNUAL", "percentage": 16.46, "name": "Basic Salary"},
+      {"type": "ALLOWANCE_ANNUAL_HOUSING", "percentage": 8.23, "name": "Housing Allowance"},
+      {"type": "ALLOWANCE_ANNUAL_TRANSPORT", "percentage": 8.23, "name": "Transport Allowance"},
+      {"type": "ALLOWANCE_ANNUAL", "percentage": 10, "name": "UTILITY"},
+      {"type": "ALLOWANCE_ANNUAL", "percentage": 10, "name": "ENTERTAINMENT"},
+      {"type": "ALLOWANCE_ANNUAL", "percentage": 17.08, "name": "PERSONAL OUTFIT"},
+      {"type": "ALLOWANCE_ANNUAL", "percentage": 10, "name": "LEAVE"},
+      {"type": "ALLOWANCE_ANNUAL", "percentage": 10, "name": "MEDICAL"},
+      {"type": "ALLOWANCE_ANNUAL", "percentage": 10, "name": "TRAINING"}
     ]
     """;
 
-        CompanyMetadata companyMetadata = CompanyMetadata.builder()
+        CompanyMetadata xykineCompanyMetadata = CompanyMetadata.builder()
                 .companyId("682cf69492b07e60fa109911")
                 .paymentEntryMode(PaymentFrequencyEnum.YEARLY)
                 .salaryFrequency(PaymentFrequencyEnum.MONTHLY)
                 .companyName("xykine inc")
-                //.paymentDistribution(xykine_payment_distribution)
                 .build();
-        companyMetadataRepo.save(companyMetadata);
+        companyMetadataRepo.save(xykineCompanyMetadata);
+
+        CompanyMetadata morufoyeCompanyMetadata = CompanyMetadata.builder()
+                .companyId("1234567")
+                .paymentEntryMode(PaymentFrequencyEnum.YEARLY)
+                .salaryFrequency(PaymentFrequencyEnum.MONTHLY)
+                .companyName("morufoye international")
+                .paymentDistribution(morufoye_international_payment_distribution)
+                .build();
+        companyMetadataRepo.save(morufoyeCompanyMetadata);
     }
 }
