@@ -3,6 +3,7 @@ package com.xykine.computation.service;
 import org.xykine.payroll.model.PaymentInfo;
 
 public interface PaymentCalculator {
+    PaymentInfo expandPaymentSettingsFromGrossAnnual(PaymentInfo paymentInfo);
     PaymentInfo applyExchange(PaymentInfo paymentInfo);
     PaymentInfo harmoniseToAnnual(PaymentInfo paymentInfo);
     PaymentInfo computeGrossPay(PaymentInfo paymentInfo);

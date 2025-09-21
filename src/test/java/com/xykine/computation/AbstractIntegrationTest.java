@@ -1,6 +1,7 @@
 package com.xykine.computation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xykine.computation.entity.PayrollStatus;
 import com.xykine.computation.request.PaymentInfoRequest;
 import com.xykine.computation.request.RetrievePaymentElementPayload;
 import com.xykine.computation.request.UpdateReportRequest;
@@ -212,7 +213,7 @@ public abstract class AbstractIntegrationTest {
         UpdateReportRequest updateReportRequest = new UpdateReportRequest();
         updateReportRequest.setStartDate(LocalDate.now().toString());
         updateReportRequest.setCompanyId(TEST_COMPANY_ID);
-        updateReportRequest.setPayrollApproved(true);
+        updateReportRequest.setPayrollStatus(PayrollStatus.APPROVED);
 
         String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX + "approve").toUriString();
         approveReport(url, updateReportRequest);

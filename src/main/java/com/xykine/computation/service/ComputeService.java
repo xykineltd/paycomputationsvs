@@ -38,11 +38,7 @@ public class ComputeService {
             LOGGER.debug("First data received {} ", rawInfo.get(0));
         }
             ObjectMapper mapper = new ObjectMapper();
-            List<PaymentInfo> paymentInfoList = mapper.convertValue(
-                    rawInfo,
-                    new TypeReference<List<PaymentInfo>>() {
-                    }
-            );
+            List<PaymentInfo> paymentInfoList = mapper.convertValue(rawInfo, new TypeReference<List<PaymentInfo>>() {});
 
         List<PaymentInfo> paymentReport = generateReport(paymentInfoList);
         return  PaymentComputeResponse.builder()
@@ -65,11 +61,12 @@ public class ComputeService {
 
         List<CompletableFuture<List<PaymentInfo>>> futures = new ArrayList<>();
 
-        for (int i = 0; i < chunks.size(); i++) {
-            List<PaymentInfo> chunk = chunks.get(i);
-            List<PaymentInfo> finalChunk = splitOutOffCycles(chunk);
-            futures.add(CompletableFuture.supplyAsync(() -> processReport(finalChunk)));
-        }
+        futures.addAll(
+                chunks.stream()
+                        .map(chunk -> splitOutOffCycles(chunk))
+                        .map(finalChunk -> CompletableFuture.supplyAsync(() -> processReport(finalChunk)))
+                        .toList()
+        );
 
         CompletableFuture<Void> allDone = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
 
@@ -83,21 +80,22 @@ public class ComputeService {
 
     private List<PaymentInfo> processReport(List<PaymentInfo> job){
         var payInfos =  job.stream()
-                .map(x -> paymentCalculator.applyExchange(x))
-                .map(x -> paymentCalculator.harmoniseToAnnual(x))
-                .map(x -> paymentCalculator.computeGrossPay(x))
-                .map(x -> paymentCalculator.computeNonTaxableIncomeExempt(x))
-                .map(x -> paymentCalculator.prorateEarnings(x))
-                .map(x -> paymentCalculator.computePayeeTax(x))
-                .map(x -> paymentCalculator.computeTotalDeduction(x))
-                .map(x -> paymentCalculator.computeNetPay(x))
-                .map(x -> paymentCalculator.computeTotalNHF(x))
+                .map(paymentCalculator::applyExchange)
+                .map(paymentCalculator::harmoniseToAnnual)
+                .map(paymentCalculator::computeGrossPay)
+                .map(paymentCalculator::computeNonTaxableIncomeExempt)
+                .map(paymentCalculator::prorateEarnings)
+                .map(paymentCalculator::computePayeeTax)
+                .map(paymentCalculator::computeTotalDeduction)
+                .map(paymentCalculator::computeNetPay)
+                .map(paymentCalculator::computeTotalNHF)
                 .collect(Collectors.toList());
         return  payInfos;
     }
 
     private List<PaymentInfo> splitOutOffCycles(List<PaymentInfo> rawInfo) {
         return rawInfo.stream()
+                .map(paymentCalculator::expandPaymentSettingsFromGrossAnnual)
                 .map(this::splitOffCyclePayments)
                 .flatMap(List::stream)
                 .toList();
@@ -105,7 +103,7 @@ public class ComputeService {
 
     public List<PaymentInfo> splitOffCyclePayments(PaymentInfo paymentInfo) {
 
-        if (paymentInfo.isOffCycle()) {
+        if (paymentInfo.isOffCycle() || paymentInfo.getPaymentSettings() == null) {
             return List.of(paymentInfo);
         }
 
