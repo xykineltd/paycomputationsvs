@@ -1,5 +1,6 @@
 package com.xykine.computation.response;
 
+import com.xykine.computation.entity.PayrollStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,12 +19,11 @@ public class ReportResponse {
     String departmentId;
     PayComputeDetailResponse detail;
     PayComputeSummaryResponse summary;
-    boolean payrollApproved;
+    PayrollStatus payrollStatus;
     String createdDate;
     String startDate;
     String endDate;
     boolean payrollSimulated;
-    boolean payrollCompleted;
     boolean offCycle;
     String payrollValidationError;
     String code;

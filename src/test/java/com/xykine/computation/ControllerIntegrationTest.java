@@ -2,6 +2,7 @@ package com.xykine.computation;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.xykine.computation.config.TestSecurityConfig;
+import com.xykine.computation.entity.PayrollStatus;
 import com.xykine.computation.entity.YTDReport;
 import com.xykine.computation.repo.YTDReportRepo;
 import com.xykine.computation.response.DashboardCardResponse;
@@ -354,7 +355,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
     void testGetReportByCompanyIdAndStatusAndVerifyApproveStatusIsFalse() {
         assertThat(getReportByCompanyIdAndStatus()).isNotNull().satisfies(reportResponses -> {
             assertThat(reportResponses.size()).isEqualTo(1);
-            assertThat(reportResponses.get(0).isPayrollApproved()).isFalse();
+            assertThat(reportResponses.get(0).getPayrollStatus().compareTo(PayrollStatus.APPROVED) != 0);
         });
     }
 
@@ -397,10 +398,10 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void testApprovePayrollReport() {
-        // Assert approved status was false initially
+        // Assert approved status was pending initially
         assertThat(getReportByCompanyId()).isNotNull().satisfies(reportResponses -> {
             assertThat(reportResponses.size()).isEqualTo(1);
-            assertThat(reportResponses.get(0).isPayrollApproved()).isFalse();
+            assertThat(reportResponses.get(0).getPayrollStatus().compareTo(PayrollStatus.PENDING) == 0);
         });
 
         // Approve
@@ -409,7 +410,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         // Assert approved status is now true
         assertThat(getReportByCompanyId()).isNotNull().satisfies(reportResponses -> {
             assertThat(reportResponses.size()).isEqualTo(1);
-            assertThat(reportResponses.get(0).isPayrollApproved()).isTrue();
+            assertThat(reportResponses.get(0).getPayrollStatus().compareTo(PayrollStatus.APPROVED) == 0);
         });
     }
 
@@ -490,10 +491,10 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
     /****         DASHBOARD CONTROLLER ENDPOINTS      *********/
     @Test
     void testDashboardCardAndCard() {
-        // Assert approved status was false initially
+        // Assert approved status was pending initially
         assertThat(getReportByCompanyId()).isNotNull().satisfies(reportResponses -> {
             assertThat(reportResponses.size()).isEqualTo(1);
-            assertThat(reportResponses.get(0).isPayrollApproved()).isFalse();
+            assertThat(reportResponses.get(0).getPayrollStatus().compareTo(PayrollStatus.PENDING) == 0);
         });
 
         // Approve
