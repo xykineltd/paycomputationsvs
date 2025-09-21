@@ -91,6 +91,7 @@ public class ReportUtils {
                 .payrollCompleted(payrollReportSummary.isPayrollCompleted())
                 .offCycle(payrollReportSummary.isOffCycle())
                 .summary(summary)
+                .code(payrollReportSummary.getCode())
                 .build();
     }
 

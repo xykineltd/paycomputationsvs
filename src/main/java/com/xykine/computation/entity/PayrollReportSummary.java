@@ -32,6 +32,7 @@ public class PayrollReportSummary {
     private LocalDateTime createdDate;
     private long totalNumberOfEmployees;
     private PaymentFrequencyEnum paymentFrequency;
+    private String code;
     @CreatedBy
     private String createdBy;
 }

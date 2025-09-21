@@ -65,6 +65,7 @@ public class ComputationUtils {
         sessionCalculationObject.getSummaryDetails()
                 .computeIfAbsent(key, k -> Collections.synchronizedList(new ArrayList<>()))
                 .add(SummaryDetail.builder()
+                        .employeeId(paymentInfo.getEmployeeID())
                         .employeeName(paymentInfo.getFullName())
                         .departmentName(paymentInfo.getDepartmentName())
                         .value(value)
@@ -172,42 +173,31 @@ public class ComputationUtils {
             return Collections.emptyList();
         }
         try {
-            String innerTaxRuleJson = mapper.readTree(paymentDistributionJson)
-                    .get("paymentDistribution")
-                    .asText();
-            return mapper.readValue(innerTaxRuleJson, new TypeReference<List<PaymentDistribution>>() {});
+            return mapper.readValue(paymentDistributionJson, new TypeReference<List<PaymentDistribution>>() {});
         } catch (Exception e) {
             LOGGER.error("Failed to parse paymentDistributionJson JSON: {}", paymentDistributionJson, e);
             return Collections.emptyList();
         }
     }
 
-    public static Set<PaymentSettingsResponse> getExpandedPaymentDistribution(
-            PaymentSettingsResponse original,
+    public static Set<PaymentSettingsResponse> getExpandedPaymentDistribution(PaymentInfo paymentInfo,
             List<PaymentDistribution> distributions
     ) {
         Set<PaymentSettingsResponse> result = new HashSet<>();
 
-        if (original == null || distributions == null) {
+        if (distributions.isEmpty()) {
             return result; // return empty list if null inputs
         }
 
         for (PaymentDistribution dist : distributions) {
             PaymentSettingsResponse copy = new PaymentSettingsResponse();
 
-            // Copy over fields from original
-            copy.setPaymentSettingID(original.getPaymentSettingID());
-            copy.setEmployeeID(original.getEmployeeID());
-            copy.setCurrency(original.getCurrency());
-            copy.setSalaryFrequency(original.getSalaryFrequency());
-            copy.setActive(original.isActive());
-            copy.setPensionable(original.isPensionable());
-            copy.setProrated(original.isProrated());
-            copy.setCreatedDate(original.getCreatedDate());
-            copy.setLastModifiedDate(original.getLastModifiedDate());
-            copy.setCreatedBy(original.getCreatedBy());
-            copy.setLastModifiedBy(original.getLastModifiedBy());
-            copy.setVersion(original.getVersion());
+            copy.setEmployeeID(paymentInfo.getEmployeeID());
+            copy.setCurrency(paymentInfo.getCurrency());
+            copy.setSalaryFrequency(PaymentFrequencyEnum.YEARLY);
+            copy.setActive(false);
+            copy.setPensionable(false);
+            copy.setProrated(false);
 
             // Replace the name with distribution name
             copy.setName(dist.getName());
@@ -222,15 +212,13 @@ public class ComputationUtils {
             BigDecimal percentage = BigDecimal.valueOf(dist.getPercentage())
                     .divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP); // high precision interim
 
-            BigDecimal distributedValue = original.getValue()
+            BigDecimal distributedValue = paymentInfo.getBasicSalary()
                     .multiply(percentage)
                     .setScale(2, RoundingMode.HALF_UP); // round to 2 decimals
 
             copy.setValue(distributedValue);
-
             result.add(copy);
         }
-
         return result;
     }
 }

@@ -32,8 +32,23 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     protected static final Logger LOGGER = LoggerFactory.getLogger(PaymentCalculatorImpl.class);
 
     @Override
-    public PaymentInfo applyExchange(PaymentInfo paymentInfo) {
+    public PaymentInfo expandPaymentSettingsFromGrossAnnual(PaymentInfo paymentInfo) {
+        String paymentDistributionJson = getCompanyPaymentDistributionJson(paymentInfo.getCompanyID());
+        List<PaymentDistribution> paymentDistributionList =
+                ComputationUtils.getPaymentDistribution(paymentDistributionJson);
+        Set<PaymentSettingsResponse> paymentSettingsFromPaymentDistributionList =
+                ComputationUtils.getExpandedPaymentDistribution(paymentInfo, paymentDistributionList);
+        Set<PaymentSettingsResponse> originalSettingsList =
+                paymentInfo.getPaymentSettings() != null
+                        ? paymentInfo.getPaymentSettings()
+                        : new HashSet<>();
+        originalSettingsList.addAll(paymentSettingsFromPaymentDistributionList);
+        paymentInfo.setPaymentSettings(originalSettingsList);
+        return paymentInfo;
+    }
 
+    @Override
+    public PaymentInfo applyExchange(PaymentInfo paymentInfo) {
         BigDecimal exchangeRate = paymentInfo.getExchangeInfo().getExchangeRate();
         paymentInfo.setBasicSalary(ComputationUtils.exchangeToLocalCurrency(exchangeRate, paymentInfo.getBasicSalary()));
         Set<PaymentSettingsResponse> paymentSettingsResponseSet = new HashSet<>();
@@ -50,19 +65,16 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     @Override
     public PaymentInfo harmoniseToAnnual(PaymentInfo paymentInfo) {
-
         // Determine multiplier from company settings, default YEARLY
         long multiplier =companyMetadataService.getByCompanyId(paymentInfo.getCompanyID())
                 .map(CompanyMetadata::getPaymentEntryMode)
                 .map(this::getMultiplier)
                 .orElse(1L);
-
         Set<PaymentSettingsResponse> updatedSettings = paymentInfo.getPaymentSettings()
                 .stream()
-                .filter(x -> x.getValue() != null) // ignore null values early
+                .filter(x -> x.getValue() != null)
                 .map(setting -> harmonisePaymentSetting(setting, multiplier))
                 .collect(Collectors.toSet());
-
         paymentInfo.setPaymentSettings(updatedSettings);
         return paymentInfo;
     }
@@ -145,10 +157,10 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                         .multiply(pensionFund));
 
         nonTaxableIncomeExemptMap.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION,
-                ComputationUtils.prorate(employeePension, paymentInfo.getNumberOfDaysOfUnpaidAbsence(), salaryFrequency));
+                ComputationUtils.prorate(employeePension, unpaidDays, salaryFrequency));
         pension.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION,
-                ComputationUtils.prorate(employeePension, paymentInfo.getNumberOfDaysOfUnpaidAbsence(), salaryFrequency));
-        BigDecimal voluntaryPensionContribution = getEmployeeMetaData(paymentInfo).getVoluntaryPensionContribution();
+                ComputationUtils.prorate(employeePension, unpaidDays, salaryFrequency));
+        BigDecimal voluntaryPensionContribution =  getEmployeeMetaData(paymentInfo).getVoluntaryPensionContribution();
         pension.put("VOLUNTARY PENSION CONTRIBUTION", voluntaryPensionContribution);
 
         BigDecimal employerPensionContribution = ComputationUtils.roundToTwoDecimalPlaces(
@@ -156,7 +168,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                         .multiply(pensionFund));
 
         pension.put(MapKeys.EMPLOYER_PENSION_CONTRIBUTION,
-                ComputationUtils.prorate(employerPensionContribution, paymentInfo.getNumberOfDaysOfUnpaidAbsence(), salaryFrequency));
+                ComputationUtils.prorate(employerPensionContribution, unpaidDays, salaryFrequency));
         pension.put(MapKeys.TOTAL_PENSION_FOR_EMPLOYEE, getTotal(pension));
 
         ComputationUtils.updateReportSummary(paymentInfo, sessionCalculationObject,
@@ -227,7 +239,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         BigDecimal annualConsolidatedAllowance = getAnnualConsolidatedAllowance(grossPayForTaxPurpose);
         BigDecimal reliefAllowance = annualConsolidatedAllowance.add(annualEmployeePensionAtEightPercent).add(annualVoluntaryPensionContribution).add(nationalHousingFund);
         BigDecimal chargeableIncome = annualGrossSalary.subtract(reliefAllowance);
-
 
         nonTaxableIncomeExemptMap.put("GROSS PAY (TAX PURPOSE)", grossPayForTaxPurpose);
         nonTaxableIncomeExemptMap.put("ANNUAL CONSOLIDATED ALLOWANCE", annualConsolidatedAllowance);
@@ -463,7 +474,12 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     }
 
     private EmployeeMetadata getEmployeeMetaData(PaymentInfo paymentInfo) {
-        return employeeMetadataService.getByEmployeeId(paymentInfo.getEmployeeID()).orElse(null);
+        EmployeeMetadata defaultEmployeeMetadata = EmployeeMetadata.builder()
+                .voluntaryPensionContribution(BigDecimal.ZERO)
+                .isNHFSubscribed(false)
+                .employeeType(EmployeeType.FULL_TIME)
+                .build();
+        return employeeMetadataService.getByEmployeeId(paymentInfo.getEmployeeID()).orElse(defaultEmployeeMetadata);
     }
 
     private PaymentFrequencyEnum getSalaryFrequency(PaymentInfo paymentInfo) {
@@ -471,6 +487,13 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         return (metadata != null && metadata.getSalaryFrequency() != null)
                 ? metadata.getSalaryFrequency()
                 : PaymentFrequencyEnum.MONTHLY;
+    }
+
+    private String getCompanyPaymentDistributionJson(String companyId) {
+        CompanyMetadata metadata = companyMetadataService.getByCompanyId(companyId).orElse(null);
+        return (metadata != null && metadata.getPaymentDistribution() != null)
+                ? metadata.getPaymentDistribution()
+                : null;
     }
 
     private PaymentFrequencyEnum getOffCyclePaymentFrequency(PaymentInfo paymentInfo) {

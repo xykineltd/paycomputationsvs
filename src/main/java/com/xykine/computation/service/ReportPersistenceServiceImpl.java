@@ -22,10 +22,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.xykine.payroll.model.*;
 
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -95,19 +97,19 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     }
 
     private ReportResponse getReportResponse(PaymentComputeResponse paymentComputeResponse, String companyId, String startDate) {
-        // TODO process the variance
         var previousDate = LocalDate.parse(startDate).minusMonths(1);
-        var reportSummary = payrollReportSummaryRepo.findPayrollReportSummaryByStartDateAndCompanyId(previousDate.toString(), companyId);
+        var previousReportSummary = payrollReportSummaryRepo.findPayrollReportSummaryByStartDateAndCompanyId(previousDate.toString(), companyId);
         PaymentInfo paymentInfo = paymentComputeResponse.getReport().get(0);
         long totalNumberOfEmployees = paymentInfo.getTotalNumberOfEmployees();
         PaymentFrequencyEnum paymentFrequency = paymentInfo.getSalaryFrequency();
+
         PayComputeSummaryResponse payComputeSummaryResponse = PayComputeSummaryResponse.builder()
                 .summary(paymentComputeResponse.getSummary())
                 .summaryDetails(paymentComputeResponse.getSummaryDetails())
-                // TODO update the variance values
-                .summaryVariance(processSummaryVariance(paymentComputeResponse.getSummary(), reportSummary))
-                .summaryDetailsVariance(processSummaryDetailsVariance(paymentComputeResponse.getSummaryDetails(), reportSummary))
+                .summaryVariance(processSummaryVariance(paymentComputeResponse.getSummary(), previousReportSummary))
+                .summaryDetailsVariance(processSummaryDetailsVariance(paymentComputeResponse.getSummaryDetails(), previousReportSummary))
                 .build();
+
         PayrollReportSummary payrollReportSummary = PayrollReportSummary.builder()
                 .id(paymentComputeResponse.getId())
                 .companyId(companyId)
@@ -120,6 +122,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 .offCycle(paymentComputeResponse.isOffCycle())
                 .totalNumberOfEmployees(totalNumberOfEmployees)
                 .paymentFrequency(paymentFrequency)
+                .code(generateReportCode(startDate, paymentComputeResponse.isOffCycle(), totalNumberOfEmployees))
                 .build();
         payrollReportSummaryRepo.save(payrollReportSummary);
         saveReportDetails(paymentComputeResponse, companyId, payrollReportSummary.isPayrollApproved());
@@ -135,17 +138,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
         if (previousPayrollReportSummary == null) {
             // If previousPayrollReportSummary is null, set all values to zero
-            currentSummaryDetails.forEach((key, detailsList) -> {
-                List<SummaryDetail> zeroValueDetails = Collections.synchronizedList(new ArrayList<>(
-                        detailsList.stream()
-                                .map(detail -> new SummaryDetail(
-                                        detail.getEmployeeName(),
-                                        detail.getDepartmentName(),
-                                        BigDecimal.ZERO))
-                                .toList()
-                ));
-                summaryDetailsVariance.put(key, zeroValueDetails);
-            });
+            //    summaryDetailsVariance.put("NONE", new ArrayList<>());
+
         } else {
             // If previousPayrollReportSummary is not null, calculate the differences
             var previousSummaryDetails = ReportUtils.transform(previousPayrollReportSummary)
@@ -158,18 +152,19 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 // Map from employee name to previous details for quick lookup
                 Map<String, SummaryDetail> previousDetailsMap = previousDetailsList != null
                         ? previousDetailsList.stream()
-                        .collect(Collectors.toMap(SummaryDetail::getEmployeeName, detail -> detail))
+                        .collect(Collectors.toMap(SummaryDetail::getEmployeeId, detail -> detail))
                         : new HashMap<>();
 
                 // Calculate the differences
                 List<SummaryDetail> varianceDetailsList = Collections.synchronizedList(new ArrayList<>(
                         currentDetailsList.stream()
                                 .map(detail -> {
-                                    SummaryDetail previousDetail = previousDetailsMap.get(detail.getEmployeeName());
+                                    SummaryDetail previousDetail = previousDetailsMap.get(detail.getEmployeeId());
                                     BigDecimal previousValue = previousDetail != null ? previousDetail.getValue() : BigDecimal.ZERO;
                                     BigDecimal difference = detail.getValue().subtract(previousValue);
-                                    return new SummaryDetail(detail.getEmployeeName(), detail.getDepartmentName(), difference);
+                                    return new SummaryDetail(detail.getEmployeeId(), detail.getEmployeeName(), detail.getDepartmentName(), difference);
                                 })
+                                .filter(x -> x.getValue().compareTo(BigDecimal.ZERO) != 0)
                                 .toList()
                 ));
 
@@ -191,6 +186,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             List<SummaryDetail> zeroValueDetails = Collections.synchronizedList(new ArrayList<>(
                     detailsList.stream()
                             .map(detail -> new SummaryDetail(
+                                    detail.getEmployeeId(),
                                     detail.getEmployeeName(),
                                     detail.getDepartmentName(),
                                     BigDecimal.ZERO))
@@ -613,10 +609,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 .map(x -> new ReportAnalytics(
                         x.getStartDate(),
                         x.getTotalNumberOfEmployees(),
-                        // TODO test for performance
                         payrollReportDetailRepo.countBySummaryId(x.getId().toString()),
                         ReportUtils.transform(x).getSummary().getSummary().get(MapKeys.TOTAL_NET_PAY),
-                        //TODO put logic to get the correct status
                         getReportStatus(x),
                         x.getId().toString(),
                         x.getCompanyId(),
@@ -722,7 +716,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                     payrollReportDetail.setPayrollSimulation(paymentComputeResponse.isPayrollSimulation());
                     payrollReportDetail.setPayrollApproved(isPayrollApproved);
                     payrollReportDetail.setOffCycle(paymentComputeResponse.isOffCycle());
-
                     payrollReportDetailRepo.save(payrollReportDetail);
 
                 } catch (Exception e) {
@@ -739,45 +732,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             throw new RuntimeException("Error while saving payroll report details", e);
         }
     }
-
-//    private void saveReportDetails(PaymentComputeResponse paymentComputeResponse, String companyId, boolean isPayrollApproved) {
-//        List<PaymentInfo> paymentInfoList = paymentComputeResponse.getReport();
-//        CompletableFuture<Void> jobFuture = CompletableFuture.supplyAsync(() -> {
-//            paymentInfoList.forEach(x -> {
-//                PayComputeDetailResponse payComputeDetailResponse = PayComputeDetailResponse.builder()
-//                        .report(x)
-//                        .build();
-//                PayrollReportDetail payrollReportDetail = PayrollReportDetail.builder()
-//                        .id(UUID.randomUUID().toString())
-//                        .employeeId(x.getEmployeeID())
-//                        .fullName(payComputeDetailResponse.getReport().getFullName())
-//                        .summaryId(paymentComputeResponse.getId().toString())
-//                        .currency(x.getCurrency().getDescription())
-//                        .currency(x.getCurrency().getCode())
-//                        .exchangeInfo(x.getExchangeInfo())
-//                        .companyId(companyId)
-//                        .offCycleId(paymentComputeResponse.getOffCycleId())
-//                        .departmentId(x.getDepartmentID())
-//                        .startDate(paymentComputeResponse.getStart())
-//                        .endDate((paymentComputeResponse.getEnd()))
-//                        .report(ReportUtils.serializeResponse(payComputeDetailResponse))
-//                        .createdDate(LocalDateTime.now())
-//                        .payrollSimulation(paymentComputeResponse.isPayrollSimulation())
-//                        .payrollApproved(isPayrollApproved)
-//                        .offCycle(paymentComputeResponse.isOffCycle())
-//                        .build();
-//                payrollReportDetailRepo.save(payrollReportDetail);
-//                //LOGGER.info("saving in repo ==> {}", payrollReportDetail);
-//            });
-//            return null;
-//        });
-//        try {
-//            jobFuture.get();
-//        } catch (InterruptedException | ExecutionException e) {
-//            throw new RuntimeException(e);
-//        }
-//    }
-
 
     private void saveReportDetailsSimulate(PaymentComputeResponse paymentComputeResponse, String companyId) {
         List<PaymentInfo> paymentInfoList = paymentComputeResponse.getReport();
@@ -840,6 +794,12 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
         // Convert the result back to a string
         return result.format(formatter);
+    }
+
+    private String generateReportCode(String startDate, boolean isOffCycle, long numberOfEmployees) {
+        YearMonth ym = YearMonth.parse(startDate, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        String codeSuffix = ym.getYear() + "-" + ym.getMonth() + "-" + numberOfEmployees;
+        return isOffCycle ? "PRO-"+ codeSuffix : "PRR-" + codeSuffix;
     }
 
     private void logGenerateReportEvent(String companyId, ReportResponse reportResponse) {
