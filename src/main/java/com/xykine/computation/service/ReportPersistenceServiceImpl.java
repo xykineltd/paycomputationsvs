@@ -394,7 +394,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 //    }
 
 
-
     @Override
     public Map<String, Object> getPayRollReports(String companyId, int page, int size) {
         int safePage = Math.max(0, page);
