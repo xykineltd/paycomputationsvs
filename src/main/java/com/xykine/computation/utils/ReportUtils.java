@@ -4,6 +4,7 @@ import com.xykine.computation.entity.AuditTrail;
 import com.xykine.computation.entity.DashboardGraph;
 import com.xykine.computation.entity.PayrollReportDetail;
 import com.xykine.computation.entity.PayrollReportSummary;
+import com.xykine.computation.entity.simulate.PayrollReportDetailSimulate;
 import com.xykine.computation.entity.simulate.PayrollReportSummarySimulate;
 import com.xykine.computation.response.AuditTrailResponse;
 import com.xykine.computation.response.DashboardGraphResponse;
@@ -69,6 +70,21 @@ public class ReportUtils {
                     .offCycle(x.isOffCycle())
                     .detail(SerializationUtils.deserialize(x.getReport()))
                     .build();
+    }
+
+    public static ReportResponse transform(PayrollReportDetailSimulate x){
+        return ReportResponse.builder()
+                .reportId(x.getId())
+                .companyId(x.getCompanyId())
+                .departmentId(x.getDepartmentId())
+                .employeeId(x.getEmployeeId())
+                .payrollStatus(x.getPayrollStatus())
+                .startDate(x.getStartDate().toString())
+                .endDate(x.getEndDate().toString())
+                .createdDate(String.valueOf(x.getCreatedDate()))
+                .payrollSimulated(x.isPayrollSimulation())
+                .detail(SerializationUtils.deserialize(x.getReport()))
+                .build();
     }
 
     public static ReportResponse transform(PayrollReportSummary payrollReportSummary){
