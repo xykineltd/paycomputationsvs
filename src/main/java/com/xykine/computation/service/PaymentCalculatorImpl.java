@@ -102,8 +102,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         else if (description.contains("OFF CYCLE")) {
             //TODO fix bug here
             long customMultiplier = getMultiplier(setting.getSalaryFrequency());
-//            long customMultiplier = 1L;
-            System.out.printf("customMultiplier: %d\n", customMultiplier);
             setting.setValue(ComputationUtils.harmoniseToAnnual(customMultiplier, setting.getValue()));
             setting.setType(PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT);
         }
