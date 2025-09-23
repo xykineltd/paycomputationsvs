@@ -2,6 +2,10 @@ package com.xykine.computation.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xykine.computation.entity.PayrollReportSummary;
+import com.xykine.computation.entity.PayrollStatus;
+import com.xykine.computation.exceptions.PayrollUnmodifiableException;
+import com.xykine.computation.repo.PayrollReportSummaryRepo;
 import com.xykine.computation.utils.ComputationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,6 +14,7 @@ import com.xykine.computation.response.PaymentComputeResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.xykine.payroll.model.PaymentFrequencyEnum;
 import org.xykine.payroll.model.PaymentInfo;
@@ -29,6 +34,7 @@ import java.util.stream.Collectors;
 public class ComputeService {
 
     private final PaymentCalculator paymentCalculator;
+    private final PayrollReportSummaryRepo payrollReportSummaryRepo;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ComputeService.class);
 
@@ -147,6 +153,14 @@ public class ComputeService {
         result.add(mainCopy);
         result.addAll(offCycleCopies);
         return result;
+    }
+
+    public void validatePayrollIsNotApprovedOrCompleted (String startDate, String companyId) {
+        PayrollReportSummary payroll = payrollReportSummaryRepo
+                .findPayrollReportSummaryByStartDateAndCompanyId(startDate, companyId);
+        if (payroll != null && (payroll.getPayrollStatus().compareTo(PayrollStatus.APPROVED) == 0 || payroll.getPayrollStatus().compareTo(PayrollStatus.COMPLETED)  == 0)) {
+            throw new PayrollUnmodifiableException(startDate);
+        }
     }
 
     private PaymentInfo copyPaymentInfo(PaymentInfo original) {
