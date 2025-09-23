@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.xykine.payroll.model.PaymentInfo;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -41,15 +42,18 @@ public class Compute {
     @PostMapping("/payroll")
     public ReportResponse computePayroll(
             @RequestHeader("Authorization") String authorizationHeader,
-            @RequestBody PaymentInfoRequest paymentRequest) {
+            @RequestBody PaymentInfoRequest paymentRequest) throws IOException, ClassNotFoundException {
 
-        try {
             sessionCalculationObject = OperationUtils.doPreflight(
                     sessionCalculationObject,
                     computationConstantsRepo,
                     employeeMetadataService,
                     paymentRequest
             );
+
+            if (!paymentRequest.isPayrollSimulation() || !paymentRequest.isOffCycle()) {
+                computeService.validatePayrollIsNotApprovedOrCompleted(String.valueOf(paymentRequest.getStart()), paymentRequest.getCompanyId());
+            }
 
             List<PaymentInfo> paymentInfoList = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
             if (paymentInfoList == null || paymentInfoList.isEmpty()) {
@@ -63,13 +67,5 @@ public class Compute {
 
             // Persist and return final report
             return reportPersistenceService.serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
-
-        } catch (PayrollValidationException ex) {
-            LOGGER.warn("Payroll validation failed: {}", ex.getMessage());
-            throw ex;
-        } catch (Exception ex) {
-            LOGGER.error("Unexpected error during payroll computation", ex);
-            throw new PayrollValidationException("Failed to compute payroll. Please contact support.");
-        }
     }
 }

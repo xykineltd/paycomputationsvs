@@ -2,8 +2,11 @@ package com.xykine.computation;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.xykine.computation.config.TestSecurityConfig;
+import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.entity.PayrollStatus;
 import com.xykine.computation.entity.YTDReport;
+import com.xykine.computation.repo.PayrollReportDetailRepo;
+import com.xykine.computation.repo.PayrollReportSummaryRepo;
 import com.xykine.computation.repo.YTDReportRepo;
 import com.xykine.computation.response.DashboardCardResponse;
 import com.xykine.computation.response.ReportResponse;
@@ -45,6 +48,11 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private YTDReportRepo ytdReportRepo;
 
+    @Autowired
+    private PayrollReportDetailRepo payrollReportDetailRepo;
+    @Autowired
+    private PayrollReportSummaryRepo payrollReportSummaryRepo;
+
     //protected static final Logger LOGGER = LoggerFactory.getLogger(ControllerIntegrationTest.class);
 
     @BeforeEach
@@ -56,7 +64,8 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
     @AfterEach
     void cancelReport() {
         // cancel so the data can be reused for other ITs
-        cancelPayroll();
+        payrollReportDetailRepo.deleteAll();
+        payrollReportSummaryRepo.deleteAll();
     }
 
     /****        COMPUTE CONTROLLER ENDPOINTS      *********/
@@ -413,6 +422,22 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void testApprovedCannotBeRolledBack() {
+        // approve the curent payroll
+        approvePayroll();
+        // send the request again
+        webTestClient.post()
+                .uri("/compute/payroll")
+                .headers(headers -> headers.setBearerAuth(jwt.getTokenValue()))
+                .bodyValue(createPayload())
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody()
+                .jsonPath("$.message").isEqualTo("The payroll for this pay period has already been approved and processed and cannot be altered.");
+
+    }
+
+    @Test
     void testGetAllHeadersForReport() {
         AtomicReference<String> reportId = new AtomicReference<>("");
         assertThat(getReportByCompanyId()).isNotNull().satisfies(reportResponses -> {
@@ -517,7 +542,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         });
 
         // cancel so the data can be reused for other ITs
-        cancelPayroll();
+        //cancelPayroll();
     }
 
 
