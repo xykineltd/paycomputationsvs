@@ -226,9 +226,10 @@ public abstract class AbstractIntegrationTest {
         UpdateReportRequest updateReportRequest = new UpdateReportRequest();
         updateReportRequest.setStartDate(LocalDate.now().toString());
         updateReportRequest.setCompanyId(TEST_COMPANY_ID);
+        updateReportRequest.setPayrollStatus(PayrollStatus.APPROVED);
         updateReportRequest.setCancelPayroll(true);
 
-        String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX + "approve").toUriString();
+        String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX + "cancel").toUriString();
         approveReport(url, updateReportRequest);
     }
 

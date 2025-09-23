@@ -275,6 +275,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 .endDate(paymentComputeResponse.getEnd())
                 .report(ReportUtils.serializeResponse(payComputeSummaryResponse))
                 .createdDate(LocalDateTime.now())
+                .payrollStatus(PayrollStatus.PENDING)
                 .payrollSimulation(paymentComputeResponse.isPayrollSimulation())
                 .build();
         payrollReportSummaryRepoSimulate.save(payrollReportSummary);
@@ -508,8 +509,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         }
 
         var payroll = payrollReportSummaryRepo
-                .findPayrollReportSummaryByPayrollStatusAndStartDateAndCompanyId(PayrollStatus.APPROVED, startDate, companyId);
-        if (payroll != null && payroll.getPayrollStatus().compareTo(PayrollStatus.APPROVED) == 0) {
+                .findPayrollReportSummaryByStartDateAndCompanyId(startDate, companyId);
+        if (payroll != null && (payroll.getPayrollStatus().compareTo(PayrollStatus.APPROVED) == 0 || payroll.getPayrollStatus().compareTo(PayrollStatus.COMPLETED)  == 0)) {
             throw new PayrollUnmodifiableException(startDate);
         }
 
