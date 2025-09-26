@@ -26,7 +26,7 @@ public class OperationUtils {
                                                        EmployeeMetadataService employeeMetadataService, PaymentInfoRequest paymentRequest){
 
         ConcurrentHashMap<String, BigDecimal> sessionSummary = new ConcurrentHashMap<>();
-        ConcurrentHashMap<String, List<SummaryDetail>> sessionSummaryDetails = new ConcurrentHashMap<>();
+        ConcurrentHashMap<String, Set<SummaryDetail>> sessionSummaryDetails = new ConcurrentHashMap<>();
         ConcurrentHashMap<String, BigDecimal> computationConstants = new ConcurrentHashMap<>();
 
         sessionSummary.put(MapKeys.TOTAL_NET_PAY, BigDecimal.ZERO);
@@ -38,13 +38,13 @@ public class OperationUtils {
         sessionSummary.put(MapKeys.TOTAL_EMPLOYER_PENSION_CONTRIBUTION, BigDecimal.ZERO);
         sessionCalculationObject.setSummary(sessionSummary);
 
-        sessionSummaryDetails.put(MapKeys.TOTAL_NET_PAY, Collections.synchronizedList(new ArrayList<>()));
-        sessionSummaryDetails.put(MapKeys.TOTAL_GROSS_PAY, Collections.synchronizedList(new ArrayList<>()));
-        sessionSummaryDetails.put(MapKeys.TOTAL_PAYEE_TAX, Collections.synchronizedList(new ArrayList<>()));
-        sessionSummaryDetails.put(MapKeys.TOTAL_EMPLOYEE_PENSION_CONTRIBUTION, Collections.synchronizedList(new ArrayList<>()));
-        sessionSummaryDetails.put(MapKeys.TOTAL_NHF, Collections.synchronizedList(new ArrayList<>()));
-        sessionSummaryDetails.put(MapKeys.TOTAL_PERSONAL_DEDUCTION, Collections.synchronizedList(new ArrayList<>()));
-        sessionSummaryDetails.put(MapKeys.TOTAL_EMPLOYER_PENSION_CONTRIBUTION, Collections.synchronizedList(new ArrayList<>()));
+        sessionSummaryDetails.put(MapKeys.TOTAL_NET_PAY, Collections.synchronizedSet(new HashSet<>()));
+        sessionSummaryDetails.put(MapKeys.TOTAL_GROSS_PAY,Collections.synchronizedSet(new HashSet<>()));
+        sessionSummaryDetails.put(MapKeys.TOTAL_PAYEE_TAX, Collections.synchronizedSet(new HashSet<>()));
+        sessionSummaryDetails.put(MapKeys.TOTAL_EMPLOYEE_PENSION_CONTRIBUTION, Collections.synchronizedSet(new HashSet<>()));
+        sessionSummaryDetails.put(MapKeys.TOTAL_NHF, Collections.synchronizedSet(new HashSet<>()));
+        sessionSummaryDetails.put(MapKeys.TOTAL_PERSONAL_DEDUCTION,Collections.synchronizedSet(new HashSet<>()));
+        sessionSummaryDetails.put(MapKeys.TOTAL_EMPLOYER_PENSION_CONTRIBUTION, Collections.synchronizedSet(new HashSet<>()));
         sessionCalculationObject.setSummaryDetails(sessionSummaryDetails);
 
         employeeMetadataService.preloadAllIntoCache(paymentRequest.getCompanyId());
