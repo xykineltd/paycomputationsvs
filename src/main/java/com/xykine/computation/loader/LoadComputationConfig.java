@@ -61,6 +61,8 @@ public class LoadComputationConfig {
                 .active(false)
                 .build();
 
+        taxRepo.deleteAll();
+
         taxRepo.save(nigeriaOldTaxRule);
         taxRepo.save(nigeriaNewTaxRule);
 
@@ -100,6 +102,10 @@ public class LoadComputationConfig {
                 .value(BigDecimal.valueOf(0.05))
                 .build();
 
+        //Delete everything so that we dont keep adding duplicate data every time we restart
+        computationConstantsRepo.deleteAll();
+
+        //Recreate
         computationConstantsRepo.save(pensionFundPercent);
         computationConstantsRepo.save(nationalHousingFund);
         computationConstantsRepo.save(craFraction);
@@ -145,6 +151,8 @@ public class LoadComputationConfig {
                 .isNHFSubscribed(false)
                 .build();
 
+        employeeMetaDataRepo.deleteAll();
+
         employeeMetaDataRepo.save(contractStaff);
         employeeMetaDataRepo.save(regularStaffWithNHF);
         employeeMetaDataRepo.save(regularStaffNoNHF);
@@ -169,7 +177,15 @@ public class LoadComputationConfig {
                 .salaryFrequency(PaymentFrequencyEnum.MONTHLY)
                 .companyName("xykine inc")
                 .build();
-        companyMetadataRepo.save(xykineCompanyMetadata);
+
+
+        CompanyMetadata xykineCompanyMetadata2 = CompanyMetadata.builder()
+                .companyId("68d6276a019e0574895914dd")
+                .paymentEntryMode(PaymentFrequencyEnum.YEARLY)
+                .salaryFrequency(PaymentFrequencyEnum.MONTHLY)
+                .paymentDistribution(morufoye_international_payment_distribution)
+                .companyName("xykine")
+                .build();
 
         CompanyMetadata morufoyeCompanyMetadata = CompanyMetadata.builder()
                 .companyId("1234567")
@@ -178,6 +194,12 @@ public class LoadComputationConfig {
                 .companyName("morufoye international")
                 .paymentDistribution(morufoye_international_payment_distribution)
                 .build();
+
+
+        companyMetadataRepo.deleteAll();
+        companyMetadataRepo.save(xykineCompanyMetadata);
+        companyMetadataRepo.save(xykineCompanyMetadata2);
         companyMetadataRepo.save(morufoyeCompanyMetadata);
     }
 }
+

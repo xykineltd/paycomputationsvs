@@ -483,6 +483,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 .isNHFSubscribed(false)
                 .employeeType(EmployeeType.FULL_TIME)
                 .build();
+        //TODO work on updating this value from bamboohr or enable UI interface to update
         return employeeMetadataService.getByEmployeeId(paymentInfo.getEmployeeID()).orElse(defaultEmployeeMetadata);
     }
 

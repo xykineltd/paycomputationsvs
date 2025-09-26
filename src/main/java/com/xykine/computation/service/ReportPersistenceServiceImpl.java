@@ -276,7 +276,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 .endDate(paymentComputeResponse.getEnd())
                 .report(ReportUtils.serializeResponse(payComputeSummaryResponse))
                 .createdDate(LocalDateTime.now())
-                .payrollStatus(PayrollStatus.PENDING)
+                .payrollStatus(PayrollStatus.SIMULATED)
                 .payrollSimulation(paymentComputeResponse.isPayrollSimulation())
                 .build();
         payrollReportSummaryRepoSimulate.save(payrollReportSummary);
