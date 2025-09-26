@@ -585,30 +585,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         return res.get();
     }
 
-    /*
-    @Override
-    public List<ReportAnalytics> getReportAnalytics(String companyId) {
-
-        var regularPayrolls =  generateDateFromJanToDecember().stream().map(
-                date -> getReportAnalytics(getPayRollReport(date.toString(), companyId), companyId)
-        ).filter( r -> r.getReportId() != null)
-                .toList();
-
-        // get for the offCyclePayrolls
-        var offCyclePayrolls =  getPayRollReportOffCycle(companyId).stream().map(
-                        reportResponse -> getReportAnalytics(reportResponse, companyId)
-                ).filter( r -> r.getReportId() != null)
-                .toList();
-
-
-        List<ReportAnalytics> mergedList = new ArrayList<>(regularPayrolls);
-
-        mergedList.addAll(offCyclePayrolls);
-        //auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Get report analytics for company id :" +  companyId);
-        return mergedList;
-    }
-     */
-
     @Override
     public List<ReportAnalytics> getReportAnalytics(String companyId, int page, int size) {
         Pageable paging = PageRequest.of(page, size);
@@ -668,12 +644,12 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             paymentInfoList.forEach(x -> {
                 try {
                     PayrollReportDetail existingReport =
-                            payrollReportDetailRepo.findPayrollReportDetailByCompanyIdAndEmployeeIdAndStartDateAndEndDate(
+                            payrollReportDetailRepo.findPayrollReportDetailByCompanyIdAndEmployeeIdAndStartDateAndEndDateAndSummaryId(
                                     companyId,
                                     x.getEmployeeID(),
                                     x.getStartDate(),
-                                    x.getEndDate()
-                            );
+                                    x.getEndDate(),
+                                    String.valueOf(paymentComputeResponse.getId()));
 
                     PaymentInfo paymentInfoToSave = x;
                     if (existingReport != null) {
@@ -750,11 +726,12 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             paymentInfoList.forEach(x -> {
                 try {
                     PayrollReportDetailSimulate existingReport =
-                            payrollReportDetailRepoSimulate.findPayrollReportDetailByCompanyIdAndEmployeeIdAndStartDateAndEndDate(
+                            payrollReportDetailRepoSimulate.findPayrollReportDetailByCompanyIdAndEmployeeIdAndStartDateAndEndDateAndSummaryId(
                                     companyId,
                                     x.getEmployeeID(),
                                     x.getStartDate(),
-                                    x.getEndDate()
+                                    x.getEndDate(),
+                                    String.valueOf(paymentComputeResponse.getId())
                             );
 
                     PaymentInfo paymentInfoToSave = x;
