@@ -63,7 +63,7 @@ public class ComputationUtils {
 
         // Thread-safe update of summaryDetails
         sessionCalculationObject.getSummaryDetails()
-                .computeIfAbsent(key, k -> Collections.synchronizedList(new ArrayList<>()))
+                .computeIfAbsent(key, k -> Collections.synchronizedSet(new HashSet<>()))
                 .add(SummaryDetail.builder()
                         .employeeId(paymentInfo.getEmployeeID())
                         .employeeName(paymentInfo.getFullName())

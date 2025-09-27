@@ -5,7 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Data
@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SessionCalculationObject {
 
     private  ConcurrentHashMap<String, BigDecimal> summary = new ConcurrentHashMap<>();
-    private  ConcurrentHashMap<String, List<SummaryDetail>> summaryDetails = new ConcurrentHashMap<>();
+    private  ConcurrentHashMap<String, Set<SummaryDetail>> summaryDetails = new ConcurrentHashMap<>();
     private  ConcurrentHashMap<String, BigDecimal> computationConstants = new ConcurrentHashMap<>();
 
 }
