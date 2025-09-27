@@ -166,8 +166,36 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 Set<SummaryDetail> currentDetails = currentSummaryDetails.getOrDefault(key, Collections.emptySet());
                 Set<SummaryDetail> previousDetails = previousSummaryDetails.getOrDefault(key, Collections.emptySet());
 
-                Map<String, SummaryDetail> currentMap = currentDetails.stream().collect(Collectors.toMap(SummaryDetail::getEmployeeId, d -> d));
-                Map<String, SummaryDetail> previousMap = previousDetails.stream().collect(Collectors.toMap(SummaryDetail::getEmployeeId, d -> d));
+//                Map<String, SummaryDetail> currentMap = currentDetails.stream().collect(Collectors.toMap(SummaryDetail::getEmployeeId, d -> d));
+
+                Map<String, SummaryDetail> currentMap = currentDetails.stream()
+                        .collect(Collectors.toMap(
+                                SummaryDetail::getEmployeeId,
+                                d -> d,
+                                (existing, incoming) -> new SummaryDetail(
+                                        existing.getEmployeeId(),
+                                        existing.getEmployeeName(),
+                                        existing.getDepartmentName(),
+                                        (existing.getValue() == null ? BigDecimal.ZERO : existing.getValue())
+                                                .add(incoming.getValue() == null ? BigDecimal.ZERO : incoming.getValue())
+                                )
+                        ));
+
+//                Map<String, SummaryDetail> previousMap = previousDetails.stream().collect(Collectors.toMap(SummaryDetail::getEmployeeId, d -> d));
+
+                Map<String, SummaryDetail> previousMap = previousDetails.stream()
+                        .collect(Collectors.toMap(
+                                SummaryDetail::getEmployeeId,
+                                d -> d,
+                                (existing, incoming) -> new SummaryDetail(
+                                        existing.getEmployeeId(),
+                                        existing.getEmployeeName(),
+                                        existing.getDepartmentName(),
+                                        (existing.getValue() == null ? BigDecimal.ZERO : existing.getValue())
+                                                .add(incoming.getValue() == null ? BigDecimal.ZERO : incoming.getValue())
+                                )
+                        ));
+
 
                 Set<SummaryDetail> varianceDetails = new HashSet<>();
 

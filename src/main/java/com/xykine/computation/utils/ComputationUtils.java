@@ -58,13 +58,8 @@ public class ComputationUtils {
 
         value = value != null ? value : BigDecimal.ZERO;
 
-        LOGGER.info("Updating summary for key: {} with value: {}", key, value);
-
         // Atomic update of summary
         sessionCalculationObject.getSummary().merge(key, value, BigDecimal::add);
-
-        LOGGER.info("Updating summary for sessionCalculationObject {}", sessionCalculationObject);
-
 
         // Thread-safe update of summaryDetails
         sessionCalculationObject.getSummaryDetails()
