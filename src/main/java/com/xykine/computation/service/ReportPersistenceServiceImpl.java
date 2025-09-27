@@ -166,8 +166,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 Set<SummaryDetail> currentDetails = currentSummaryDetails.getOrDefault(key, Collections.emptySet());
                 Set<SummaryDetail> previousDetails = previousSummaryDetails.getOrDefault(key, Collections.emptySet());
 
-//                Map<String, SummaryDetail> currentMap = currentDetails.stream().collect(Collectors.toMap(SummaryDetail::getEmployeeId, d -> d));
-
                 Map<String, SummaryDetail> currentMap = currentDetails.stream()
                         .collect(Collectors.toMap(
                                 SummaryDetail::getEmployeeId,
@@ -181,8 +179,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                                 )
                         ));
 
-//                Map<String, SummaryDetail> previousMap = previousDetails.stream().collect(Collectors.toMap(SummaryDetail::getEmployeeId, d -> d));
-
                 Map<String, SummaryDetail> previousMap = previousDetails.stream()
                         .collect(Collectors.toMap(
                                 SummaryDetail::getEmployeeId,
@@ -195,7 +191,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                                                 .add(incoming.getValue() == null ? BigDecimal.ZERO : incoming.getValue())
                                 )
                         ));
-
 
                 Set<SummaryDetail> varianceDetails = new HashSet<>();
 
@@ -512,28 +507,35 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     @Override
     public List<ReportResponse> getPayRollReportsByStatus(String companyId, String status) {
         List<ReportResponse> reports = new ArrayList<>();
-        if (status != null && status.equalsIgnoreCase("SIMULATED")) {
-            reports = getPayRollReportSimulates(companyId);
-        }
-        // TODO create enum for this strings
-        //'COMPLETED. |. PENDING. |. APPROVED. |. SIMULATED'
-        if (status != null && status.equalsIgnoreCase("COMPLETED")) {
-            List<ReportResponse> firstReport = payrollReportSummaryRepo.findAllByPayrollStatusAndCompanyIdOrderByCreatedDateAsc(PayrollStatus.COMPLETED, companyId).stream()
-                    .map(ReportUtils::transform).toList();
-            if (!firstReport.isEmpty()) {
-                reports.add(firstReport.get(0));
+
+        try {
+            if (status != null && status.equalsIgnoreCase("SIMULATED")) {
+                reports = getPayRollReportSimulates(companyId);
             }
+            // TODO create enum for this strings
+            //'COMPLETED. |. PENDING. |. APPROVED. |. SIMULATED'
+            if (status != null && status.equalsIgnoreCase("COMPLETED")) {
+                List<ReportResponse> firstReport = payrollReportSummaryRepo.findAllByPayrollStatusAndCompanyIdOrderByCreatedDateAsc(PayrollStatus.COMPLETED, companyId).stream()
+                        .map(ReportUtils::transform).toList();
+                if (!firstReport.isEmpty()) {
+                    reports.add(firstReport.get(0));
+                }
+            }
+            if (status != null && status.equalsIgnoreCase("APPROVED")) {
+                reports = payrollReportSummaryRepo.findAllByPayrollStatusAndCompanyIdOrderByCreatedDateAsc(PayrollStatus.APPROVED, companyId).stream()
+                        .map(ReportUtils::transform).toList();
+            }
+            if (status != null && status.equalsIgnoreCase("PENDING")) {
+                reports = payrollReportSummaryRepo.findAllByPayrollStatusAndCompanyIdOrderByCreatedDateAsc(PayrollStatus.PENDING, companyId).stream()
+                        .map(ReportUtils::transform).toList();
+            }
+            //auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Pulled payroll report for company id :" + companyId);
+            return reports;
+        } catch (Exception e) {
+            log.error("Error in getPayRollReportsByStatus", e);
+            throw e;
         }
-        if (status != null && status.equalsIgnoreCase("APPROVED")) {
-            reports = payrollReportSummaryRepo.findAllByPayrollStatusAndCompanyIdOrderByCreatedDateAsc(PayrollStatus.APPROVED, companyId).stream()
-                    .map(ReportUtils::transform).toList();
-        }
-        if (status != null && status.equalsIgnoreCase("PENDING")) {
-            reports = payrollReportSummaryRepo.findAllByPayrollStatusAndCompanyIdOrderByCreatedDateAsc(PayrollStatus.PENDING, companyId).stream()
-                    .map(ReportUtils::transform).toList();
-        }
-        //auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Pulled payroll report for company id :" + companyId);
-        return reports;
+
     }
 
     @Override
@@ -730,24 +732,30 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         Pageable paging = PageRequest.of(page, size);
         Page<PayrollReportSummary> payrollReportSummaryPage = payrollReportSummaryRepo.findPayrollReportSummaryByCompanyIdAndPayrollSimulationOrderByCreatedDateDesc(companyId, false, paging);
         log.info(" ======> payrollReportSummaryPage list {}", payrollReportSummaryPage.getTotalElements());
-        var reportAnalytics = payrollReportSummaryPage.getContent()
-                .stream()
-                .filter(r -> r != null && r.getId() != null)
-                .map(x -> new ReportAnalytics(
-                        x.getStartDate(),
-                        x.getTotalNumberOfEmployees(),
-                        payrollReportDetailRepo.countBySummaryId(x.getId().toString()),
-                        ReportUtils.transform(x).getSummary().getSummary().get(MapKeys.TOTAL_NET_PAY),
-                        getReportStatus(x),
-                        x.getId().toString(),
-                        x.getCompanyId(),
-                        x.isOffCycle(),
-                        x.getOffCycleId(),
-                        x.isOffCycle() ? "Off-Cycle" : "Regular",
-                        x.getCreatedDate().toString()
-                ))
-                .toList();
-        return !reportAnalytics.isEmpty() ? reportAnalytics : new ArrayList<>();
+        try {
+            var reportAnalytics = payrollReportSummaryPage.getContent()
+                    .stream()
+                    .filter(r -> r != null && r.getId() != null)
+                    .map(x -> new ReportAnalytics(
+                            x.getStartDate(),
+                            x.getTotalNumberOfEmployees(),
+                            payrollReportDetailRepo.countBySummaryId(x.getId().toString()),
+                            ReportUtils.transform(x).getSummary().getSummary().get(MapKeys.TOTAL_NET_PAY),
+                            getReportStatus(x),
+                            x.getId().toString(),
+                            x.getCompanyId(),
+                            x.isOffCycle(),
+                            x.getOffCycleId(),
+                            x.isOffCycle() ? "Off-Cycle" : "Regular",
+                            x.getCreatedDate().toString()
+                    ))
+                    .toList();
+            return !reportAnalytics.isEmpty() ? reportAnalytics : new ArrayList<>();
+        } catch (Exception e) {
+            LOGGER.error("Error while retrieving report analytics {}", e.getMessage());
+            throw e;
+        }
+
     }
 
     private String getReportStatus(PayrollReportSummary report) {

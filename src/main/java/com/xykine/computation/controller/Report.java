@@ -7,14 +7,21 @@ import com.xykine.computation.request.*;
 
 import com.xykine.computation.response.ReportAnalytics;
 import com.xykine.computation.response.ReportResponse;
+import com.xykine.computation.service.PaymentCalculatorImpl;
 import com.xykine.computation.service.ReportGeneratorService;
 import com.xykine.computation.service.ReportPersistenceService;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -28,6 +35,9 @@ public class Report {
 
     private final ReportPersistenceService reportPersistenceService;
     private final ReportGeneratorService reportGeneratorService;
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(Report.class);
+
 
     @PostMapping("/{companyId}")
     public ResponseEntity<?> getReports(
@@ -43,7 +53,10 @@ public class Report {
 
     @GetMapping("/{companyId}/status/{status}")
     public List<ReportResponse> getReportsByStatus(@PathVariable String companyId, @PathVariable String status) {
-        return reportPersistenceService.getPayRollReportsByStatus(companyId, status);
+        List<ReportResponse> res =  reportPersistenceService.getPayRollReportsByStatus(companyId, status);
+
+        LOGGER.info("Report response--->: {}", res);
+        return res;
     }
 
     @GetMapping("/by-reportId/{reportId}/isSimulate/{isSimulate}")
@@ -67,7 +80,15 @@ public class Report {
                                                      @RequestParam(defaultValue = "0") int page,
                                                      @RequestParam(defaultValue = "12") int size
     ) {
-        return reportPersistenceService.getReportAnalytics(companyId, page, size);
+        try {
+            var respo = reportPersistenceService.getReportAnalytics(companyId, page, size);
+            LOGGER.info("Analytics response--->: {}", respo);
+            return respo;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw e ;
+        }
+
     }
 
     @GetMapping("/get-by-start-date/{companyId}/{startDate}")
@@ -155,7 +176,19 @@ public class Report {
     // fire and forget
     @PostMapping("/download-report")
     public ResponseEntity<byte[]> uploadReport(@RequestBody ReportRequestPayload payload) throws IOException {
-        return new ResponseEntity<>(reportGeneratorService.generateReport(payload), HttpStatus.OK);
+        byte[] excelFile = reportGeneratorService.generateReport(payload);
+
+        // 🔹 Store file locally
+        Path folder = Paths.get("./exports");  // relative folder inside Spring Boot run dir
+        if (!Files.exists(folder)) {
+            Files.createDirectories(folder);
+        }
+        Path filePath = folder.resolve("report-detail.xlsx");
+        try (FileOutputStream fos = new FileOutputStream(filePath.toFile())) {
+            fos.write(excelFile);
+        }
+
+        return new ResponseEntity<>(excelFile, HttpStatus.OK);
     }
 
     @PostMapping("/retrieve-payment-element")

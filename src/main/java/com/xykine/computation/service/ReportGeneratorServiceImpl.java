@@ -15,6 +15,8 @@ import com.xykine.computation.request.RetrieveSummaryElementRequest;
 import com.xykine.computation.response.ReportResponse;
 import com.xykine.computation.utils.ReportUtils;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
@@ -39,6 +41,9 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
     private final PayrollReportSummaryRepo payrollReportSummaryRepo;
     private final ExcelUploadService excelUploadService;
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(ReportGeneratorServiceImpl.class);
+
+
     @Override
     public byte[] generateReport(ReportRequestPayload reportRequestPayload) throws IOException {
         if (reportRequestPayload.getEntityType() == null) {
@@ -51,6 +56,8 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
 
         List<?> source; // raw entities before transform
 
+        LOGGER.info("source ---> reportRequestPayload.isAll(): {}", reportRequestPayload.isAll());
+
         // Decide source based on type + flags
         switch (reportRequestPayload.getEntityType()) {
             case "details" -> {
@@ -58,10 +65,12 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                 List<String> headers = reportRequestPayload.getHeaders();
                 if (reportRequestPayload.isAll()) {
                     source = payrollReportDetailRepo.findByCompanyId(reportRequestPayload.getCompanyID());
+                    LOGGER.info("source --->: {}", source);
                 } else if (!reportRequestPayload.getIds().isEmpty()) {
                     source = payrollReportDetailRepo.findPayrollReportDetailByEmployeeIdInAndCompanyId(reportRequestPayload.getIds(), reportRequestPayload.getCompanyID());
                 } else {
                     source = List.of();
+                    LOGGER.info("source ---> empty: {}", source);
                 }
             }
             case "summary" -> {
@@ -157,6 +166,9 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
 
     private boolean filterByDates(ReportResponse detail, ReportRequestPayload payload) {
         DateRange dateRange = payload.getDateRange();
+        LOGGER.info("Date range--->: {}", dateRange);
+        LOGGER.info("Detail--->: {}", detail);
+
         if (dateRange == null) {
             throw new IllegalArgumentException("Date range cannot be null");
         }
@@ -181,15 +193,14 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         Map<String, Object> raw = extractRawDetail(paymentInfo);
         Map<String, Object> result = new LinkedHashMap<>();
 
+        if (isDetail) {
+            result.put("FULL NAME", paymentInfo.getFullName());
+        }
         selectedReports.forEach(key -> {
             if (raw.containsKey(key)) {
                 result.put(key, raw.get(key));
             }
         });
-
-        if (isDetail) {
-            result.put("FULL NAME", paymentInfo.getFullName());
-        }
 
         return result;
     }
@@ -226,35 +237,59 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
 
             Sheet sheet = workbook.createSheet("Report");
 
-            // Header row
+            // 🔹 Styles
+            CellStyle headerStyle = workbook.createCellStyle();
+            Font headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            headerStyle.setFont(headerFont);
+            headerStyle.setAlignment(HorizontalAlignment.CENTER);
+            headerStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+            CellStyle textStyle = workbook.createCellStyle();
+            textStyle.setAlignment(HorizontalAlignment.LEFT);
+
+            CellStyle numberStyle = workbook.createCellStyle();
+            numberStyle.setAlignment(HorizontalAlignment.RIGHT);
+            DataFormat df = workbook.createDataFormat();
+            numberStyle.setDataFormat(df.getFormat("#,##0.00")); // two decimal places
+
+            // 🔹 Header row
             Row headerRow = sheet.createRow(0);
             for (int i = 0; i < headers.size(); i++) {
-                headerRow.createCell(i).setCellValue(headers.get(i));
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(headers.get(i));
+                cell.setCellStyle(headerStyle);
             }
 
-            // Data rows
+            // 🔹 Data rows
             for (int i = 0; i < dataRows.size(); i++) {
                 Row row = sheet.createRow(i + 1);
                 Map<String, Object> rowData = dataRows.get(i);
+
                 for (int j = 0; j < headers.size(); j++) {
                     Object value = rowData.get(headers.get(j));
                     Cell cell = row.createCell(j);
+
                     if (value instanceof Number) {
                         cell.setCellValue(((Number) value).doubleValue());
+                        cell.setCellStyle(numberStyle);
                     } else if (value != null) {
                         cell.setCellValue(value.toString());
+                        cell.setCellStyle(textStyle);
                     } else {
                         cell.setBlank();
+                        cell.setCellStyle(textStyle);
                     }
                 }
             }
 
             // 🔹 Auto-size all columns, but enforce a minimum width (15 chars)
-            int totalCols = 2 + (dataRows.size() * 2);
+            int totalCols = headers.size();
             for (int i = 0; i < totalCols; i++) {
                 sheet.autoSizeColumn(i);
                 int currentWidth = sheet.getColumnWidth(i);
-                int minWidth = 25 * 256; // 15 characters
+                int minWidth = 15 * 256; // 15 characters
                 if (currentWidth < minWidth) {
                     sheet.setColumnWidth(i, minWidth);
                 }
@@ -267,4 +302,5 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
             return outputStream.toByteArray();
         }
     }
+
 }
