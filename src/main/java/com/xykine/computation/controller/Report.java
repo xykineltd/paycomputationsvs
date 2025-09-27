@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -152,9 +153,9 @@ public class Report {
     }
 
     // fire and forget
-    @PostMapping("/upload-report")
-    public void uploadReport(@RequestBody ReportRequestPayload payload){
-        reportGeneratorService.generateReport(payload);
+    @PostMapping("/download-report")
+    public ResponseEntity<byte[]> uploadReport(@RequestBody ReportRequestPayload payload) throws IOException {
+        return new ResponseEntity<>(reportGeneratorService.generateReport(payload), HttpStatus.OK);
     }
 
     @PostMapping("/retrieve-payment-element")

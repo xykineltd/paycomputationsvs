@@ -166,10 +166,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 Set<SummaryDetail> currentDetails = currentSummaryDetails.getOrDefault(key, Collections.emptySet());
                 Set<SummaryDetail> previousDetails = previousSummaryDetails.getOrDefault(key, Collections.emptySet());
 
-                Map<String, SummaryDetail> currentMap = currentDetails.stream()
-                        .collect(Collectors.toMap(SummaryDetail::getEmployeeId, d -> d));
-                Map<String, SummaryDetail> previousMap = previousDetails.stream()
-                        .collect(Collectors.toMap(SummaryDetail::getEmployeeId, d -> d));
+                Map<String, SummaryDetail> currentMap = currentDetails.stream().collect(Collectors.toMap(SummaryDetail::getEmployeeId, d -> d));
+                Map<String, SummaryDetail> previousMap = previousDetails.stream().collect(Collectors.toMap(SummaryDetail::getEmployeeId, d -> d));
 
                 Set<SummaryDetail> varianceDetails = new HashSet<>();
 
