@@ -135,29 +135,24 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         ConcurrentHashMap<String, Set<SummaryDetail>> summaryDetailsVariance = new ConcurrentHashMap<>();
 
         if (previousPayrollReportSummary == null) {
-            // Treat previous values as zero → variance = current values
+            // Previous null → variance = current values
             currentSummaryDetails.forEach((key, currentDetails) -> {
-                Set<SummaryDetail> varianceDetails = currentDetails.stream()
-                        .map(detail -> new SummaryDetail(
-                                detail.getEmployeeId(),
-                                detail.getEmployeeName(),
-                                detail.getDepartmentName(),
-                                detail.getValue() // variance = current - 0
-                        ))
-                        .filter(d -> d.getValue().compareTo(BigDecimal.ZERO) != 0)
-                        .collect(Collectors.toSet());
-
+                Set<SummaryDetail> varianceDetails = Collections.newSetFromMap(new ConcurrentHashMap<>());
+                currentDetails.forEach(d -> {
+                    if (d.getValue().compareTo(BigDecimal.ZERO) != 0) {
+                        varianceDetails.add(d);
+                    }
+                });
                 if (!varianceDetails.isEmpty()) {
                     summaryDetailsVariance.put(key, varianceDetails);
                 }
             });
-
         } else {
             Map<String, Set<SummaryDetail>> previousSummaryDetails =
                     ReportUtils.transform(previousPayrollReportSummary).getSummary().getSummaryDetails();
 
             // Union of all keys
-            Set<String> allKeys = new HashSet<>();
+            Set<String> allKeys = ConcurrentHashMap.newKeySet();
             allKeys.addAll(currentSummaryDetails.keySet());
             allKeys.addAll(previousSummaryDetails.keySet());
 
@@ -165,47 +160,61 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 Set<SummaryDetail> currentDetails = currentSummaryDetails.getOrDefault(key, Collections.emptySet());
                 Set<SummaryDetail> previousDetails = previousSummaryDetails.getOrDefault(key, Collections.emptySet());
 
-                Map<String, SummaryDetail> currentMap = currentDetails.stream().collect(Collectors.toMap(SummaryDetail::getEmployeeId, d -> d));
-                Map<String, SummaryDetail> previousMap = previousDetails.stream().collect(Collectors.toMap(SummaryDetail::getEmployeeId, d -> d));
+                Map<String, BigDecimal> currentSum = sumByEmployee(currentDetails);
+                Map<String, BigDecimal> previousSum = sumByEmployee(previousDetails);
 
-                Set<SummaryDetail> varianceDetails = new HashSet<>();
+                // Use representative objects for employeeName/department
+                Map<String, SummaryDetail> representativeMap = new ConcurrentHashMap<>();
+                currentDetails.forEach(d -> representativeMap.putIfAbsent(d.getEmployeeId(), d));
+                previousDetails.forEach(d -> representativeMap.putIfAbsent(d.getEmployeeId(), d));
 
-                // Employees in current (variance = current - previous)
-                for (SummaryDetail curr : currentDetails) {
-                    BigDecimal prevValue = previousMap.containsKey(curr.getEmployeeId())
-                            ? previousMap.get(curr.getEmployeeId()).getValue()
-                            : BigDecimal.ZERO;
-                    BigDecimal difference = curr.getValue().subtract(prevValue);
+                Set<SummaryDetail> varianceDetails = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
-                    if (difference.compareTo(BigDecimal.ZERO) != 0) {
+                // Calculate variance for employees present in current
+                currentSum.forEach((empId, currTotal) -> {
+                    BigDecimal prevTotal = previousSum.getOrDefault(empId, BigDecimal.ZERO);
+                    BigDecimal diff = currTotal.subtract(prevTotal);
+                    if (diff.compareTo(BigDecimal.ZERO) != 0) {
+                        SummaryDetail rep = representativeMap.get(empId);
                         varianceDetails.add(new SummaryDetail(
-                                curr.getEmployeeId(),
-                                curr.getEmployeeName(),
-                                curr.getDepartmentName(),
-                                difference
+                                rep.getEmployeeId(),
+                                rep.getEmployeeName(),
+                                rep.getDepartmentName(),
+                                diff
                         ));
                     }
-                }
+                });
 
-                // Employees missing in current but present in previous (negative variance)
-                for (SummaryDetail prev : previousDetails) {
-                    if (!currentMap.containsKey(prev.getEmployeeId())) {
-                        BigDecimal difference = BigDecimal.ZERO.subtract(prev.getValue());
+                // Include negative variance for employees only in previous
+                previousSum.forEach((empId, prevTotal) -> {
+                    if (!currentSum.containsKey(empId)) {
+                        SummaryDetail rep = representativeMap.get(empId);
                         varianceDetails.add(new SummaryDetail(
-                                prev.getEmployeeId(),
-                                prev.getEmployeeName(),
-                                prev.getDepartmentName(),
-                                difference
+                                rep.getEmployeeId(),
+                                rep.getEmployeeName(),
+                                rep.getDepartmentName(),
+                                prevTotal.negate()
                         ));
                     }
-                }
+                });
 
                 if (!varianceDetails.isEmpty()) {
                     summaryDetailsVariance.put(key, varianceDetails);
                 }
             }
         }
+
         return summaryDetailsVariance;
+    }
+
+    private static Map<String, BigDecimal> sumByEmployee(Collection<SummaryDetail> details) {
+        Map<String, BigDecimal> map = new ConcurrentHashMap<>();
+        details.forEach(d -> map.merge(
+                d.getEmployeeId(),
+                d.getValue() == null ? BigDecimal.ZERO : d.getValue(),
+                BigDecimal::add
+        ));
+        return map;
     }
 
     private ConcurrentHashMap<String, Set<SummaryDetail>> processSummaryDetailsVarianceSimulate(
