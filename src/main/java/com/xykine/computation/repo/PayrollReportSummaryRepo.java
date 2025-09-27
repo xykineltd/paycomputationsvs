@@ -6,8 +6,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -31,6 +29,7 @@ public interface PayrollReportSummaryRepo extends MongoRepository<PayrollReportS
     PayrollReportSummary findPayrollReportSummaryByPayrollStatusAndStartDateAndCompanyId(PayrollStatus payrollStatus, String startDate, String companyId);
     void deletePayrollReportSummaryByStartDate(Boolean simulation);
     PayrollReportSummary findPayrollReportSummaryByStartDateAndCompanyId(String startDate, String companyID);
+    Optional<PayrollReportSummary> findTopByCompanyIdAndPayrollStatusAndOffCycleFalseOrderByEndDateDesc(String companyId, PayrollStatus payrollStatus);
     Optional<PayrollReportSummary> findPayrollReportSummaryByIdAndCompanyId(UUID id, String companyId);
 
 }
