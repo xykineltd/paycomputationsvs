@@ -12,7 +12,6 @@ import com.xykine.computation.request.ReportRequestPayload;
 import com.xykine.computation.request.RetrievePaymentElementPayload;
 import com.xykine.computation.request.RetrieveSummaryElementRequest;
 
-import com.xykine.computation.response.GeneratedReportResponse;
 import com.xykine.computation.response.ReportResponse;
 import com.xykine.computation.utils.ReportUtils;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +29,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
 @RequiredArgsConstructor
@@ -54,6 +54,8 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         // Decide source based on type + flags
         switch (reportRequestPayload.getEntityType()) {
             case "details" -> {
+
+                List<String> headers = reportRequestPayload.getHeaders();
                 if (reportRequestPayload.isAll()) {
                     source = payrollReportDetailRepo.findByCompanyId(reportRequestPayload.getCompanyID());
                 } else if (!reportRequestPayload.getIds().isEmpty()) {
@@ -73,12 +75,13 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
             }
             default -> throw new RuntimeException("Invalid report type: " + reportRequestPayload.getEntityType());
         }
-
+        AtomicBoolean isDetail = new AtomicBoolean(false);
         // Transform, filter, and map into data rows
         List<Map<String, Object>> dataRows = source.stream()
                 .filter(Objects::nonNull)
                 .map(obj -> {
                     if (obj instanceof PayrollReportDetail detail) {
+                        isDetail.set(true);
                         return ReportUtils.transform(detail); // returns ReportResponse
                     } else if (obj instanceof PayrollReportSummary summary) {
                         return ReportUtils.transform(summary); // returns ReportResponse
@@ -89,7 +92,8 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                 .filter(detail -> filterByDates(detail, reportRequestPayload))
                 .map(detail -> extractDetail(
                         detail.getDetail().getReport(),
-                        reportRequestPayload.getHeaders()
+                        reportRequestPayload.getHeaders(),
+                        isDetail.get()
                 ))
                 .toList();
 
@@ -119,11 +123,11 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
 
     @Override
     public List<Map<String, Object>> retrievePaymentElementFromReport(RetrievePaymentElementPayload retrievePaymentElementPayload) {
-       return payrollReportDetailRepo
+        return payrollReportDetailRepo
                 .findPayrollReportDetailBySummaryId(retrievePaymentElementPayload.getReportId()).stream()
                 .filter(Objects::nonNull)
                 .map(ReportUtils::transform)
-                .map(detail -> extractDetail(detail.getDetail().getReport(), retrievePaymentElementPayload.getSelectedHeader()))
+                .map(detail -> extractDetail(detail.getDetail().getReport(), retrievePaymentElementPayload.getSelectedHeader(), true))
                 .toList();
     }
 
@@ -132,7 +136,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         Map<String, Object> result = new HashMap<>();
 
         try {
-                payrollReportSummaryRepo
+            payrollReportSummaryRepo
                     .findPayrollReportSummaryByIdAndCompanyId(UUID.fromString(request.getReportId()), request.getCompanyId())
                     .ifPresentOrElse(payrollReportSummary -> {
                         ReportResponse reportResponse = ReportUtils.transform(payrollReportSummary);
@@ -173,7 +177,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                 && !startDateInstance.isAfter(dateRange.getEndDate());
     }
 
-    private Map<String, Object> extractDetail(PaymentInfo paymentInfo, List<String> selectedReports) {
+    private Map<String, Object> extractDetail(PaymentInfo paymentInfo, List<String> selectedReports, boolean isDetail) {
         Map<String, Object> raw = extractRawDetail(paymentInfo);
         Map<String, Object> result = new LinkedHashMap<>();
 
@@ -182,6 +186,10 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                 result.put(key, raw.get(key));
             }
         });
+
+        if (isDetail) {
+            result.put("FULL NAME", paymentInfo.getFullName());
+        }
 
         return result;
     }
@@ -240,6 +248,20 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                     }
                 }
             }
+
+            // 🔹 Auto-size all columns, but enforce a minimum width (15 chars)
+            int totalCols = 2 + (dataRows.size() * 2);
+            for (int i = 0; i < totalCols; i++) {
+                sheet.autoSizeColumn(i);
+                int currentWidth = sheet.getColumnWidth(i);
+                int minWidth = 25 * 256; // 15 characters
+                if (currentWidth < minWidth) {
+                    sheet.setColumnWidth(i, minWidth);
+                }
+            }
+
+            // 🔹 Freeze header row
+            sheet.createFreezePane(0, 1);
 
             workbook.write(outputStream);
             return outputStream.toByteArray();
