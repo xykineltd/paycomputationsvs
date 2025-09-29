@@ -16,7 +16,7 @@ public class CompanyMetadataService {
     private final CompanyMetaDataRepo companyMetadataRepo;
 
     //TODO the Cacheable is returning even something not in the database bcos we already deleted them
-    @Cacheable(value = "companyMetadata", key = "#companyId")
+//    @Cacheable(value = "companyMetadata", key = "#companyId")
     public Optional<CompanyMetadata> getByCompanyId(String companyId) {
         return companyMetadataRepo.findByCompanyId(companyId);
 

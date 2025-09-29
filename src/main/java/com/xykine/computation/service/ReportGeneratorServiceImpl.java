@@ -56,8 +56,6 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
 
         List<?> source; // raw entities before transform
 
-        LOGGER.info("source ---> reportRequestPayload.isAll(): {}", reportRequestPayload.isAll());
-
         // Decide source based on type + flags
         switch (reportRequestPayload.getEntityType()) {
             case "details" -> {
@@ -65,12 +63,10 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                 List<String> headers = reportRequestPayload.getHeaders();
                 if (reportRequestPayload.isAll()) {
                     source = payrollReportDetailRepo.findByCompanyId(reportRequestPayload.getCompanyID());
-                    LOGGER.info("source --->: {}", source);
                 } else if (!reportRequestPayload.getIds().isEmpty()) {
                     source = payrollReportDetailRepo.findPayrollReportDetailByEmployeeIdInAndCompanyId(reportRequestPayload.getIds(), reportRequestPayload.getCompanyID());
                 } else {
                     source = List.of();
-                    LOGGER.info("source ---> empty: {}", source);
                 }
             }
             case "summary" -> {
@@ -166,8 +162,6 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
 
     private boolean filterByDates(ReportResponse detail, ReportRequestPayload payload) {
         DateRange dateRange = payload.getDateRange();
-        LOGGER.info("Date range--->: {}", dateRange);
-        LOGGER.info("Detail--->: {}", detail);
 
         if (dateRange == null) {
             throw new IllegalArgumentException("Date range cannot be null");
@@ -243,8 +237,11 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
             headerFont.setBold(true);
             headerStyle.setFont(headerFont);
             headerStyle.setAlignment(HorizontalAlignment.CENTER);
+            headerStyle.setVerticalAlignment(VerticalAlignment.CENTER); // center vertically
             headerStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
             headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            headerStyle.setWrapText(true); // allow long headers to wrap to multiple lines
+
 
             CellStyle textStyle = workbook.createCellStyle();
             textStyle.setAlignment(HorizontalAlignment.LEFT);
@@ -254,8 +251,10 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
             DataFormat df = workbook.createDataFormat();
             numberStyle.setDataFormat(df.getFormat("#,##0.00")); // two decimal places
 
-            // 🔹 Header row
+            // Header row
             Row headerRow = sheet.createRow(0);
+            headerRow.setHeightInPoints(30); // Increase header row height (default ~15)
+
             for (int i = 0; i < headers.size(); i++) {
                 Cell cell = headerRow.createCell(i);
                 cell.setCellValue(headers.get(i));

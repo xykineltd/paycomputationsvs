@@ -28,7 +28,21 @@ spring:
       timeout: 1s
 
     mongodb:
-      uri: ${SPRING_DATA_MONGODB_URI:mongodb://root:rootpassword@localhost:27017/dev_db?authSource=admin}
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://root:rootpassword@localhost:27017/test_db?authSource=admin&connectTimeoutMS=30000&serverSelectionTimeoutMS=30000&socketTimeoutMS=90000&directConnection=true}
+      database: ${MONGO_DB_NAME:test_db}
+
+mongodb:
+  pool:
+    max-size: 50
+    min-size: 5
+    max-wait-time-ms: 30000      # 30s
+    max-connection-idle-ms: 600000 # 10 minutes
+  socket:
+    connect-timeout-ms: 10000    # 10s
+    read-timeout-ms: 30000       # 30s
+  heartbeat:
+    frequency-ms: 10000          # 10s
+    min-frequency-ms: 5000       # 5s
 
 admin:
   service:

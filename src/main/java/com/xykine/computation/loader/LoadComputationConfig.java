@@ -180,7 +180,7 @@ public class LoadComputationConfig {
 
 
         CompanyMetadata xykineCompanyMetadata2 = CompanyMetadata.builder()
-                .companyId("68d6276a019e0574895914dd")
+                .companyId("68d86f8ec74ca27e1e48125f")
                 .paymentEntryMode(PaymentFrequencyEnum.YEARLY)
                 .salaryFrequency(PaymentFrequencyEnum.MONTHLY)
                 .paymentDistribution(morufoye_international_payment_distribution)

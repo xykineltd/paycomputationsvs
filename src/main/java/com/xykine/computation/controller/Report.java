@@ -13,8 +13,7 @@ import com.xykine.computation.service.ReportPersistenceService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.FileOutputStream;
@@ -80,15 +79,8 @@ public class Report {
                                                      @RequestParam(defaultValue = "0") int page,
                                                      @RequestParam(defaultValue = "12") int size
     ) {
-        try {
             var respo = reportPersistenceService.getReportAnalytics(companyId, page, size);
-            LOGGER.info("Analytics response--->: {}", respo);
             return respo;
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw e ;
-        }
-
     }
 
     @GetMapping("/get-by-start-date/{companyId}/{startDate}")
@@ -175,20 +167,38 @@ public class Report {
 
     // fire and forget
     @PostMapping("/download-report")
-    public ResponseEntity<byte[]> uploadReport(@RequestBody ReportRequestPayload payload) throws IOException {
-        byte[] excelFile = reportGeneratorService.generateReport(payload);
+    public ResponseEntity<byte[]> uploadReport(@RequestBody ReportRequestPayload request) throws IOException {
+        byte[] excelFile = reportGeneratorService.generateReport(request);
 
         // 🔹 Store file locally
-        Path folder = Paths.get("./exports");  // relative folder inside Spring Boot run dir
-        if (!Files.exists(folder)) {
-            Files.createDirectories(folder);
-        }
-        Path filePath = folder.resolve("report-detail.xlsx");
-        try (FileOutputStream fos = new FileOutputStream(filePath.toFile())) {
-            fos.write(excelFile);
-        }
+//        Path folder = Paths.get("./exports");  // relative folder inside Spring Boot run dir
+//        if (!Files.exists(folder)) {
+//            Files.createDirectories(folder);
+//        }
+//        Path filePath = folder.resolve("report-detail.xlsx");
+//        try (FileOutputStream fos = new FileOutputStream(filePath.toFile())) {
+//            fos.write(excelFile);
+//        }
 
-        return new ResponseEntity<>(excelFile, HttpStatus.OK);
+        String fileName = "payroll-report." +
+                (request.getDocType().equalsIgnoreCase("pdf") ? "pdf" : "xlsx");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(
+                request.getDocType().equalsIgnoreCase("pdf") ?
+                        MediaType.APPLICATION_PDF :
+                        MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        );
+
+        headers.setContentDisposition(
+                ContentDisposition.attachment()
+                        .filename(fileName)
+                        .build()
+        );
+
+        headers.setCacheControl(CacheControl.noCache().getHeaderValue());
+
+        return new ResponseEntity<>(excelFile, headers, HttpStatus.OK);
     }
 
     @PostMapping("/retrieve-payment-element")
