@@ -22,6 +22,8 @@ public class SecurityConfig {
 						authorizeRequests
 								.requestMatchers("/**")
 								.hasAuthority("SCOPE_payroll.read")
+								.requestMatchers("/actuator/prometheus").permitAll()
+								.requestMatchers("/actuator/health").permitAll()
 				)
 				.addFilterBefore(keycloakJwtFilter, UsernamePasswordAuthenticationFilter.class)
 			   .oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt);
