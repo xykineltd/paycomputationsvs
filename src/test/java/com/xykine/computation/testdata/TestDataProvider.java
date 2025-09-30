@@ -504,6 +504,72 @@ public class TestDataProvider {
                              ]
             """;
 
+    public static String STANDARD_PAYROLL_ENTRY_WITH_PERFORMANCE_BONUS_DISTRIBUTION_LIST_CUSTOM_TAX_RELEIF  =
+            """
+                   [
+                     {
+                                 "id": null,
+                                 "numberOfDaysOfUnpaidAbsence": 2,
+                                 "startDate": "2025-06-01",
+                                 "endDate": "2025-06-30",
+                                 "employeeID": "8654321",
+                                 "companyID": "1234567",
+                                 "completed": false,
+                                 "employeeIsLock": false,
+                                 "paymentSettings": [
+                                   {
+                                     "paymentSettingID": null,
+                                     "employeeID": "682cf69592b07e60fa10991b",
+                                     "type": "OFF_CYCLE_PAYMENT_AMOUNT",
+                                     "name": "MONTHLY PERFORMANCE BONUS",
+                                     "value":  15,
+                                     "currency": "NGN",
+                                     "salaryFrequency": "MONTHLY",
+                                     "active": false,
+                                     "pensionable": false,
+                                     "prorated": false,
+                                     "createdDate": null,
+                                     "lastModifiedDate": null,
+                                     "createdBy": null,
+                                     "lastModifiedBy": null,
+                                     "version": 0
+                                   },
+                                   {
+                                     "paymentSettingID": null,
+                                     "employeeID": "682cf69592b07e60fa10991b",
+                                     "type": "OFF_CYCLE_PAYMENT_AMOUNT",
+                                     "name": "OVERTIME GROSS",
+                                     "value":  58817.24,
+                                     "currency": "NGN",
+                                     "salaryFrequency": "MONTHLY",
+                                     "active": false,
+                                     "pensionable": false,
+                                     "prorated": false,
+                                     "createdDate": null,
+                                     "lastModifiedDate": null,
+                                     "createdBy": null,
+                                     "lastModifiedBy": null,
+                                     "version": 0
+                                   }
+                                 ],
+                                 "basicSalary": 10351833.82,
+                                 "fullName": "Maudie Steuber",
+                                 "offCycleID": null,
+                                 "offCycle": false,
+                                 "offCycleActualValueSupplied": false,
+                                 "currency": "NGN",
+                                 "salaryFrequency": "MONTHLY",
+                                 "exchangeInfo": {
+                                   "currency": "NGN",
+                                   "rateDateAndTime": null,
+                                   "exchangeRate": 1.0
+                                 },
+                                 "totalNumberOfEmployees": 1,
+                                 "ytdReport": null
+                               }
+                             ]
+            """;
+
     public static String OFF_CYCLE  =
             """
                     [

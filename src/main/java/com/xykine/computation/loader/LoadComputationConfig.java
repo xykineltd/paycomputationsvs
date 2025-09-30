@@ -1,6 +1,7 @@
 package com.xykine.computation.loader;
 
 
+import com.xykine.computation.domain.LoanStatus;
 import com.xykine.computation.entity.*;
 import com.xykine.computation.repo.*;
 import lombok.AllArgsConstructor;
@@ -25,7 +26,7 @@ public class LoadComputationConfig {
 	private final DashboardCardRepo dashboardCardRepo;
     private final EmployeeMetadataRepo employeeMetaDataRepo;
     private final CompanyMetaDataRepo companyMetadataRepo;
-
+    private final LoanRepo loanRepo;
 
     @EventListener(ApplicationReadyEvent.class)
     public void loadLegalEntityTestData() {
@@ -140,6 +141,7 @@ public class LoadComputationConfig {
 
                 .employeeType(EmployeeType.FULL_TIME)
                 .isNHFSubscribed(false)
+                .customTaxReliefApplicable(BigDecimal.ZERO)
                 .voluntaryPensionContribution(BigDecimal.ZERO)
 
                 .build();
@@ -153,6 +155,16 @@ public class LoadComputationConfig {
 
         employeeMetaDataRepo.deleteAll();
 
+        EmployeeMetadata regularStaffWithCustomTaxReleif = EmployeeMetadata.builder()
+                .employeeId("8654321")
+                .companyId("1234567")
+                .employeeType(EmployeeType.FULL_TIME)
+                .isNHFSubscribed(false)
+                .customTaxReliefApplicable(BigDecimal.valueOf(50000))
+                .voluntaryPensionContribution(BigDecimal.ZERO)
+                .build();
+
+        employeeMetaDataRepo.save(regularStaffWithCustomTaxReleif);
         employeeMetaDataRepo.save(contractStaff);
         employeeMetaDataRepo.save(regularStaffWithNHF);
         employeeMetaDataRepo.save(regularStaffNoNHF);
@@ -200,6 +212,19 @@ public class LoadComputationConfig {
         companyMetadataRepo.save(xykineCompanyMetadata);
         companyMetadataRepo.save(xykineCompanyMetadata2);
         companyMetadataRepo.save(morufoyeCompanyMetadata);
+
+        Loan loan = Loan.builder()
+                .companyId("1234567")
+                .employeeId("7654321")
+                .status(LoanStatus.APPROVED)
+                .principalAmount(BigDecimal.valueOf(1000000))
+                .outstandingAmount(BigDecimal.valueOf(1000000))
+                .scheduledRepaymentAmount(BigDecimal.valueOf(10000))
+                .description("Company Car Loan")
+                .active(true)
+                .build();
+        loanRepo.save(loan);
     }
+
 }
 

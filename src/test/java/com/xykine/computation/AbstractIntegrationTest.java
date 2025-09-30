@@ -82,11 +82,32 @@ public abstract class AbstractIntegrationTest {
         return paymentInfoRequest;
     }
 
+    protected  PaymentInfoRequest customCreatePayload(String companyId) {
+        PaymentInfoRequest paymentInfoRequest = new PaymentInfoRequest();
+        paymentInfoRequest.setCompanyId(companyId);
+        paymentInfoRequest.setPayrollSimulation(false);
+        paymentInfoRequest.setStart(LocalDate.parse("2025-06-01"));
+        paymentInfoRequest.setEnd(LocalDate.parse("2025-06-30"));
+        return paymentInfoRequest;
+    }
+
     ReportResponse getReportSummary() {
         return webTestClient.post()
                 .uri("/compute/payroll")
                 .headers(headers -> headers.setBearerAuth(jwt.getTokenValue()))
                 .bodyValue(createPayload())
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(ReportResponse.class)
+                .returnResult()
+                .getResponseBody();
+    }
+
+    ReportResponse getReportSummaryCustom(String companyId) {
+        return webTestClient.post()
+                .uri("/compute/payroll")
+                .headers(headers -> headers.setBearerAuth(jwt.getTokenValue()))
+                .bodyValue(customCreatePayload(companyId))
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(ReportResponse.class)
@@ -215,6 +236,13 @@ public abstract class AbstractIntegrationTest {
         updateReportRequest.setCompanyId(TEST_COMPANY_ID);
         updateReportRequest.setPayrollStatus(PayrollStatus.APPROVED);
 
+        String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX + "approve").toUriString();
+        approveReport(url, updateReportRequest);
+    }
+
+    void approvePayroll(UpdateReportRequest updateReportRequest) {
+        // @PutMapping("/approve")
+        String URL_PREFIX = "http://localhost:" + port + "/compute/reports/";
         String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX + "approve").toUriString();
         approveReport(url, updateReportRequest);
     }
