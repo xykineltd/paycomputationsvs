@@ -2,6 +2,7 @@ package com.xykine.computation.utils;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xykine.computation.entity.Loan;
 import com.xykine.computation.entity.PaymentDistribution;
 import com.xykine.computation.entity.TaxRule;
 import com.xykine.computation.response.SummaryDetail;
@@ -12,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.xykine.payroll.model.PaymentFrequencyEnum;
 import org.xykine.payroll.model.PaymentInfo;
 import org.xykine.payroll.model.PaymentSettingsResponse;
+import org.xykine.payroll.model.enums.CurrencyEnum;
 import org.xykine.payroll.model.enums.PaymentTypeEnum;
 
 import java.math.BigDecimal;
@@ -219,6 +221,25 @@ public class ComputationUtils {
             copy.setValue(distributedValue);
             result.add(copy);
         }
+        return result;
+    }
+
+    public static Set<PaymentSettingsResponse> getEmployeeDeductions(List<Loan> loans) {
+        Set<PaymentSettingsResponse> result = new HashSet<>();
+        if (loans.isEmpty()) {
+            return result;
+        }
+        loans.stream().forEach(x -> {
+            PaymentSettingsResponse loan = new PaymentSettingsResponse();
+            loan.setEmployeeID(x.getEmployeeId());
+            loan.setCurrency(CurrencyEnum.NGN);
+            loan.setSalaryFrequency(PaymentFrequencyEnum.MONTHLY);
+            loan.setActive(true);
+            loan.setValue(x.getScheduledRepaymentAmount());
+            loan.setName(x.getDescription());
+            loan.setType(PaymentTypeEnum.DEDUCTION_MONTHLY);
+            result.add(loan);
+        });
         return result;
     }
 }

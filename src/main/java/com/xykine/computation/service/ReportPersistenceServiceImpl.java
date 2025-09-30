@@ -1,13 +1,13 @@
 package com.xykine.computation.service;
 
-import com.xykine.computation.entity.PayrollStatus;
-import com.xykine.computation.entity.YTDReport;
+import com.xykine.computation.entity.*;
 import com.xykine.computation.repo.PayrollReportDetailRepo;
 import com.xykine.computation.repo.PayrollReportSummaryRepo;
 import com.xykine.computation.repo.YTDReportRepo;
 import com.xykine.computation.repo.simulate.PayrollReportDetailSimulateRepo;
 import com.xykine.computation.repo.simulate.PayrollReportSummarySimulateRepo;
 import com.xykine.computation.request.ReportByTypeRequest;
+import com.xykine.computation.request.UpdateLoanRequest;
 import com.xykine.computation.request.UpdateReportRequest;
 import com.xykine.computation.response.*;
 
@@ -37,14 +37,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
-import com.xykine.computation.entity.PayrollReportDetail;
-import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.entity.simulate.PayrollReportDetailSimulate;
 import com.xykine.computation.entity.simulate.PayrollReportSummarySimulate;
 import com.xykine.computation.exceptions.PayrollReportNotException;
 import com.xykine.computation.exceptions.PayrollUnmodifiableException;
 import com.xykine.computation.utils.ReportUtils;
 import com.xykine.computation.utils.AppConstants;
+import org.xykine.payroll.model.enums.PaymentTypeEnum;
 
 @Slf4j
 @Service
@@ -61,6 +60,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     private final DashboardDataService dashboardDataService;
     private final YTDReportRepo ytdReportRepo;
     private final PayrollReportDetailSimulateRepo payrollReportDetailSimulateRepo;
+    private final LoanService loanService;
+    private final PayrollAsyncService payrollAsyncService;
 
     @Transactional
     public ReportResponse serializeAndSaveReport(PaymentComputeResponse paymentComputeResponse, String companyId)
@@ -481,18 +482,21 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         if (request.isOffCycle()) {
             existingSummaryReport = payrollReportSummaryRepo
                     .findPayrollReportSummaryByCompanyIdAndOffCycleId(request.getCompanyId(), request.getOffCycleId());
-
             updateDashboardData(AppConstants.payrollCountOffCycle, existingSummaryReport);
         } else {
             existingSummaryReport = payrollReportSummaryRepo
                     .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(request.getStartDate(), request.getCompanyId(), false);
-
+            LOGGER.info("===== existingSummaryReport {} ", existingSummaryReport);
             updateDashboardData(AppConstants.payrollCountRegular, existingSummaryReport);
         }
         existingSummaryReport.setPayrollStatus(request.getPayrollStatus());
-        var reportResponse = payrollReportSummaryRepo.save(existingSummaryReport);
+        PayrollReportSummary reportResponse = payrollReportSummaryRepo.save(existingSummaryReport);
         //TODO update the detail report once the payroll is approved
         logApproveReportEvent(request.getCompanyId(), reportResponse);
+        if (request.getPayrollStatus().equals(PayrollStatus.APPROVED)) {
+            payrollAsyncService.updateEmployeeLoanAsync(existingSummaryReport.getId().toString(), request.getCompanyId());
+            payrollAsyncService.updateDetailStatusAsync(existingSummaryReport.getId().toString());
+        }
         return existingSummaryReport;
     }
 

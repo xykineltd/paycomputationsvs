@@ -5,6 +5,7 @@ import org.xykine.payroll.model.PaymentInfo;
 public interface PaymentCalculator {
     PaymentInfo expandPaymentSettingsFromGrossAnnual(PaymentInfo paymentInfo);
     PaymentInfo applyExchange(PaymentInfo paymentInfo);
+    PaymentInfo addPersonalDeduction(PaymentInfo paymentInfo);
     PaymentInfo harmoniseToAnnual(PaymentInfo paymentInfo);
     PaymentInfo computeGrossPay(PaymentInfo paymentInfo);
     PaymentInfo computeNonTaxableIncomeExempt(PaymentInfo paymentInfo);

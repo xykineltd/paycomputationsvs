@@ -1,9 +1,13 @@
 package com.xykine.computation.service;
 
+import com.xykine.computation.domain.LoanStatus;
+import com.xykine.computation.dto.LoanFilter;
 import com.xykine.computation.entity.*;
 import com.xykine.computation.repo.TaxRepo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.xykine.payroll.model.*;
 
 import org.xykine.payroll.model.enums.PaymentTypeEnum;
@@ -16,7 +20,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.xykine.computation.utils.ComputationUtils.*;
 
@@ -28,6 +31,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     private final EmployeeMetadataService employeeMetadataService;
     private final CompanyMetadataService companyMetadataService;
     private final TaxRepo taxRepo;
+    private final LoanService loanService;
 
     protected static final Logger LOGGER = LoggerFactory.getLogger(PaymentCalculatorImpl.class);
 
@@ -60,6 +64,22 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                     paymentSettingsResponseSet.add(x);
                 });
         paymentInfo.setPaymentSettings(paymentSettingsResponseSet);
+        return paymentInfo;
+    }
+
+    @Override
+    public PaymentInfo addPersonalDeduction(PaymentInfo paymentInfo) {
+        if (paymentInfo.isOffCycle()) {return paymentInfo;}
+        LoanFilter loanFilter = new LoanFilter();
+        loanFilter.setCompanyId(paymentInfo.getCompanyID());
+        loanFilter.setEmployeeId(paymentInfo.getEmployeeID());
+        loanFilter.setStatus(LoanStatus.APPROVED);
+        Page<Loan> employeeLoansPage = loanService.getLoans(loanFilter, Pageable.unpaged());
+        List<Loan> employeeLoansList = employeeLoansPage.getContent();
+        Set<PaymentSettingsResponse> employeePersonalDeductionSet = ComputationUtils.getEmployeeDeductions(employeeLoansList);
+        Set<PaymentSettingsResponse> originalSettingsList = paymentInfo.getPaymentSettings() != null ? paymentInfo.getPaymentSettings() : new HashSet<>();
+        originalSettingsList.addAll(employeePersonalDeductionSet);
+        paymentInfo.setPaymentSettings(originalSettingsList);
         return paymentInfo;
     }
 
@@ -229,6 +249,8 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         BigDecimal annualGrossSalary = paymentInfo.getBasicSalary();
         BigDecimal voluntaryPensionContribution = getEmployeeMetaData(paymentInfo).getVoluntaryPensionContribution();
         BigDecimal annualVoluntaryPensionContribution = voluntaryPensionContribution.multiply(BigDecimal.valueOf(12));
+        BigDecimal customTaxReleifApplicable = getEmployeeMetaData(paymentInfo).getCustomTaxReliefApplicable();
+        BigDecimal annualCustomTaxReleifApplicable = customTaxReleifApplicable.multiply(BigDecimal.valueOf(12));
 
         BigDecimal annualEmployeePensionAtEightPercent = ComputationUtils.roundToTwoDecimalPlaces(
                 sessionCalculationObject.getComputationConstants().get("pensionFundPercent")
@@ -237,9 +259,10 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         annualEmployeePensionAtEightPercent = ComputationUtils.roundToTwoDecimalPlaces(annualEmployeePensionAtEightPercent.subtract(annualVoluntaryPensionContribution));
         BigDecimal grossPayForTaxPurpose = annualGrossSalary.subtract(annualEmployeePensionAtEightPercent).subtract(voluntaryPensionContribution);
         BigDecimal annualConsolidatedAllowance = getAnnualConsolidatedAllowance(grossPayForTaxPurpose);
-        BigDecimal reliefAllowance = annualConsolidatedAllowance.add(annualEmployeePensionAtEightPercent).add(annualVoluntaryPensionContribution).add(nationalHousingFund);
+        BigDecimal reliefAllowance = annualConsolidatedAllowance.add(annualEmployeePensionAtEightPercent).add(annualVoluntaryPensionContribution).add(nationalHousingFund).add(annualCustomTaxReleifApplicable);
         BigDecimal chargeableIncome = annualGrossSalary.subtract(reliefAllowance);
 
+        nonTaxableIncomeExemptMap.put("CUSTOM TAX RELIEF APPLICABLE", customTaxReleifApplicable);
         nonTaxableIncomeExemptMap.put("GROSS PAY (TAX PURPOSE)", grossPayForTaxPurpose);
         nonTaxableIncomeExemptMap.put("ANNUAL CONSOLIDATED ALLOWANCE", annualConsolidatedAllowance);
         nonTaxableIncomeExemptMap.put("ANNUAL EMPLOYEE PENSION @ 8%", annualEmployeePensionAtEightPercent);
@@ -248,7 +271,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         nonTaxableIncomeExemptMap.put("ANNUAL VOLUNTARY PENSION CONTRIBUTION", annualVoluntaryPensionContribution);
 
         paymentInfo.setTaxRelief(nonTaxableIncomeExemptMap);
-
         return paymentInfo;
     }
 
@@ -478,6 +500,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 .voluntaryPensionContribution(BigDecimal.ZERO)
                 .isNHFSubscribed(false)
                 .employeeType(EmployeeType.FULL_TIME)
+                .customTaxReliefApplicable(BigDecimal.ZERO)
                 .build();
         return employeeMetadataService.getByEmployeeId(paymentInfo.getEmployeeID()).orElse(defaultEmployeeMetadata);
     }
