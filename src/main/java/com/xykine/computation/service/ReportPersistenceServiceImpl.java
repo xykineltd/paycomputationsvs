@@ -1,13 +1,13 @@
 package com.xykine.computation.service;
 
-import com.xykine.computation.entity.PayrollStatus;
-import com.xykine.computation.entity.YTDReport;
+import com.xykine.computation.entity.*;
 import com.xykine.computation.repo.PayrollReportDetailRepo;
 import com.xykine.computation.repo.PayrollReportSummaryRepo;
 import com.xykine.computation.repo.YTDReportRepo;
 import com.xykine.computation.repo.simulate.PayrollReportDetailSimulateRepo;
 import com.xykine.computation.repo.simulate.PayrollReportSummarySimulateRepo;
 import com.xykine.computation.request.ReportByTypeRequest;
+import com.xykine.computation.request.UpdateLoanRequest;
 import com.xykine.computation.request.UpdateReportRequest;
 import com.xykine.computation.response.*;
 
@@ -37,14 +37,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
-import com.xykine.computation.entity.PayrollReportDetail;
-import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.entity.simulate.PayrollReportDetailSimulate;
 import com.xykine.computation.entity.simulate.PayrollReportSummarySimulate;
 import com.xykine.computation.exceptions.PayrollReportNotException;
 import com.xykine.computation.exceptions.PayrollUnmodifiableException;
 import com.xykine.computation.utils.ReportUtils;
 import com.xykine.computation.utils.AppConstants;
+import org.xykine.payroll.model.enums.PaymentTypeEnum;
 
 @Slf4j
 @Service
@@ -61,6 +60,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     private final DashboardDataService dashboardDataService;
     private final YTDReportRepo ytdReportRepo;
     private final PayrollReportDetailSimulateRepo payrollReportDetailSimulateRepo;
+    private final LoanService loanService;
+    private final PayrollAsyncService payrollAsyncService;
 
     @Transactional
     public ReportResponse serializeAndSaveReport(PaymentComputeResponse paymentComputeResponse, String companyId)
@@ -135,29 +136,24 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         ConcurrentHashMap<String, Set<SummaryDetail>> summaryDetailsVariance = new ConcurrentHashMap<>();
 
         if (previousPayrollReportSummary == null) {
-            // Treat previous values as zero → variance = current values
+            // Previous null → variance = current values
             currentSummaryDetails.forEach((key, currentDetails) -> {
-                Set<SummaryDetail> varianceDetails = currentDetails.stream()
-                        .map(detail -> new SummaryDetail(
-                                detail.getEmployeeId(),
-                                detail.getEmployeeName(),
-                                detail.getDepartmentName(),
-                                detail.getValue() // variance = current - 0
-                        ))
-                        .filter(d -> d.getValue().compareTo(BigDecimal.ZERO) != 0)
-                        .collect(Collectors.toSet());
-
+                Set<SummaryDetail> varianceDetails = Collections.newSetFromMap(new ConcurrentHashMap<>());
+                currentDetails.forEach(d -> {
+                    if (d.getValue().compareTo(BigDecimal.ZERO) != 0) {
+                        varianceDetails.add(d);
+                    }
+                });
                 if (!varianceDetails.isEmpty()) {
                     summaryDetailsVariance.put(key, varianceDetails);
                 }
             });
-
         } else {
             Map<String, Set<SummaryDetail>> previousSummaryDetails =
                     ReportUtils.transform(previousPayrollReportSummary).getSummary().getSummaryDetails();
 
             // Union of all keys
-            Set<String> allKeys = new HashSet<>();
+            Set<String> allKeys = ConcurrentHashMap.newKeySet();
             allKeys.addAll(currentSummaryDetails.keySet());
             allKeys.addAll(previousSummaryDetails.keySet());
 
@@ -165,47 +161,61 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 Set<SummaryDetail> currentDetails = currentSummaryDetails.getOrDefault(key, Collections.emptySet());
                 Set<SummaryDetail> previousDetails = previousSummaryDetails.getOrDefault(key, Collections.emptySet());
 
-                Map<String, SummaryDetail> currentMap = currentDetails.stream().collect(Collectors.toMap(SummaryDetail::getEmployeeId, d -> d));
-                Map<String, SummaryDetail> previousMap = previousDetails.stream().collect(Collectors.toMap(SummaryDetail::getEmployeeId, d -> d));
+                Map<String, BigDecimal> currentSum = sumByEmployee(currentDetails);
+                Map<String, BigDecimal> previousSum = sumByEmployee(previousDetails);
 
-                Set<SummaryDetail> varianceDetails = new HashSet<>();
+                // Use representative objects for employeeName/department
+                Map<String, SummaryDetail> representativeMap = new ConcurrentHashMap<>();
+                currentDetails.forEach(d -> representativeMap.putIfAbsent(d.getEmployeeId(), d));
+                previousDetails.forEach(d -> representativeMap.putIfAbsent(d.getEmployeeId(), d));
 
-                // Employees in current (variance = current - previous)
-                for (SummaryDetail curr : currentDetails) {
-                    BigDecimal prevValue = previousMap.containsKey(curr.getEmployeeId())
-                            ? previousMap.get(curr.getEmployeeId()).getValue()
-                            : BigDecimal.ZERO;
-                    BigDecimal difference = curr.getValue().subtract(prevValue);
+                Set<SummaryDetail> varianceDetails = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
-                    if (difference.compareTo(BigDecimal.ZERO) != 0) {
+                // Calculate variance for employees present in current
+                currentSum.forEach((empId, currTotal) -> {
+                    BigDecimal prevTotal = previousSum.getOrDefault(empId, BigDecimal.ZERO);
+                    BigDecimal diff = currTotal.subtract(prevTotal);
+                    if (diff.compareTo(BigDecimal.ZERO) != 0) {
+                        SummaryDetail rep = representativeMap.get(empId);
                         varianceDetails.add(new SummaryDetail(
-                                curr.getEmployeeId(),
-                                curr.getEmployeeName(),
-                                curr.getDepartmentName(),
-                                difference
+                                rep.getEmployeeId(),
+                                rep.getEmployeeName(),
+                                rep.getDepartmentName(),
+                                diff
                         ));
                     }
-                }
+                });
 
-                // Employees missing in current but present in previous (negative variance)
-                for (SummaryDetail prev : previousDetails) {
-                    if (!currentMap.containsKey(prev.getEmployeeId())) {
-                        BigDecimal difference = BigDecimal.ZERO.subtract(prev.getValue());
+                // Include negative variance for employees only in previous
+                previousSum.forEach((empId, prevTotal) -> {
+                    if (!currentSum.containsKey(empId)) {
+                        SummaryDetail rep = representativeMap.get(empId);
                         varianceDetails.add(new SummaryDetail(
-                                prev.getEmployeeId(),
-                                prev.getEmployeeName(),
-                                prev.getDepartmentName(),
-                                difference
+                                rep.getEmployeeId(),
+                                rep.getEmployeeName(),
+                                rep.getDepartmentName(),
+                                prevTotal.negate()
                         ));
                     }
-                }
+                });
 
                 if (!varianceDetails.isEmpty()) {
                     summaryDetailsVariance.put(key, varianceDetails);
                 }
             }
         }
+
         return summaryDetailsVariance;
+    }
+
+    private static Map<String, BigDecimal> sumByEmployee(Collection<SummaryDetail> details) {
+        Map<String, BigDecimal> map = new ConcurrentHashMap<>();
+        details.forEach(d -> map.merge(
+                d.getEmployeeId(),
+                d.getValue() == null ? BigDecimal.ZERO : d.getValue(),
+                BigDecimal::add
+        ));
+        return map;
     }
 
     private ConcurrentHashMap<String, Set<SummaryDetail>> processSummaryDetailsVarianceSimulate(
@@ -472,18 +482,21 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         if (request.isOffCycle()) {
             existingSummaryReport = payrollReportSummaryRepo
                     .findPayrollReportSummaryByCompanyIdAndOffCycleId(request.getCompanyId(), request.getOffCycleId());
-
             updateDashboardData(AppConstants.payrollCountOffCycle, existingSummaryReport);
         } else {
             existingSummaryReport = payrollReportSummaryRepo
                     .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(request.getStartDate(), request.getCompanyId(), false);
-
+            LOGGER.info("===== existingSummaryReport {} ", existingSummaryReport);
             updateDashboardData(AppConstants.payrollCountRegular, existingSummaryReport);
         }
         existingSummaryReport.setPayrollStatus(request.getPayrollStatus());
-        var reportResponse = payrollReportSummaryRepo.save(existingSummaryReport);
+        PayrollReportSummary reportResponse = payrollReportSummaryRepo.save(existingSummaryReport);
         //TODO update the detail report once the payroll is approved
         logApproveReportEvent(request.getCompanyId(), reportResponse);
+        if (request.getPayrollStatus().equals(PayrollStatus.APPROVED)) {
+            payrollAsyncService.updateEmployeeLoanAsync(existingSummaryReport.getId().toString(), request.getCompanyId());
+            payrollAsyncService.updateDetailStatusAsync(existingSummaryReport.getId().toString());
+        }
         return existingSummaryReport;
     }
 

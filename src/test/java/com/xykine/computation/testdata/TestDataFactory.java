@@ -18,6 +18,7 @@ public class TestDataFactory {
             case "contract staff" -> CONTRACT_STAFF;
             case "standard with payment distribution list" -> STANDARD_PAYROLL_ENTRY_WITH_PAYMENT_DISTRIBUTION_LIST;
             case "standard and performance with payment distribution list" -> STANDARD_PAYROLL_ENTRY_WITH_PERFORMANCE_BONUS_DISTRIBUTION_LIST;
+            case "standard and performance with payment distribution list and custom tax refief" -> STANDARD_PAYROLL_ENTRY_WITH_PERFORMANCE_BONUS_DISTRIBUTION_LIST_CUSTOM_TAX_RELEIF;
             case "standard with performance bonus" -> STANDARD_PAYROLL_ENTRY_WITH_PERFORMANCE_BONUS;
             case "off-cycle" -> OFF_CYCLE;
             case "ten-entries" -> TEN_ENTRIES;

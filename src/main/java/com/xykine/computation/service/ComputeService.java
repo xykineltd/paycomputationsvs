@@ -88,6 +88,7 @@ public class ComputeService {
         var payInfos =  job.stream()
                 .map(paymentCalculator::applyExchange)
                 .map(paymentCalculator::harmoniseToAnnual)
+                .map(paymentCalculator::addPersonalDeduction)
                 .map(paymentCalculator::computeGrossPay)
                 .map(paymentCalculator::computeNonTaxableIncomeExempt)
                 .map(paymentCalculator::prorateEarnings)
