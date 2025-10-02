@@ -15,8 +15,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Component
-@Profile({"dev"})
+//@Component
+//@Profile({"dev"})
 @AllArgsConstructor
 public class LoadComputationConfig {
 
@@ -192,7 +192,7 @@ public class LoadComputationConfig {
 
 
         CompanyMetadata xykineCompanyMetadata2 = CompanyMetadata.builder()
-                .companyId("68d86f8ec74ca27e1e48125f")
+                .companyId("68dd326d1baabe7296f9624a")
                 .paymentEntryMode(PaymentFrequencyEnum.YEARLY)
                 .salaryFrequency(PaymentFrequencyEnum.MONTHLY)
                 .paymentDistribution(morufoye_international_payment_distribution)
@@ -207,11 +207,19 @@ public class LoadComputationConfig {
                 .paymentDistribution(morufoye_international_payment_distribution)
                 .build();
 
+        CompanyMetadata moniepointMfbCompanyMetadata = CompanyMetadata.builder()
+                .companyId("68dc6b42221c622db20b626b")
+                .paymentEntryMode(PaymentFrequencyEnum.YEARLY)
+                .salaryFrequency(PaymentFrequencyEnum.MONTHLY)
+                .paymentDistribution(morufoye_international_payment_distribution)
+                .companyName("Moniepoint MFB")
+                .build();
 
         companyMetadataRepo.deleteAll();
         companyMetadataRepo.save(xykineCompanyMetadata);
         companyMetadataRepo.save(xykineCompanyMetadata2);
         companyMetadataRepo.save(morufoyeCompanyMetadata);
+        companyMetadataRepo.save(moniepointMfbCompanyMetadata);
 
         Loan loan = Loan.builder()
                 .companyId("1234567")

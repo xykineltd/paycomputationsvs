@@ -6,7 +6,7 @@ import lombok.Data;
 
 import java.time.Instant;
 
-@Data
+ @Data
 public class LoanFilter {
     private String companyId;     // required
     private String employeeId;    // optional

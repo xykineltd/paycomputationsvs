@@ -18,7 +18,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-            issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:https://auth.acedpaydev.com/realms/staging}
+            issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:https://auth.acedpaydev.com/realms/localdev}
   data:
     redis:
       connect-timeout: 2s
@@ -28,8 +28,11 @@ spring:
       timeout: 1s
 
     mongodb:
-      uri: ${SPRING_DATA_MONGODB_URI:mongodb://root:rootpassword@localhost:27017/test_db?authSource=admin&connectTimeoutMS=30000&serverSelectionTimeoutMS=30000&socketTimeoutMS=90000&directConnection=true}
-      database: ${MONGO_DB_NAME:test_db}
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://root:rootpassword@localhost:27017/dev_db?authSource=admin&connectTimeoutMS=30000&serverSelectionTimeoutMS=30000&socketTimeoutMS=90000&directConnection=true}
+      database: ${MONGO_DB_NAME:dev_db}
+#      uri: mongodb://root:rootpassword@localhost:27017/dev_db?authSource=admin&connectTimeoutMS=30000&serverSelectionTimeoutMS=30000&socketTimeoutMS=90000&directConnection=true
+#            database: ${MONGO_DB_NAME:dev_db}
+#      database: dev_db
 
 mongodb:
   pool:
@@ -48,7 +51,7 @@ admin:
   service:
     url: ${ADMIN_SERVICE_URL:http://localhost:9001/}
 #    url: http://xykinehrs.com/
-    maxBufferSize: 500000
+    maxBufferSize: ${ADMIN_SERVICE_MAXBUFFERSIZE:500000}
 
 xykine:
   spa-uri: ${SPA_URL:http://localhost:3000}

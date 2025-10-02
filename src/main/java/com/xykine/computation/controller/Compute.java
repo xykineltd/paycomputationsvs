@@ -44,6 +44,7 @@ public class Compute {
             @RequestHeader("Authorization") String authorizationHeader,
             @RequestBody PaymentInfoRequest paymentRequest) throws IOException, ClassNotFoundException {
 
+        try {
             sessionCalculationObject = OperationUtils.doPreflight(
                     sessionCalculationObject,
                     computationConstantsRepo,
@@ -67,5 +68,9 @@ public class Compute {
 
             // Persist and return final report
             return reportPersistenceService.serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
+        } catch (Exception e) {
+            throw e;
+        }
+
     }
 }
