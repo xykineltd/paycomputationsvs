@@ -491,7 +491,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         }
         existingSummaryReport.setPayrollStatus(request.getPayrollStatus());
         PayrollReportSummary reportResponse = payrollReportSummaryRepo.save(existingSummaryReport);
-        //TODO update the detail report once the payroll is approved
+
         logApproveReportEvent(request.getCompanyId(), reportResponse);
         if (request.getPayrollStatus().equals(PayrollStatus.APPROVED)) {
             payrollAsyncService.updateEmployeeLoanAsync(existingSummaryReport.getId().toString(), request.getCompanyId());
