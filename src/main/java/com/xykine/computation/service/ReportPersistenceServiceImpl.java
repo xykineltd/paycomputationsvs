@@ -13,13 +13,13 @@ import com.xykine.computation.response.*;
 
 import com.xykine.computation.utils.AuthUtil;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.xykine.payroll.model.*;
@@ -43,9 +43,7 @@ import com.xykine.computation.exceptions.PayrollReportNotException;
 import com.xykine.computation.exceptions.PayrollUnmodifiableException;
 import com.xykine.computation.utils.ReportUtils;
 import com.xykine.computation.utils.AppConstants;
-import org.xykine.payroll.model.enums.PaymentTypeEnum;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ReportPersistenceServiceImpl implements ReportPersistenceService {
@@ -629,7 +627,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     public List<ReportAnalytics> getReportAnalytics(String companyId, int page, int size) {
         Pageable paging = PageRequest.of(page, size);
         Page<PayrollReportSummary> payrollReportSummaryPage = payrollReportSummaryRepo.findPayrollReportSummaryByCompanyIdAndPayrollSimulationOrderByCreatedDateDesc(companyId, false, paging);
-        log.info(" ======> payrollReportSummaryPage list {}", payrollReportSummaryPage.getTotalElements());
+        //log.info(" ======> payrollReportSummaryPage list {}", payrollReportSummaryPage.getTotalElements());
         var reportAnalytics = payrollReportSummaryPage.getContent()
                 .stream()
                 .filter(r -> r != null && r.getId() != null)
@@ -874,7 +872,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         return isOffCycle ? "PRO-"+ codeSuffix : "PRR-" + codeSuffix;
     }
 
-    private void logGenerateReportEvent(String companyId, ReportResponse reportResponse) {
+    protected void logGenerateReportEvent(String companyId, ReportResponse reportResponse) {
         var loggedInUserName = AuthUtil.getUserName();
         var loggedInUserEmail = AuthUtil.getUserEmail();
         var payPeriod = reportResponse.getStartDate() + " - " + reportResponse.getEndDate();

@@ -11,6 +11,7 @@ import com.xykine.computation.service.ComputeService;
 import com.xykine.computation.service.EmployeeMetadataService;
 import com.xykine.computation.service.ReportPersistenceService;
 import com.xykine.computation.session.SessionCalculationObject;
+import com.xykine.computation.utils.AuthUtil;
 import com.xykine.computation.utils.OperationUtils;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -18,6 +19,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.xykine.payroll.model.PaymentInfo;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.io.IOException;
 import java.util.List;
@@ -40,7 +43,7 @@ public class Compute {
     private SessionCalculationObject sessionCalculationObject;
 
     @PostMapping("/payroll")
-    public ReportResponse computePayroll(
+    public Mono<ReportResponse> computePayroll(
             @RequestHeader("Authorization") String authorizationHeader,
             @RequestBody PaymentInfoRequest paymentRequest) throws IOException, ClassNotFoundException {
 
@@ -55,17 +58,21 @@ public class Compute {
                 computeService.validatePayrollIsNotApprovedOrCompleted(String.valueOf(paymentRequest.getStart()), paymentRequest.getCompanyId());
             }
 
-            List<PaymentInfo> paymentInfoList = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
-            if (paymentInfoList == null || paymentInfoList.isEmpty()) {
-                throw new PayrollValidationException("No payment information found for request");
-            }
+        return AuthUtil.getUserName()
+                .doOnNext(username -> LOGGER.info("User: {}", username))
+                        .then(Mono.fromCallable(() -> {
+                    // your blocking logic inside
+                    List<PaymentInfo> paymentInfoList = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
+                    if (paymentInfoList == null || paymentInfoList.isEmpty()) {
+                        throw new PayrollValidationException("No payment information found for request");
+                    }
 
-            PaymentComputeResponse computeResponse = computeService.computePayroll(paymentInfoList);
+                    PaymentComputeResponse computeResponse = computeService.computePayroll(paymentInfoList);
+                    computeResponse = OperationUtils.refineResponse(computeResponse, sessionCalculationObject, paymentRequest);
 
-            // Refine response
-            computeResponse = OperationUtils.refineResponse(computeResponse, sessionCalculationObject, paymentRequest);
-
-            // Persist and return final report
-            return reportPersistenceService.serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
+                    return reportPersistenceService.serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
+                })
+                // run the blocking part on a thread pool for blocking tasks
+                .subscribeOn(Schedulers.boundedElastic()));
     }
 }
