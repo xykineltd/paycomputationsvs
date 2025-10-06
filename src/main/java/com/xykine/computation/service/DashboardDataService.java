@@ -206,7 +206,6 @@ public class DashboardDataService {
         BigDecimal netPay = extractNetPayFromReport(payrollReportSummary);
         BigDecimal currentNetPay = dashboardCard.getTotalPayrollCost();
         dashboardCard.setTotalPayrollCost(currentNetPay.add(netPay));
-        LOGGER.info(" ====> netPay, currentNetPay,  payrollReportSummary.getTotalNumberOfEmployees()  {} {} {} ",  netPay, currentNetPay, payrollReportSummary.getTotalNumberOfEmployees());
         dashboardCard.setAverageEmployeeCost(ComputationUtils.roundToTwoDecimalPlaces(
                 currentNetPay.add(netPay)
                         .divide(BigDecimal.valueOf(payrollReportSummary.getTotalNumberOfEmployees()), 2, RoundingMode.HALF_UP)

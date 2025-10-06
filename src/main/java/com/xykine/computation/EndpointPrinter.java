@@ -28,8 +28,6 @@ public class EndpointPrinter {
 
     @PostConstruct
     public void logAllEndpoints() {
-        System.out.println("====== REGISTERED SPRING MVC ENDPOINTS ======");
-
         for (Map.Entry<RequestMappingInfo, HandlerMethod> entry : handlerMapping.getHandlerMethods().entrySet()) {
             RequestMappingInfo mappingInfo = entry.getKey();
             HandlerMethod handlerMethod = entry.getValue();
@@ -48,12 +46,11 @@ public class EndpointPrinter {
 
             Set<RequestMethod> methods = mappingInfo.getMethodsCondition().getMethods();
 
-            System.out.println("---------------------------------------------");
-            System.out.println("Handler:   " + handlerMethod.getBeanType().getSimpleName() + "#" + handlerMethod.getMethod().getName());
-            System.out.println("URL(s):    " + paths);
-            System.out.println("Method(s): " + methods);
+//            System.out.println("---------------------------------------------");
+//            System.out.println("Handler:   " + handlerMethod.getBeanType().getSimpleName() + "#" + handlerMethod.getMethod().getName());
+//            System.out.println("URL(s):    " + paths);
+//            System.out.println("Method(s): " + methods);
         }
 
-        System.out.println("=============================================");
     }
 }

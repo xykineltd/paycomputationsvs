@@ -94,8 +94,8 @@ public class Metadata {
             @RequestBody EmployeeMetadata updatedEmployee
     ) {
 
-        System.out.println("updatedEmployee--->" + updatedEmployee);
-        System.out.println("employeeId--->" + employeeId);
+//        System.out.println("updatedEmployee--->" + updatedEmployee);
+//        System.out.println("employeeId--->" + employeeId);
         //TODO let include companyID here to be completely sure we are pulling employee for a particular company
         return employeeMetadataService.updateByEmployeeId(employeeId, updatedEmployee)
                 .map(ResponseEntity::ok)

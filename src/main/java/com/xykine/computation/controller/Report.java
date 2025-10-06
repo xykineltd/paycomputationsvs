@@ -52,10 +52,7 @@ public class Report {
 
     @GetMapping("/{companyId}/status/{status}")
     public List<ReportResponse> getReportsByStatus(@PathVariable String companyId, @PathVariable String status) {
-        List<ReportResponse> res =  reportPersistenceService.getPayRollReportsByStatus(companyId, status);
-
-        LOGGER.info("Report response--->: {}", res);
-        return res;
+        return reportPersistenceService.getPayRollReportsByStatus(companyId, status);
     }
 
     @GetMapping("/by-reportId/{reportId}/isSimulate/{isSimulate}")
