@@ -2,6 +2,8 @@ package com.xykine.computation.service;
 
 import com.xykine.computation.entity.EmployeeMetadata;
 import com.xykine.computation.repo.EmployeeMetadataRepo;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +38,8 @@ public class EmployeeMetadataService {
         return employeeMetadataRepo.findAll();
     }
 
+    //Save and update cache at the same time
+    @CachePut(value = "employeeMetadata", key = "#employee.employeeId")
     public EmployeeMetadata save(EmployeeMetadata employee) {
         return employeeMetadataRepo.save(employee);
     }
@@ -44,15 +48,22 @@ public class EmployeeMetadataService {
         return employeeMetadataRepo.saveAll(employees);
     }
 
+
+    // Update and refresh the cache entry
+    @CachePut(value = "employeeMetadata", key = "#employeeId")
     public Optional<EmployeeMetadata> updateByEmployeeId(String employeeId, EmployeeMetadata updatedEmployee) {
         return employeeMetadataRepo.findByEmployeeId(employeeId).map(existing -> {
             existing.setCompanyId(updatedEmployee.getCompanyId());
             existing.setEmployeeType(updatedEmployee.getEmployeeType());
             existing.setNHFSubscribed(updatedEmployee.isNHFSubscribed());
+            existing.setCustomTaxReliefApplicable(updatedEmployee.getCustomTaxReliefApplicable());
+            existing.setVoluntaryPensionContribution(updatedEmployee.getVoluntaryPensionContribution());
             return employeeMetadataRepo.save(existing);
         });
     }
 
+    // Evict cache when deleting record
+    @CacheEvict(value = "employeeMetadata", key = "#employeeId")
     public void deleteByEmployeeId(String employeeId) {
         employeeMetadataRepo.findByEmployeeId(employeeId)
                 .ifPresent(employeeMetadataRepo::delete);

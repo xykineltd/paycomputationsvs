@@ -506,7 +506,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 .employeeType(EmployeeType.FULL_TIME)
                 .customTaxReliefApplicable(BigDecimal.ZERO)
                 .build();
-        //TODO work on updating this value from bamboohr or enable UI interface to update
         return employeeMetadataService.getByEmployeeId(paymentInfo.getEmployeeID()).orElse(defaultEmployeeMetadata);
     }
 

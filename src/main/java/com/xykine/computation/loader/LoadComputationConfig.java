@@ -15,8 +15,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-//@Component
-//@Profile({"dev"})
+@Component
+@Profile({"dev"})
 @AllArgsConstructor
 public class LoadComputationConfig {
 
@@ -208,7 +208,7 @@ public class LoadComputationConfig {
                 .build();
 
         CompanyMetadata moniepointMfbCompanyMetadata = CompanyMetadata.builder()
-                .companyId("68dc6b42221c622db20b626b")
+                .companyId("68e339494e8c5d553d566f43")
                 .paymentEntryMode(PaymentFrequencyEnum.YEARLY)
                 .salaryFrequency(PaymentFrequencyEnum.MONTHLY)
                 .paymentDistribution(morufoye_international_payment_distribution)

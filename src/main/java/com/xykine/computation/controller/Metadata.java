@@ -71,6 +71,7 @@ public class Metadata {
 
     @GetMapping("/employee/{employeeId}")
     public ResponseEntity<EmployeeMetadata> getEmployeeByEmployeeId(@PathVariable String employeeId) {
+        //TODO let include companyID here to be completely sure we are pulling employee for a particular company
         return employeeMetadataService.getByEmployeeId(employeeId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -92,6 +93,10 @@ public class Metadata {
             @PathVariable String employeeId,
             @RequestBody EmployeeMetadata updatedEmployee
     ) {
+
+        System.out.println("updatedEmployee--->" + updatedEmployee);
+        System.out.println("employeeId--->" + employeeId);
+        //TODO let include companyID here to be completely sure we are pulling employee for a particular company
         return employeeMetadataService.updateByEmployeeId(employeeId, updatedEmployee)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
