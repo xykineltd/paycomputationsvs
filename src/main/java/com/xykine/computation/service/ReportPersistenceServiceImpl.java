@@ -74,7 +74,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 //delete and replace
                 payrollReportDetailRepoSimulate.deleteAll();
                 payrollReportSummaryRepoSimulate.deleteAll();
-                LOGGER.info("Simulated report with start date: " + paymentComputeResponse.getStart() + " will be saved.");
+                LOGGER.debug("Simulated report with start date: " + paymentComputeResponse.getStart() + " will be saved.");
                 reportResponse = getReportResponseSimulate(paymentComputeResponse, companyId, paymentComputeResponse.getStart());
             } else {
                 //delete and replace based on pay period, ie only 1 pay period in the database and companyID
@@ -88,11 +88,11 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 reportResponse = getReportResponse(paymentComputeResponse, companyId, paymentComputeResponse.getStart());
             }
         } catch (RuntimeException e) {
-            LOGGER.info(" exception {} ", e.toString());
+            LOGGER.error(" exception {} ", e.toString());
             throw e;
         }
         long endTime = System.currentTimeMillis();
-        LOGGER.info(" Process time {} ms", endTime - startTime);
+        LOGGER.debug(" Process time {} ms", endTime - startTime);
         logGenerateReportEvent(companyId, reportResponse);
         return reportResponse;
     }

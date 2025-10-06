@@ -36,7 +36,7 @@ public class ComponentResilienceTest extends AbstractIntegrationTest {
         getReportSummary();
         var report = getReportByCompanyId();
         long durationInMillis = (System.nanoTime() - start) / 1_000_000;
-        LOGGER.info("Report generation for 1000 entries took {} ms", durationInMillis);
+        LOGGER.debug("Report generation for 1000 entries took {} ms", durationInMillis);
         assertThat(report).isNotNull().satisfies(x -> {
             assertThat(x.size()).isEqualTo(1);
         });

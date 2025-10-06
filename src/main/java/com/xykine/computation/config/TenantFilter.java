@@ -14,9 +14,9 @@ public class TenantFilter implements Filter {
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws java.io.IOException, ServletException {
         HttpServletRequest req = (HttpServletRequest) request;
         String tenantId = req.getHeader("X-Tenant-ID");
-        logger.info("Processing request for tenant ID: {}", tenantId);
+        logger.debug("Processing request for tenant ID: {}", tenantId);
         TenantContext.setTenantId(tenantId);
-        logger.info("Tenant ID set to: {}", tenantId);
+        logger.debug("Tenant ID set to: {}", tenantId);
         try {
             chain.doFilter(request, response);
         } catch (Exception e) {
@@ -24,7 +24,7 @@ public class TenantFilter implements Filter {
             throw e;
         } finally {
             TenantContext.clear();
-            logger.info("Tenant ID cleared after processing request.");
+            logger.debug("Tenant ID cleared after processing request.");
         }
     }
 }

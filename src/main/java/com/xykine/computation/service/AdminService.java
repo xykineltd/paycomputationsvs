@@ -80,8 +80,8 @@ public class AdminService {
                         return response.bodyToMono(ApiException.class)
                                 .flatMap(errorBody -> {
                                     LOGGER.error("Non-successful response: {}", response.statusCode());
-                                    LOGGER.info("Error Message: {}", errorBody.getErrorMessage());
-                                    LOGGER.info("Error Code: {}", errorBody.getErrorCode());
+                                    LOGGER.error("Error Message: {}", errorBody.getErrorMessage());
+                                    LOGGER.error("Error Code: {}", errorBody.getErrorCode());
 
                                     // Throw custom exception with the error message
                                     return Mono.error(new PayrollValidationException(errorBody.getMessage()));
