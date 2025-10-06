@@ -144,7 +144,6 @@ public class Report {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    // fire and forget
     @PostMapping("/download-report")
     public ResponseEntity<byte[]> uploadReport(@RequestBody ReportRequestPayload payload) throws IOException {
         return new ResponseEntity<>(reportGeneratorService.generateReport(payload), HttpStatus.OK);

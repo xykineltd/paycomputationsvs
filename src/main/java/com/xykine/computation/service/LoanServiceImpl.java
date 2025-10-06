@@ -15,6 +15,8 @@ import com.xykine.computation.request.CreateLoanRequest;
 import com.xykine.computation.request.RepaymentRequest;
 import com.xykine.computation.request.UpdateLoanRequest;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -36,6 +38,8 @@ public class LoanServiceImpl implements LoanService {
     private final RepaymentRepo repaymentRepo;
     private final AdjustmentRepo adjustmentRepo;
     private final MongoTemplate mongoTemplate;
+
+    protected static final Logger LOGGER = LoggerFactory.getLogger(LoanServiceImpl.class);
 
     @Override
     public Loan createLoan(CreateLoanRequest req) {
@@ -72,6 +76,8 @@ public class LoanServiceImpl implements LoanService {
 
         List<Loan> loans = mongoTemplate.find(query, Loan.class);
         long total = mongoTemplate.count(Query.of(query).limit(-1).skip(-1), Loan.class);
+
+        LOGGER.info(" ====> getLoans {} ", loans);
 
         return new PageImpl<>(loans, pageable, total);
     }
