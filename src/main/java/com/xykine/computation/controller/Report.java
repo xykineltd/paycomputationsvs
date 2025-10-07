@@ -43,6 +43,11 @@ public class Report {
         return reportPersistenceService.getPayRollReport(reportId, isSimulate);
     }
 
+    @GetMapping("/by-reportId/{reportId}")
+    public ReportResponse getReport( @PathVariable UUID reportId) {
+        return reportPersistenceService.getPayRollReport(reportId);
+    }
+
     @GetMapping("/{companyId}/{employeeId}")
     public ResponseEntity<?> getReportByEmployeeID(
             @PathVariable String companyId,
