@@ -11,7 +11,6 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @EnableCaching
 @SpringBootApplication(scanBasePackages = "com.xykine")
 @ConfigurationPropertiesScan
-@RequiredArgsConstructor
 public class ComputationApplication {
 
 	public static void main(String[] args) {

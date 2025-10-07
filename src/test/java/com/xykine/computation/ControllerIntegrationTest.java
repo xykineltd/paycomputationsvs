@@ -58,10 +58,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private YTDReportRepo ytdReportRepo;
-    @Autowired
-    private PayrollReportDetailRepo payrollReportDetailRepo;
-    @Autowired
-    private PayrollReportSummaryRepo payrollReportSummaryRepo;
+
     @Autowired
     private LoanRepo loanRepo;
 
@@ -223,7 +220,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
 
         approvePayroll(updateReportRequest);
 
-        /* Loan updates was executed asynchronously, so chill a lil bit before checking for update*/
+        /* Loan updates was executed asynchronously, so chill a lil bit before checking for update */
         Thread.sleep(1000);
 
         loanOptional = loanRepo.findOneByCompanyIdAndEmployeeIdAndDescriptionAndActiveIsTrue(companyId, employeeId, loanDescription);
@@ -296,6 +293,34 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
             assertThat(x.get("Employee Pension Contribution")).isEqualByComparingTo(BigDecimal.valueOf(20555.13));
             assertThat(x.get("VOLUNTARY PENSION CONTRIBUTION")).isEqualByComparingTo(BigDecimal.valueOf(0));
             assertThat(x.get("Total Employee Pension")).isEqualByComparingTo(BigDecimal.valueOf(46249.03));
+        });
+    }
+
+    @Test
+    void testStandardNotPensioned() throws InterruptedException {
+        String companyId = "1234567";
+        when(adminService.getPaymentInfoList(any(), anyString())).thenReturn(TestDataFactory.getPaymentSettings("standard not pensioned"));
+        ReportResponse reportSummary = getReportSummaryCustom(companyId);
+
+        assert reportSummary != null;
+        Map<String, Object> body = getReportDetail(reportSummary);
+        assertThat(body).isNotNull().satisfies((x) -> {
+            assertThat(x.get("totalItems")).isEqualTo(1);
+        });
+
+        List<ReportResponse> reportResponses = MAPPER.convertValue(body.get("payrollDetails"), new TypeReference<List<ReportResponse>>() {
+        });
+
+        PaymentInfo paymentInfo = reportResponses.get(0).getDetail().getReport();
+        assertThat(paymentInfo).isNotNull().satisfies((x) -> {
+            assertThat(x.getNetPay()).isEqualByComparingTo(BigDecimal.valueOf(653889.0));
+        });
+
+        Map<String, BigDecimal> pension = paymentInfo.getPension();
+        assertThat(pension).isNotNull().satisfies((x) -> {
+            assertThat(x.get("Employer Pension Contribution")).isEqualByComparingTo(BigDecimal.ZERO);
+            assertThat(x.get("Employee Pension Contribution")).isEqualByComparingTo(BigDecimal.ZERO);
+            assertThat(x.get("Total Employee Pension")).isEqualByComparingTo(BigDecimal.ZERO);
         });
     }
 

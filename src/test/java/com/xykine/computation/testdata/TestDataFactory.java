@@ -19,10 +19,14 @@ public class TestDataFactory {
             case "standard with payment distribution list" -> STANDARD_PAYROLL_ENTRY_WITH_PAYMENT_DISTRIBUTION_LIST;
             case "standard and performance with payment distribution list" -> STANDARD_PAYROLL_ENTRY_WITH_PERFORMANCE_BONUS_DISTRIBUTION_LIST;
             case "standard and performance with payment distribution list and custom tax refief" -> STANDARD_PAYROLL_ENTRY_WITH_PERFORMANCE_BONUS_DISTRIBUTION_LIST_CUSTOM_TAX_RELEIF;
+            case "standard not pensioned" -> STANDARD_PAYROLL_ENTRY_WITH_PAYMENT_DISTRIBUTION_LIST_NOT_PENSIONED;
             case "standard with performance bonus" -> STANDARD_PAYROLL_ENTRY_WITH_PERFORMANCE_BONUS;
             case "off-cycle" -> OFF_CYCLE;
             case "ten-entries" -> TEN_ENTRIES;
             case "one-thousand-entries" -> ONE_THOUSAND_ENTRIES;
+            case "two-thousand-entries" -> TWO_THOUSAND_ENTRIES;
+            case "5000" -> FIVE_THOUSAND;
+            case "two" -> TWO;
             default -> throw new IllegalArgumentException("Unknown type: " + type);
         };
         try {

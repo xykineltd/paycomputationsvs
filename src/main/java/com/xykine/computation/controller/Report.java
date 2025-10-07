@@ -60,6 +60,11 @@ public class Report {
         return reportPersistenceService.getPayRollReport(reportId, isSimulate);
     }
 
+    @GetMapping("/by-reportId/{reportId}")
+    public ReportResponse getReport( @PathVariable UUID reportId) {
+        return reportPersistenceService.getPayRollReport(reportId);
+    }
+
     @GetMapping("/{companyId}/{employeeId}")
     public ResponseEntity<?> getReportByEmployeeID(
             @PathVariable String companyId,
@@ -162,7 +167,6 @@ public class Report {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    // fire and forget
     @PostMapping("/download-report")
     public ResponseEntity<byte[]> uploadReport(@RequestBody ReportRequestPayload request) throws IOException {
         byte[] excelFile = reportGeneratorService.generateReport(request);

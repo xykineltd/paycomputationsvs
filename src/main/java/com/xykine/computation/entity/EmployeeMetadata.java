@@ -23,4 +23,5 @@ public class EmployeeMetadata {
     private boolean isNHFSubscribed;
     private BigDecimal voluntaryPensionContribution;
     private BigDecimal customTaxReliefApplicable;
+    private boolean isPensioned;
 }

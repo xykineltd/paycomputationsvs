@@ -165,17 +165,19 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         Map<String, BigDecimal> pension = new HashMap<>();
         Map<String, BigDecimal> nhf = new HashMap<>();
 
+        EmployeeMetadata employeeMetadata = getEmployeeMetaData(paymentInfo);
+        boolean isPensioned = employeeMetadata.isPensioned();
         // === Pension ===
-        BigDecimal pensionFund =  getAllowanceForEmployee(paymentInfo).stream()
+        BigDecimal pensionFund = isPensioned ? getAllowanceForEmployee(paymentInfo).stream()
                 .filter(x -> x.isPensionable()
                         || x.getType() == PaymentTypeEnum.ALLOWANCE_ANNUAL_HOUSING
                         || x.getType() == PaymentTypeEnum.ALLOWANCE_ANNUAL_TRANSPORT)
                 .map(PaymentSettingsResponse::getValue)
-                .reduce(basicSalary, BigDecimal::add);
+                .reduce(basicSalary, BigDecimal::add) : BigDecimal.ZERO;
 
-        BigDecimal employeePension = ComputationUtils.roundToTwoDecimalPlaces(
+        BigDecimal employeePension = isPensioned ? ComputationUtils.roundToTwoDecimalPlaces(
                 sessionCalculationObject.getComputationConstants().get("pensionFundPercent")
-                        .multiply(pensionFund));
+                        .multiply(pensionFund)) : BigDecimal.ZERO;
 
         nonTaxableIncomeExemptMap.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION,
                 ComputationUtils.prorate(employeePension, unpaidDays, salaryFrequency));
@@ -211,35 +213,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         paymentInfo = computeNonTaxableIncomeExemptForMFB(paymentInfo, nationalHousingFund);
         paymentInfo.setPension(pension);
         return paymentInfo;
-//
-//        // === CRA ===
-//        BigDecimal grossIncomeForCRA = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY)
-//                .subtract(employeePension)
-//                .subtract(nationalHousingFund);
-//
-//        BigDecimal rawFXR = ComputationUtils.roundToTwoDecimalPlaces(
-//                sessionCalculationObject.getComputationConstants().get("craFraction")
-//                        .multiply(grossIncomeForCRA));
-//
-//        BigDecimal craCutOff = sessionCalculationObject.getComputationConstants().get("craCutOff");
-//        BigDecimal fixedCRA = rawFXR.compareTo(craCutOff) > 0 ? rawFXR : BigDecimal.valueOf(200000);
-//        nonTaxableIncomeExemptMap.put(MapKeys.FIXED_CONSOLIDATED_RELIEF_ALLOWANCE,
-//                ComputationUtils.prorate(fixedCRA, unpaidDays, salaryFrequency));
-//        BigDecimal variableCRA = ComputationUtils.roundToTwoDecimalPlaces(
-//                sessionCalculationObject.getComputationConstants().get("variableCRAFraction")
-//                        .multiply(grossIncomeForCRA));
-//
-//        nonTaxableIncomeExemptMap.put(MapKeys.VARIABLE_CONSOLIDATED_RELIEF_ALLOWANCE,
-//                ComputationUtils.roundToTwoDecimalPlaces(
-//                        ComputationUtils.prorate(variableCRA, unpaidDays, salaryFrequency)));
-//        // === Final Totals ===
-//        BigDecimal total = getTotal(nonTaxableIncomeExemptMap);
-//        nonTaxableIncomeExemptMap.put(MapKeys.TOTAL_TAX_RELIEF, total);
-
-//        paymentInfo.setTaxRelief(nonTaxableIncomeExemptMap);
-//        paymentInfo.setPension(pension);
-//
-//        return paymentInfo;
     }
 
     public PaymentInfo computeNonTaxableIncomeExemptForMFB(PaymentInfo paymentInfo, BigDecimal nationalHousingFund) {
@@ -505,6 +478,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 .isNHFSubscribed(false)
                 .employeeType(EmployeeType.FULL_TIME)
                 .customTaxReliefApplicable(BigDecimal.ZERO)
+                .isPensioned(true)
                 .build();
         return employeeMetadataService.getByEmployeeId(paymentInfo.getEmployeeID()).orElse(defaultEmployeeMetadata);
     }

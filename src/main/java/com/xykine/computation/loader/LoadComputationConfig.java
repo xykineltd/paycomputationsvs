@@ -132,6 +132,9 @@ public class LoadComputationConfig {
                 .companyId("682cf69492b07e60fa109911")
                 .employeeType(EmployeeType.CONTRACT)
                 .isNHFSubscribed(false)
+                .customTaxReliefApplicable(BigDecimal.ZERO)
+                .voluntaryPensionContribution(BigDecimal.ZERO)
+                .isPensioned(false)
                 .build();
 
         EmployeeMetadata regularStaffWithNHF = EmployeeMetadata.builder()
@@ -143,7 +146,7 @@ public class LoadComputationConfig {
                 .isNHFSubscribed(false)
                 .customTaxReliefApplicable(BigDecimal.ZERO)
                 .voluntaryPensionContribution(BigDecimal.ZERO)
-
+                .isPensioned(true)
                 .build();
 
         EmployeeMetadata regularStaffNoNHF = EmployeeMetadata.builder()
@@ -151,6 +154,9 @@ public class LoadComputationConfig {
                 .companyId("682cf69592b07e60fa10991b")
                 .employeeType(EmployeeType.FULL_TIME)
                 .isNHFSubscribed(false)
+                .customTaxReliefApplicable(BigDecimal.ZERO)
+                .voluntaryPensionContribution(BigDecimal.ZERO)
+                .isPensioned(true)
                 .build();
 
         employeeMetaDataRepo.deleteAll();
@@ -162,8 +168,20 @@ public class LoadComputationConfig {
                 .isNHFSubscribed(false)
                 .customTaxReliefApplicable(BigDecimal.valueOf(50000))
                 .voluntaryPensionContribution(BigDecimal.ZERO)
+                .isPensioned(true)
                 .build();
 
+        EmployeeMetadata standardNotPensioned = EmployeeMetadata.builder()
+                .employeeId("standardNotPensioned")
+                .companyId("1234567")
+                .employeeType(EmployeeType.FULL_TIME)
+                .isNHFSubscribed(false)
+                .customTaxReliefApplicable(BigDecimal.ZERO)
+                .voluntaryPensionContribution(BigDecimal.ZERO)
+                .isPensioned(false)
+                .build();
+
+        employeeMetaDataRepo.save(standardNotPensioned);
         employeeMetaDataRepo.save(regularStaffWithCustomTaxReleif);
         employeeMetaDataRepo.save(contractStaff);
         employeeMetaDataRepo.save(regularStaffWithNHF);
@@ -233,6 +251,5 @@ public class LoadComputationConfig {
                 .build();
         loanRepo.save(loan);
     }
-
 }
 

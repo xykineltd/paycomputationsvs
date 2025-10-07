@@ -1,26 +1,32 @@
 package com.xykine.computation.service;
 
+import com.xykine.computation.domain.JobStatus;
 import com.xykine.computation.entity.*;
+import com.xykine.computation.exceptions.PayrollValidationException;
+import com.xykine.computation.repo.ComputationConstantsRepo;
 import com.xykine.computation.repo.PayrollReportDetailRepo;
 import com.xykine.computation.repo.PayrollReportSummaryRepo;
 import com.xykine.computation.repo.YTDReportRepo;
 import com.xykine.computation.repo.simulate.PayrollReportDetailSimulateRepo;
 import com.xykine.computation.repo.simulate.PayrollReportSummarySimulateRepo;
+import com.xykine.computation.request.PaymentInfoRequest;
 import com.xykine.computation.request.ReportByTypeRequest;
 import com.xykine.computation.request.UpdateLoanRequest;
 import com.xykine.computation.request.UpdateReportRequest;
 import com.xykine.computation.response.*;
 
+import com.xykine.computation.session.SessionCalculationObject;
 import com.xykine.computation.utils.AuthUtil;
+import com.xykine.computation.utils.OperationUtils;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.xykine.payroll.model.*;
@@ -44,9 +50,8 @@ import com.xykine.computation.exceptions.PayrollReportNotException;
 import com.xykine.computation.exceptions.PayrollUnmodifiableException;
 import com.xykine.computation.utils.ReportUtils;
 import com.xykine.computation.utils.AppConstants;
-import org.xykine.payroll.model.enums.PaymentTypeEnum;
+import reactor.core.publisher.Sinks;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ReportPersistenceServiceImpl implements ReportPersistenceService {
@@ -60,9 +65,45 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     private final PayrollReportDetailSimulateRepo payrollReportDetailRepoSimulate;
     private final DashboardDataService dashboardDataService;
     private final YTDReportRepo ytdReportRepo;
-    private final PayrollReportDetailSimulateRepo payrollReportDetailSimulateRepo;
-    private final LoanService loanService;
     private final PayrollAsyncService payrollAsyncService;
+    private final JobStatusStore jobStatusStore;
+    private final ComputationConstantsRepo computationConstantsRepo;
+    private final EmployeeMetadataService employeeMetadataService;
+    private final AdminService adminService;
+    private final ComputeService computeService;
+    @Autowired
+    private SessionCalculationObject sessionCalculationObject;
+
+    @Override
+    @Async
+    public void computePayrollAsync(String jobId, String authorizationHeader, PaymentInfoRequest paymentRequest, Sinks.Many<JobStatus> jobStatusSink) {
+        jobStatusStore.updateJob(jobId, "IN_PROGRESS", "Computation started", "");
+        jobStatusSink.tryEmitNext(jobStatusStore.getJob(jobId));
+        try {
+            sessionCalculationObject = OperationUtils.doPreflight(
+                    sessionCalculationObject,
+                    computationConstantsRepo,
+                    employeeMetadataService,
+                    paymentRequest
+            );
+
+            List<PaymentInfo> paymentInfoList = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
+            if (paymentInfoList == null || paymentInfoList.isEmpty()) {
+                throw new PayrollValidationException("No payment information found for request");
+            }
+
+            PaymentComputeResponse computeResponse = computeService.computePayroll(paymentInfoList);
+            computeResponse = OperationUtils.refineResponse(computeResponse, sessionCalculationObject, paymentRequest);
+
+            ReportResponse reportResponse = serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
+
+            jobStatusStore.updateJob(jobId, "COMPLETED", "Payroll computation complete", reportResponse.getReportId());
+            jobStatusSink.tryEmitNext(jobStatusStore.getJob(jobId));
+        } catch (Exception e) {
+            jobStatusStore.updateJob(jobId, "FAILED", e.getMessage(), "");
+            jobStatusSink.tryEmitNext(jobStatusStore.getJob(jobId));
+        }
+    }
 
     @Transactional
     public ReportResponse serializeAndSaveReport(PaymentComputeResponse paymentComputeResponse, String companyId)
@@ -74,7 +115,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 //delete and replace
                 payrollReportDetailRepoSimulate.deleteAll();
                 payrollReportSummaryRepoSimulate.deleteAll();
-                LOGGER.debug("Simulated report with start date: " + paymentComputeResponse.getStart() + " will be saved.");
+                LOGGER.info("Simulated report with start date: " + paymentComputeResponse.getStart() + " will be saved.");
                 reportResponse = getReportResponseSimulate(paymentComputeResponse, companyId, paymentComputeResponse.getStart());
             } else {
                 //delete and replace based on pay period, ie only 1 pay period in the database and companyID
@@ -88,11 +129,11 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 reportResponse = getReportResponse(paymentComputeResponse, companyId, paymentComputeResponse.getStart());
             }
         } catch (RuntimeException e) {
-            LOGGER.error(" exception {} ", e.toString());
+            LOGGER.info(" exception {} ", e.toString());
             throw e;
         }
         long endTime = System.currentTimeMillis();
-        LOGGER.debug(" Process time {} ms", endTime - startTime);
+        LOGGER.info(" Process time {} ms", endTime - startTime);
         logGenerateReportEvent(companyId, reportResponse);
         return reportResponse;
     }
@@ -162,33 +203,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 Set<SummaryDetail> currentDetails = currentSummaryDetails.getOrDefault(key, Collections.emptySet());
                 Set<SummaryDetail> previousDetails = previousSummaryDetails.getOrDefault(key, Collections.emptySet());
 
-//<<<<<<< HEAD
-//                Map<String, SummaryDetail> currentMap = currentDetails.stream()
-//                        .collect(Collectors.toMap(
-//                                SummaryDetail::getEmployeeId,
-//                                d -> d,
-//                                (existing, incoming) -> new SummaryDetail(
-//                                        existing.getEmployeeId(),
-//                                        existing.getEmployeeName(),
-//                                        existing.getDepartmentName(),
-//                                        (existing.getValue() == null ? BigDecimal.ZERO : existing.getValue())
-//                                                .add(incoming.getValue() == null ? BigDecimal.ZERO : incoming.getValue())
-//                                )
-//                        ));
-//
-//                Map<String, SummaryDetail> previousMap = previousDetails.stream()
-//                        .collect(Collectors.toMap(
-//                                SummaryDetail::getEmployeeId,
-//                                d -> d,
-//                                (existing, incoming) -> new SummaryDetail(
-//                                        existing.getEmployeeId(),
-//                                        existing.getEmployeeName(),
-//                                        existing.getDepartmentName(),
-//                                        (existing.getValue() == null ? BigDecimal.ZERO : existing.getValue())
-//                                                .add(incoming.getValue() == null ? BigDecimal.ZERO : incoming.getValue())
-//                                )
-//                        ));
-//=======
                 Map<String, BigDecimal> currentSum = sumByEmployee(currentDetails);
                 Map<String, BigDecimal> previousSum = sumByEmployee(previousDetails);
 
@@ -307,8 +321,16 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         return summaryVariance;
     }
 
-    public ReportResponse getPayRollReport(UUID id, boolean isSimulate) {
+    public ReportResponse getPayRollReport(UUID id) {
+        PayrollReportSummarySimulate simulate = payrollReportSummaryRepoSimulate.findPayrollReportSummaryById(id);
+        if (simulate != null) return ReportUtils.transform(simulate);
+        PayrollReportSummary summary = payrollReportSummaryRepo.findPayrollReportSummaryById(id);
+        if (summary != null) return ReportUtils.transform(summary);
+        throw new RuntimeException("Report with id: " + id + " was not found");
+    }
 
+
+    public ReportResponse getPayRollReport(UUID id, boolean isSimulate) {
         if (isSimulate) {
             PayrollReportSummarySimulate payrollReportSimulateSummary = payrollReportSummaryRepoSimulate.findPayrollReportSummaryById(id);
             if (payrollReportSimulateSummary == null) {
@@ -340,7 +362,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 .endDate(paymentComputeResponse.getEnd())
                 .report(ReportUtils.serializeResponse(payComputeSummaryResponse))
                 .createdDate(LocalDateTime.now())
-                .payrollStatus(PayrollStatus.SIMULATED)
+                .payrollStatus(PayrollStatus.PENDING)
                 .payrollSimulation(paymentComputeResponse.isPayrollSimulation())
                 .build();
         payrollReportSummaryRepoSimulate.save(payrollReportSummary);
@@ -363,23 +385,23 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     public Map<String, Object> getPayRollReportByType(ReportByTypeRequest request, int page, int size) {
         Pageable paging = PageRequest.of(page, size);
 
-       // if (category == null) {
-            Page<PayrollReportSummary> payrollReportReportPage = payrollReportSummaryRepo
-                    .findAllByCompanyIdAndStartDateBetween(
-                            request.getCompanyId(),
-                            getStartDateRange(request.getStart(), request.getEnd()),
-                            getEndDateRange(request.getEnd()), paging);
+        // if (category == null) {
+        Page<PayrollReportSummary> payrollReportReportPage = payrollReportSummaryRepo
+                .findAllByCompanyIdAndStartDateBetween(
+                        request.getCompanyId(),
+                        getStartDateRange(request.getStart(), request.getEnd()),
+                        getEndDateRange(request.getEnd()), paging);
 
         List<PayrollReportSummary> payrollReportReportPageList = payrollReportReportPage.getContent();
 
-            if (request.getCategory() != null) {
-                boolean categoryFound = request.getCategory().compareTo(PayrollCategory.OFFCYLE) == 0 ? true : false;
-                payrollReportReportPageList = payrollReportReportPageList.stream().filter(x -> x.isOffCycle() == categoryFound).toList();
-            }
+        if (request.getCategory() != null) {
+            boolean categoryFound = request.getCategory().compareTo(PayrollCategory.OFFCYLE) == 0 ? true : false;
+            payrollReportReportPageList = payrollReportReportPageList.stream().filter(x -> x.isOffCycle() == categoryFound).toList();
+        }
 
-            if (request.getPayrollStatus() != null) {
-                payrollReportReportPageList = payrollReportReportPageList.stream().filter(x -> x.getPayrollStatus().compareTo(request.getPayrollStatus()) == 0).toList();
-            }
+        if (request.getPayrollStatus() != null) {
+            payrollReportReportPageList = payrollReportReportPageList.stream().filter(x -> x.getPayrollStatus().compareTo(request.getPayrollStatus()) == 0).toList();
+        }
 
         payrollReportReportPage = new PageImpl<>(
                 payrollReportReportPageList,
@@ -425,131 +447,40 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     }
 
     //Pull both all report summary for display on dashboard
-//    public List<ReportResponse> getPayRollReports(String companyId, int page, int size) {
-//        List<ReportResponse> allReports = getPayRollReportSimulates(companyId);
-//        var reports = payrollReportSummaryRepo.findAllByCompanyIdOrderByCreatedDateAsc(companyId).stream()
-//                .map(ReportUtils::transform).toList();
-//        allReports.addAll(reports);
-//        //auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Pulled payroll report for company id :" + companyId);
-//        return allReports;
-//    }
-
-//    @Override
-//    public Map<String, Object> getPayRollReports(String companyId, int page, int size) {
-//        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "createdDate"));
-//
-//        Page<PayrollReportSummary> reportsPage =
-//                payrollReportSummaryRepo.findAllByCompanyIdOrderByCreatedDateAsc(companyId, pageable);
-//
-//        List<ReportResponse> reports = reportsPage.getContent()
-//                .stream()
-//                .map(ReportUtils::transform)
-//                .toList();
-//
-//        // Keep simulations separate to avoid skewing pagination counts
-//        List<ReportResponse> simulatedReports = getPayRollReportSimulates(companyId);
-//
-//        Map<String, Object> response = new HashMap<>();
-//        response.put("reports", reports);
-//        response.put("simulatedReports", simulatedReports);
-//        response.put("currentPage", reportsPage.getNumber());
-//        response.put("totalItems", reportsPage.getTotalElements());
-//        response.put("totalPages", reportsPage.getTotalPages());
-//        response.put("pageSize", reportsPage.getSize());
-//        return response;
-//    }
-
-
-    @Override
-    public Map<String, Object> getPayRollReports(String companyId, int page, int size) {
-        int safePage = Math.max(0, page);
-        int safeSize = size > 0 ? size : 10;
-
-        // Fetch all persisted reports for the company (unpaged)
-        Page<PayrollReportSummary> persistedPage =
-                payrollReportSummaryRepo.findAllByCompanyIdOrderByCreatedDateAsc(companyId, Pageable.unpaged());
-
-        List<ReportResponse> persisted = persistedPage.getContent()
-                .stream()
-                .map(ReportUtils::transform)
-                .toList();
-
-        // Fetch all simulated reports
-        List<ReportResponse> simulated = getPayRollReportSimulates(companyId);
-
-        // Merge both, sort by createdDate ASC
-        List<ReportResponse> combined = new ArrayList<>(persisted.size() + simulated.size());
-        combined.addAll(persisted);
-        combined.addAll(simulated);
-
-        combined.sort(Comparator.comparing(
-                rr -> parseCreated(rr.getCreatedDate()),
-                Comparator.nullsLast(Comparator.naturalOrder())
-        ));
-
-        // In-memory pagination
-        int totalItems = combined.size();
-        int fromIndex = Math.min(safePage * safeSize, totalItems);
-        int toIndex = Math.min(fromIndex + safeSize, totalItems);
-        List<ReportResponse> pageContent = combined.subList(fromIndex, toIndex);
-
-        int totalPages = (int) Math.ceil((double) totalItems / safeSize);
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("reports", pageContent);
-        response.put("currentPage", safePage);
-        response.put("totalItems", totalItems);
-        response.put("totalPages", totalPages);
-        response.put("pageSize", safeSize);
-        return response;
+    public List<ReportResponse> getPayRollReports(String companyId) {
+        List<ReportResponse> summary = getPayRollReportSimulates(companyId);
+        var reports = payrollReportSummaryRepo.findAllByCompanyIdOrderByCreatedDateAsc(companyId).stream()
+                .map(ReportUtils::transform).toList();
+        summary.addAll(reports);
+        //auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Pulled payroll report for company id :" + companyId);
+        return summary;
     }
-
-    private static LocalDateTime parseCreated(String value) {
-        if (value == null || value.isEmpty()) return null;
-        try {
-            return LocalDateTime.parse(value);
-        } catch (Exception e1) {
-            try {
-                return LocalDate.parse(value).atStartOfDay();
-            } catch (Exception e2) {
-                return null;
-            }
-        }
-    }
-
 
     @Override
     public List<ReportResponse> getPayRollReportsByStatus(String companyId, String status) {
         List<ReportResponse> reports = new ArrayList<>();
-
-        try {
-            if (status != null && status.equalsIgnoreCase("SIMULATED")) {
-                reports = getPayRollReportSimulates(companyId);
-            }
-            // TODO create enum for this strings
-            //'COMPLETED. |. PENDING. |. APPROVED. |. SIMULATED'
-            if (status != null && status.equalsIgnoreCase("COMPLETED")) {
-                List<ReportResponse> firstReport = payrollReportSummaryRepo.findAllByPayrollStatusAndCompanyIdOrderByCreatedDateAsc(PayrollStatus.COMPLETED, companyId).stream()
-                        .map(ReportUtils::transform).toList();
-                if (!firstReport.isEmpty()) {
-                    reports.add(firstReport.get(0));
-                }
-            }
-            if (status != null && status.equalsIgnoreCase("APPROVED")) {
-                reports = payrollReportSummaryRepo.findAllByPayrollStatusAndCompanyIdOrderByCreatedDateAsc(PayrollStatus.APPROVED, companyId).stream()
-                        .map(ReportUtils::transform).toList();
-            }
-            if (status != null && status.equalsIgnoreCase("PENDING")) {
-                reports = payrollReportSummaryRepo.findAllByPayrollStatusAndCompanyIdOrderByCreatedDateAsc(PayrollStatus.PENDING, companyId).stream()
-                        .map(ReportUtils::transform).toList();
-            }
-            //auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Pulled payroll report for company id :" + companyId);
-            return reports;
-        } catch (Exception e) {
-            log.error("Error in getPayRollReportsByStatus", e);
-            throw e;
+        if (status != null && status.equalsIgnoreCase("SIMULATED")) {
+            reports = getPayRollReportSimulates(companyId);
         }
-
+        // TODO create enum for this strings
+        //'COMPLETED. |. PENDING. |. APPROVED. |. SIMULATED'
+        if (status != null && status.equalsIgnoreCase("COMPLETED")) {
+            List<ReportResponse> firstReport = payrollReportSummaryRepo.findAllByPayrollStatusAndCompanyIdOrderByCreatedDateAsc(PayrollStatus.COMPLETED, companyId).stream()
+                    .map(ReportUtils::transform).toList();
+            if (!firstReport.isEmpty()) {
+                reports.add(firstReport.get(0));
+            }
+        }
+        if (status != null && status.equalsIgnoreCase("APPROVED")) {
+            reports = payrollReportSummaryRepo.findAllByPayrollStatusAndCompanyIdOrderByCreatedDateAsc(PayrollStatus.APPROVED, companyId).stream()
+                    .map(ReportUtils::transform).toList();
+        }
+        if (status != null && status.equalsIgnoreCase("PENDING")) {
+            reports = payrollReportSummaryRepo.findAllByPayrollStatusAndCompanyIdOrderByCreatedDateAsc(PayrollStatus.PENDING, companyId).stream()
+                    .map(ReportUtils::transform).toList();
+        }
+        //auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Pulled payroll report for company id :" + companyId);
+        return reports;
     }
 
     @Override
@@ -605,11 +536,12 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         } else {
             existingSummaryReport = payrollReportSummaryRepo
                     .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(request.getStartDate(), request.getCompanyId(), false);
+            LOGGER.info("===== existingSummaryReport {} ", existingSummaryReport);
             updateDashboardData(AppConstants.payrollCountRegular, existingSummaryReport);
         }
         existingSummaryReport.setPayrollStatus(request.getPayrollStatus());
         PayrollReportSummary reportResponse = payrollReportSummaryRepo.save(existingSummaryReport);
-        //TODO update the detail report once the payroll is approved
+
         logApproveReportEvent(request.getCompanyId(), reportResponse);
         if (request.getPayrollStatus().equals(PayrollStatus.APPROVED)) {
             payrollAsyncService.updateEmployeeLoanAsync(existingSummaryReport.getId().toString(), request.getCompanyId());
@@ -744,34 +676,86 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     }
 
     @Override
+    public Map<String, Object> getPayRollReports(String companyId, int page, int size) {
+        int safePage = Math.max(0, page);
+        int safeSize = size > 0 ? size : 10;
+
+        // Fetch all persisted reports for the company (unpaged)
+        Page<PayrollReportSummary> persistedPage =
+                payrollReportSummaryRepo.findAllByCompanyIdOrderByCreatedDateAsc(companyId, Pageable.unpaged());
+
+        List<ReportResponse> persisted = persistedPage.getContent()
+                .stream()
+                .map(ReportUtils::transform)
+                .toList();
+
+        // Fetch all simulated reports
+        List<ReportResponse> simulated = getPayRollReportSimulates(companyId);
+
+        // Merge both, sort by createdDate ASC
+        List<ReportResponse> combined = new ArrayList<>(persisted.size() + simulated.size());
+        combined.addAll(persisted);
+        combined.addAll(simulated);
+
+        combined.sort(Comparator.comparing(
+                rr -> parseCreated(rr.getCreatedDate()),
+                Comparator.nullsLast(Comparator.naturalOrder())
+        ));
+
+        // In-memory pagination
+        int totalItems = combined.size();
+        int fromIndex = Math.min(safePage * safeSize, totalItems);
+        int toIndex = Math.min(fromIndex + safeSize, totalItems);
+        List<ReportResponse> pageContent = combined.subList(fromIndex, toIndex);
+
+        int totalPages = (int) Math.ceil((double) totalItems / safeSize);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("reports", pageContent);
+        response.put("currentPage", safePage);
+        response.put("totalItems", totalItems);
+        response.put("totalPages", totalPages);
+        response.put("pageSize", safeSize);
+        return response;
+    }
+
+    private static LocalDateTime parseCreated(String value) {
+        if (value == null || value.isEmpty()) return null;
+        try {
+            return LocalDateTime.parse(value);
+        } catch (Exception e1) {
+            try {
+                return LocalDate.parse(value).atStartOfDay();
+            } catch (Exception e2) {
+                return null;
+            }
+        }
+    }
+
+
+    @Override
     public List<ReportAnalytics> getReportAnalytics(String companyId, int page, int size) {
         Pageable paging = PageRequest.of(page, size);
         Page<PayrollReportSummary> payrollReportSummaryPage = payrollReportSummaryRepo.findPayrollReportSummaryByCompanyIdAndPayrollSimulationOrderByCreatedDateDesc(companyId, false, paging);
-        log.info(" ======> payrollReportSummaryPage list {}", payrollReportSummaryPage.getTotalElements());
-        try {
-            var reportAnalytics = payrollReportSummaryPage.getContent()
-                    .stream()
-                    .filter(r -> r != null && r.getId() != null)
-                    .map(x -> new ReportAnalytics(
-                            x.getStartDate(),
-                            x.getTotalNumberOfEmployees(),
-                            payrollReportDetailRepo.countBySummaryId(x.getId().toString()),
-                            ReportUtils.transform(x).getSummary().getSummary().get(MapKeys.TOTAL_NET_PAY),
-                            getReportStatus(x),
-                            x.getId().toString(),
-                            x.getCompanyId(),
-                            x.isOffCycle(),
-                            x.getOffCycleId(),
-                            x.isOffCycle() ? "Off-Cycle" : "Regular",
-                            x.getCreatedDate().toString()
-                    ))
-                    .toList();
-            return !reportAnalytics.isEmpty() ? reportAnalytics : new ArrayList<>();
-        } catch (Exception e) {
-            LOGGER.error("Error while retrieving report analytics {}", e.getMessage());
-            throw e;
-        }
-
+        //log.info(" ======> payrollReportSummaryPage list {}", payrollReportSummaryPage.getTotalElements());
+        var reportAnalytics = payrollReportSummaryPage.getContent()
+                .stream()
+                .filter(r -> r != null && r.getId() != null)
+                .map(x -> new ReportAnalytics(
+                        x.getStartDate(),
+                        x.getTotalNumberOfEmployees(),
+                        payrollReportDetailRepo.countBySummaryId(x.getId().toString()),
+                        ReportUtils.transform(x).getSummary().getSummary().get(MapKeys.TOTAL_NET_PAY),
+                        getReportStatus(x),
+                        x.getId().toString(),
+                        x.getCompanyId(),
+                        x.isOffCycle(),
+                        x.getOffCycleId(),
+                        x.isOffCycle() ? "Off-Cycle" : "Regular",
+                        x.getCreatedDate().toString()
+                ))
+                .toList();
+        return !reportAnalytics.isEmpty() ? reportAnalytics : new ArrayList<>();
     }
 
     private String getReportStatus(PayrollReportSummary report) {
@@ -822,7 +806,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                                 .map(r -> r.getDetail())
                                 .map(d -> d.getReport())
                                 .orElse(new PaymentInfo());
-                       //  merge maps safely
+                        //  merge maps safely
                         boolean mapsDifferent = !Objects.equals(oldPaymentInfo.getPayeeTax(), x.getPayeeTax()) && !Objects.equals(oldPaymentInfo.getPension(), x.getPension());
                         if (mapsDifferent) {
                             oldPaymentInfo.setGrossPay(mergeMaps(oldPaymentInfo.getGrossPay(), paymentInfoToSave.getGrossPay()));
@@ -998,7 +982,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         return isOffCycle ? "PRO-"+ codeSuffix : "PRR-" + codeSuffix;
     }
 
-    private void logGenerateReportEvent(String companyId, ReportResponse reportResponse) {
+    @Async
+    protected void logGenerateReportEvent(String companyId, ReportResponse reportResponse) {
         var loggedInUserName = AuthUtil.getUserName();
         var loggedInUserEmail = AuthUtil.getUserEmail();
         var payPeriod = reportResponse.getStartDate() + " - " + reportResponse.getEndDate();
