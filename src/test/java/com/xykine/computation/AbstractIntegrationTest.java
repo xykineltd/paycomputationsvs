@@ -1,13 +1,17 @@
 package com.xykine.computation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xykine.computation.domain.JobStatus;
 import com.xykine.computation.entity.PayrollStatus;
+import com.xykine.computation.repo.PayrollReportDetailRepo;
+import com.xykine.computation.repo.PayrollReportSummaryRepo;
 import com.xykine.computation.request.PaymentInfoRequest;
 import com.xykine.computation.request.RetrievePaymentElementPayload;
 import com.xykine.computation.request.UpdateReportRequest;
 import com.xykine.computation.response.ReportResponse;
 import com.xykine.computation.service.AdminService;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,6 +59,12 @@ public abstract class AbstractIntegrationTest {
     @LocalServerPort
     protected int port;
 
+    @Autowired
+    protected PayrollReportDetailRepo payrollReportDetailRepo;
+
+    @Autowired
+    protected PayrollReportSummaryRepo payrollReportSummaryRepo;
+
     protected static ObjectMapper MAPPER = new ObjectMapper();
 
     protected static final Logger LOGGER = LoggerFactory.getLogger(ControllerIntegrationTest.class);
@@ -91,6 +101,18 @@ public abstract class AbstractIntegrationTest {
         return paymentInfoRequest;
     }
 
+    Map startReportSummary() {
+        return webTestClient.post()
+                .uri("/compute/payroll/start")
+                .headers(headers -> headers.setBearerAuth(jwt.getTokenValue()))
+                .bodyValue(createPayload())
+                .exchange()
+                .expectStatus().isAccepted()
+                .expectBody(Map.class)
+                .returnResult()
+                .getResponseBody();
+    }
+
     ReportResponse getReportSummary() {
         return webTestClient.post()
                 .uri("/compute/payroll")
@@ -123,6 +145,18 @@ public abstract class AbstractIntegrationTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(new ParameterizedTypeReference<Map<String, Object>>() {})
+                .returnResult()
+                .getResponseBody();
+    }
+
+    protected ReportResponse getReportByReportId(String url){
+        return webTestClient.get()
+                .uri(url)
+                .headers(headers -> headers.setBearerAuth(jwt.getTokenValue()))
+                .accept(MediaType.APPLICATION_JSON)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(new ParameterizedTypeReference<ReportResponse>() {})
                 .returnResult()
                 .getResponseBody();
     }
@@ -185,6 +219,24 @@ public abstract class AbstractIntegrationTest {
                 .getResponseBody();
     }
 
+    protected JobStatus getStatus(String jobId) {
+
+        String url = UriComponentsBuilder.fromHttpUrl("http://localhost:" + port + "/compute/payroll/status/" + jobId)
+                    .toUriString();
+
+        return webTestClient.get()
+                .uri(url)
+                .headers(headers -> headers.setBearerAuth(jwt.getTokenValue()))
+                .accept(MediaType.APPLICATION_JSON)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(new ParameterizedTypeReference<JobStatus>() {})
+                .returnResult()
+                .getResponseBody();
+
+
+    }
+
     protected Map<String, Object> getReportDetail(ReportResponse reportSummary) {
         String url = UriComponentsBuilder.fromHttpUrl("http://localhost:" + port + "/compute/reports/paymentDetails")
                 .queryParam("id", reportSummary.getReportId())
@@ -193,6 +245,14 @@ public abstract class AbstractIntegrationTest {
                 .queryParam("size", "3")
                 .toUriString();
         return getReport(url);
+    }
+
+    ReportResponse getReportById(String reportId) {
+        // @GetMapping("/{companyId}/")
+        String URL_PREFIX = "http://localhost:" + port + "/compute/reports//by-reportId/"+ reportId;
+        String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX)
+                .toUriString();
+        return getReportByReportId(url);
     }
 
     List<ReportResponse> getReportByCompanyId() {

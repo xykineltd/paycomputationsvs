@@ -58,10 +58,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private YTDReportRepo ytdReportRepo;
-    @Autowired
-    private PayrollReportDetailRepo payrollReportDetailRepo;
-    @Autowired
-    private PayrollReportSummaryRepo payrollReportSummaryRepo;
+
     @Autowired
     private LoanRepo loanRepo;
 

@@ -1,20 +1,27 @@
 package com.xykine.computation.service;
 
+import com.xykine.computation.domain.JobStatus;
 import com.xykine.computation.entity.*;
+import com.xykine.computation.exceptions.PayrollValidationException;
+import com.xykine.computation.repo.ComputationConstantsRepo;
 import com.xykine.computation.repo.PayrollReportDetailRepo;
 import com.xykine.computation.repo.PayrollReportSummaryRepo;
 import com.xykine.computation.repo.YTDReportRepo;
 import com.xykine.computation.repo.simulate.PayrollReportDetailSimulateRepo;
 import com.xykine.computation.repo.simulate.PayrollReportSummarySimulateRepo;
+import com.xykine.computation.request.PaymentInfoRequest;
 import com.xykine.computation.request.ReportByTypeRequest;
 import com.xykine.computation.request.UpdateLoanRequest;
 import com.xykine.computation.request.UpdateReportRequest;
 import com.xykine.computation.response.*;
 
+import com.xykine.computation.session.SessionCalculationObject;
 import com.xykine.computation.utils.AuthUtil;
+import com.xykine.computation.utils.OperationUtils;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -43,6 +50,7 @@ import com.xykine.computation.exceptions.PayrollReportNotException;
 import com.xykine.computation.exceptions.PayrollUnmodifiableException;
 import com.xykine.computation.utils.ReportUtils;
 import com.xykine.computation.utils.AppConstants;
+import reactor.core.publisher.Sinks;
 
 @Service
 @RequiredArgsConstructor
@@ -57,9 +65,45 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     private final PayrollReportDetailSimulateRepo payrollReportDetailRepoSimulate;
     private final DashboardDataService dashboardDataService;
     private final YTDReportRepo ytdReportRepo;
-    private final PayrollReportDetailSimulateRepo payrollReportDetailSimulateRepo;
-    private final LoanService loanService;
     private final PayrollAsyncService payrollAsyncService;
+    private final JobStatusStore jobStatusStore;
+    private final ComputationConstantsRepo computationConstantsRepo;
+    private final EmployeeMetadataService employeeMetadataService;
+    private final AdminService adminService;
+    private final ComputeService computeService;
+    @Autowired
+    private SessionCalculationObject sessionCalculationObject;
+
+    @Override
+    @Async
+    public void computePayrollAsync(String jobId, String authorizationHeader, PaymentInfoRequest paymentRequest, Sinks.Many<JobStatus> jobStatusSink) {
+        jobStatusStore.updateJob(jobId, "IN_PROGRESS", "Computation started", "");
+        jobStatusSink.tryEmitNext(jobStatusStore.getJob(jobId));
+        try {
+            sessionCalculationObject = OperationUtils.doPreflight(
+                    sessionCalculationObject,
+                    computationConstantsRepo,
+                    employeeMetadataService,
+                    paymentRequest
+            );
+
+            List<PaymentInfo> paymentInfoList = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
+            if (paymentInfoList == null || paymentInfoList.isEmpty()) {
+                throw new PayrollValidationException("No payment information found for request");
+            }
+
+            PaymentComputeResponse computeResponse = computeService.computePayroll(paymentInfoList);
+            computeResponse = OperationUtils.refineResponse(computeResponse, sessionCalculationObject, paymentRequest);
+
+            ReportResponse reportResponse = serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
+
+            jobStatusStore.updateJob(jobId, "COMPLETED", "Payroll computation complete", reportResponse.getReportId());
+            jobStatusSink.tryEmitNext(jobStatusStore.getJob(jobId));
+        } catch (Exception e) {
+            jobStatusStore.updateJob(jobId, "FAILED", e.getMessage(), "");
+            jobStatusSink.tryEmitNext(jobStatusStore.getJob(jobId));
+        }
+    }
 
     @Transactional
     public ReportResponse serializeAndSaveReport(PaymentComputeResponse paymentComputeResponse, String companyId)
@@ -277,8 +321,16 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         return summaryVariance;
     }
 
-    public ReportResponse getPayRollReport(UUID id, boolean isSimulate) {
+    public ReportResponse getPayRollReport(UUID id) {
+        PayrollReportSummarySimulate simulate = payrollReportSummaryRepoSimulate.findPayrollReportSummaryById(id);
+        if (simulate != null) return ReportUtils.transform(simulate);
+        PayrollReportSummary summary = payrollReportSummaryRepo.findPayrollReportSummaryById(id);
+        if (summary != null) return ReportUtils.transform(summary);
+        throw new RuntimeException("Report with id: " + id + " was not found");
+    }
 
+
+    public ReportResponse getPayRollReport(UUID id, boolean isSimulate) {
         if (isSimulate) {
             PayrollReportSummarySimulate payrollReportSimulateSummary = payrollReportSummaryRepoSimulate.findPayrollReportSummaryById(id);
             if (payrollReportSimulateSummary == null) {
@@ -872,6 +924,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         return isOffCycle ? "PRO-"+ codeSuffix : "PRR-" + codeSuffix;
     }
 
+    @Async
     protected void logGenerateReportEvent(String companyId, ReportResponse reportResponse) {
         var loggedInUserName = AuthUtil.getUserName();
         var loggedInUserEmail = AuthUtil.getUserEmail();

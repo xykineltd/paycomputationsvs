@@ -1,15 +1,13 @@
 package com.xykine.computation.controller;
 
+import com.xykine.computation.domain.JobStatus;
 import com.xykine.computation.exceptions.PayrollValidationException;
 import com.xykine.computation.repo.ComputationConstantsRepo;
 import com.xykine.computation.repo.TaxRepo;
 import com.xykine.computation.request.PaymentInfoRequest;
 import com.xykine.computation.response.PaymentComputeResponse;
 import com.xykine.computation.response.ReportResponse;
-import com.xykine.computation.service.AdminService;
-import com.xykine.computation.service.ComputeService;
-import com.xykine.computation.service.EmployeeMetadataService;
-import com.xykine.computation.service.ReportPersistenceService;
+import com.xykine.computation.service.*;
 import com.xykine.computation.session.SessionCalculationObject;
 import com.xykine.computation.utils.AuthUtil;
 import com.xykine.computation.utils.OperationUtils;
@@ -17,13 +15,22 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 import org.xykine.payroll.model.PaymentInfo;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import reactor.core.publisher.Sinks;
 
 @RestController
 @RequestMapping("/compute")
@@ -35,12 +42,55 @@ public class Compute {
     private final ComputeService computeService;
     private final ReportPersistenceService reportPersistenceService;
     private final ComputationConstantsRepo computationConstantsRepo;
-    private final TaxRepo taxRepo;
     private final AdminService adminService;
     private final EmployeeMetadataService employeeMetadataService;
+    private final JobStatusStore jobStatusStore;
+
+    private final Sinks.Many<JobStatus> jobStatusSink = Sinks.many().multicast().onBackpressureBuffer();
 
     @Autowired
     private SessionCalculationObject sessionCalculationObject;
+
+    @PostMapping("/payroll/start")
+    public ResponseEntity<Map<String, String>> startPayroll(
+            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestBody PaymentInfoRequest paymentRequest) {
+
+        if (!paymentRequest.isPayrollSimulation() || !paymentRequest.isOffCycle()) {
+            computeService.validatePayrollIsNotApprovedOrCompleted(
+                    String.valueOf(paymentRequest.getStart()),
+                    paymentRequest.getCompanyId()
+            );
+        }
+
+        String jobId = UUID.randomUUID().toString();
+        jobStatusStore.createJob(jobId);
+
+        reportPersistenceService.computePayrollAsync(jobId, authorizationHeader, paymentRequest,jobStatusSink);
+
+        Map<String, String> response = new HashMap<>();
+        response.put("jobId", jobId);
+        response.put("status", "ACCEPTED");
+
+        return ResponseEntity.accepted().body(response);
+    }
+
+    // Use jobId to check job status
+    @GetMapping("/payroll/status/{jobId}")
+    public Mono<ResponseEntity<JobStatus>> getPayrollStatus(@PathVariable String jobId) {
+        JobStatus status = jobStatusStore.getJob(jobId);
+        if (status == null) {
+            return Mono.just(ResponseEntity.notFound().build());
+        }
+        return Mono.just(ResponseEntity.ok(status));
+    }
+
+    // Server sent event
+    @GetMapping(value = "/payroll/stream/{jobId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<JobStatus> streamJobStatus(@PathVariable String jobId) {
+        return jobStatusSink.asFlux()
+                .filter(status -> status.getJobId().equals(jobId));
+    }
 
     @PostMapping("/payroll")
     public Mono<ReportResponse> computePayroll(
