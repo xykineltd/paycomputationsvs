@@ -12,42 +12,65 @@ public class TestDataGenerator {
 
         for (int i = 1; i <= numberOfEntries; i++) {
             ObjectNode entry = mapper.createObjectNode();
-
             entry.put("id", (String) null);
-            entry.put("numberOfDaysOfUnpaidAbsence", i % 4);
+            entry.put("numberOfDaysOfUnpaidAbsence", 0);
             entry.put("startDate", "2025-05-01");
             entry.put("endDate", "2025-05-31");
             entry.put("employeeID", "emp-" + String.format("%04d", i));
-            entry.put("companyID", "682cf69492b07e60fa109911");
-            entry.put("completed", i % 7 == 0);
-            entry.put("employeeIsLock", i % 11 == 0);
-            entry.set("paymentSettings", generatePaymentSettings(mapper, i));
-            entry.put("basicSalary", 300000 + (i * 100) % 200000);
+            entry.put("companyID", "1234567");
+            entry.put("completed", false);
+            entry.put("employeeIsLock", false);
+            entry.put("basicSalary", 10351833.82);
             entry.put("fullName", "Employee " + i);
             entry.put("offCycleID", (String) null);
-            entry.put("offCycle", i % 8 == 0);
-            entry.put("offCycleActualValueSupplied", i % 9 == 0);
+            entry.put("offCycle", false);
+            entry.put("offCycleActualValueSupplied", false);
             entry.put("currency", "NGN");
             entry.put("salaryFrequency", "MONTHLY");
-
             ObjectNode exchangeInfo = mapper.createObjectNode();
             exchangeInfo.put("currency", "NGN");
             exchangeInfo.put("rateDateAndTime", (String) null);
             exchangeInfo.put("exchangeRate", 1.0);
             entry.set("exchangeInfo", exchangeInfo);
-
-            entry.put("totalNumberOfEmployees", 1);
+            entry.put("totalNumberOfEmployees", 100);
             entry.put("ytdReport", (String) null);
-
             rootArray.add(entry);
         }
-
         try {
             return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(rootArray);
         } catch (Exception e) {
             throw new RuntimeException("Error generating test data", e);
         }
     }
+
+    /*
+     [
+                     {
+                                 "id": null,
+                                 "numberOfDaysOfUnpaidAbsence": 2,
+                                 "startDate": "2025-06-01",
+                                 "endDate": "2025-06-30",
+                                 "employeeID": "standardNotPensioned",
+                                 "companyID": "1234567",
+                                 "completed": false,
+                                 "employeeIsLock": false,
+                                 "basicSalary": 10351833.82,
+                                 "fullName": "Maudie Steuber",
+                                 "offCycleID": null,
+                                 "offCycle": false,
+                                 "offCycleActualValueSupplied": false,
+                                 "currency": "NGN",
+                                 "salaryFrequency": "MONTHLY",
+                                 "exchangeInfo": {
+                                   "currency": "NGN",
+                                   "rateDateAndTime": null,
+                                   "exchangeRate": 1.0
+                                 },
+                                 "totalNumberOfEmployees": 1,
+                                 "ytdReport": null
+                               }
+                             ]
+    * */
 
     private static ArrayNode generatePaymentSettings(ObjectMapper mapper, int index) {
         ArrayNode settingsArray = mapper.createArrayNode();

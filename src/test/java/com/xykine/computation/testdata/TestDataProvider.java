@@ -3,6 +3,9 @@ package com.xykine.computation.testdata;
 public class TestDataProvider {
 
     public static String ONE_THOUSAND_ENTRIES = TestDataGenerator.generateEntries(1000);
+    public static String TWO_THOUSAND_ENTRIES = TestDataGenerator.generateEntries(2000);
+    public static String FIVE_THOUSAND = TestDataGenerator.generateEntries(5000);
+    public static String TWO = TestDataGenerator.generateEntries(2);
     public static String TEN_ENTRIES = TestDataGenerator.generateEntries(10);
     public static String STANDARD_PAYROLL_ENTRY_WITH_PERFORMANCE_BONUS  =
             """

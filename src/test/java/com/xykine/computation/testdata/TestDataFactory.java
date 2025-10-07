@@ -24,6 +24,9 @@ public class TestDataFactory {
             case "off-cycle" -> OFF_CYCLE;
             case "ten-entries" -> TEN_ENTRIES;
             case "one-thousand-entries" -> ONE_THOUSAND_ENTRIES;
+            case "two-thousand-entries" -> TWO_THOUSAND_ENTRIES;
+            case "5000" -> FIVE_THOUSAND;
+            case "two" -> TWO;
             default -> throw new IllegalArgumentException("Unknown type: " + type);
         };
         try {
