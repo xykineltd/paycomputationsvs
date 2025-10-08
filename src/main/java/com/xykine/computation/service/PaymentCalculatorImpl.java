@@ -334,8 +334,17 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     @Override
     public PaymentInfo computeTotalDeduction(PaymentInfo paymentInfo) {
         Map<String, BigDecimal> deductionMap = new HashMap<>();
+        String payee_tax_key = "";
         if (!isContract(paymentInfo)) {
-        String payee_tax_key = !paymentInfo.isOffCycle() ?  "MONTHLY PAYEE" : "Payee Tax on " + getOffCyclePaymentDetails(paymentInfo).getName();
+            if (paymentInfo.isOffCycle()) {
+                payee_tax_key = "Payee Tax on " + getOffCyclePaymentDetails(paymentInfo).getName();
+                deductionMap.put(payee_tax_key, paymentInfo.getPayeeTax().get(payee_tax_key));
+                deductionMap.put(MapKeys.TOTAL_DEDUCTION, paymentInfo.getPayeeTax().get(payee_tax_key));
+                updateReportSummary(paymentInfo, sessionCalculationObject, MapKeys.TOTAL_PERSONAL_DEDUCTION, paymentInfo.getPayeeTax().get(payee_tax_key));
+                paymentInfo.setDeduction(deductionMap);
+                return paymentInfo;
+            }
+        payee_tax_key = "MONTHLY PAYEE";
         deductionMap.put(payee_tax_key, paymentInfo.getPayeeTax().get(payee_tax_key));
         deductionMap.put(MapKeys.PENSION_FUND, paymentInfo.getPension().get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION));
         deductionMap.put(MapKeys.NATIONAL_HOUSING_FUND, paymentInfo.getNhf().get(MapKeys.NATIONAL_HOUSING_FUND));
@@ -380,7 +389,8 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         if(paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY) != null) {
             ExchangeInfo exchangeInfo = paymentInfo.getExchangeInfo();
             BigDecimal exchangeRate = exchangeInfo.getExchangeRate();
-            BigDecimal netPay = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(paymentInfo.getDeduction().get(MapKeys.TOTAL_DEDUCTION));
+            BigDecimal voluntaryPensionContribution =  !paymentInfo.isOffCycle() ? getEmployeeMetaData(paymentInfo).getVoluntaryPensionContribution() : BigDecimal.ZERO;
+            BigDecimal netPay = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(paymentInfo.getDeduction().get(MapKeys.TOTAL_DEDUCTION)).subtract(voluntaryPensionContribution);
             paymentInfo.setNetPay(roundToTwoDecimalPlaces(netPay.divide(exchangeRate, 0, RoundingMode.CEILING)));
             //Add net pay to summary
             updateReportSummary(paymentInfo, sessionCalculationObject, MapKeys.TOTAL_NET_PAY, netPay);

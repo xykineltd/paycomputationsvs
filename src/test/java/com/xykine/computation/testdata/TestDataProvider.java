@@ -471,6 +471,36 @@ public class TestDataProvider {
                              ]
             """;
 
+    public static String STANDARD_PAYROLL_ENTRY_WITH_PAYMENT_DISTRIBUTION_LIST_NOT_PENSIONED_VOLUNTARY_PENSION_CONTRIBUTION =
+            """
+                   [
+                     {
+                                 "id": null,
+                                 "numberOfDaysOfUnpaidAbsence": 2,
+                                 "startDate": "2025-06-01",
+                                 "endDate": "2025-06-30",
+                                 "employeeID": "standardWithVoluntaryPensionContribution",
+                                 "companyID": "1234567",
+                                 "completed": false,
+                                 "employeeIsLock": false,
+                                 "basicSalary": 10351833.82,
+                                 "fullName": "Maudie Steuber",
+                                 "offCycleID": null,
+                                 "offCycle": false,
+                                 "offCycleActualValueSupplied": false,
+                                 "currency": "NGN",
+                                 "salaryFrequency": "MONTHLY",
+                                 "exchangeInfo": {
+                                   "currency": "NGN",
+                                   "rateDateAndTime": null,
+                                   "exchangeRate": 1.0
+                                 },
+                                 "totalNumberOfEmployees": 1,
+                                 "ytdReport": null
+                               }
+                             ]
+            """;
+
     public static String STANDARD_PAYROLL_ENTRY_WITH_PERFORMANCE_BONUS_DISTRIBUTION_LIST  =
             """
                    [
