@@ -226,11 +226,11 @@ public class LoadComputationConfig {
                 .build();
 
         CompanyMetadata moniepointMfbCompanyMetadata = CompanyMetadata.builder()
-                .companyId("68e339494e8c5d553d566f43")
+                .companyId("68e6121925592b68310c91cc")
                 .paymentEntryMode(PaymentFrequencyEnum.YEARLY)
                 .salaryFrequency(PaymentFrequencyEnum.MONTHLY)
                 .paymentDistribution(morufoye_international_payment_distribution)
-                .companyName("Moniepoint MFB")
+                .companyName("MonieWorld")
                 .build();
 
         companyMetadataRepo.deleteAll();

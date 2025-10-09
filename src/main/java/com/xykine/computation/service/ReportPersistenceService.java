@@ -25,6 +25,7 @@ public interface ReportPersistenceService {
 
     //TODO we need to accept the companyID so that we do not mix up other company reports
     ReportResponse getPayRollReport(UUID reportId, boolean isSimulate);
+    ReportResponse getPayRollReport(UUID reportId);
     Map<String, Object> getPayRollReports(String companyId, int page, int size);
     List<ReportResponse> getPayRollReportsByStatus(String companyId, String status);
     Map<String, Object> getReportByEmployeeID(String companyId, String employeeID, int page, int size);

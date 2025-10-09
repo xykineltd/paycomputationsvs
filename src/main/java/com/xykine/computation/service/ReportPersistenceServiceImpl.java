@@ -536,7 +536,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         } else {
             existingSummaryReport = payrollReportSummaryRepo
                     .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(request.getStartDate(), request.getCompanyId(), false);
-            LOGGER.info("===== existingSummaryReport {} ", existingSummaryReport);
             updateDashboardData(AppConstants.payrollCountRegular, existingSummaryReport);
         }
         existingSummaryReport.setPayrollStatus(request.getPayrollStatus());
