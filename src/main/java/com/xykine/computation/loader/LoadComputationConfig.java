@@ -171,6 +171,16 @@ public class LoadComputationConfig {
                 .isPensioned(true)
                 .build();
 
+        EmployeeMetadata regularStaffWithCustomTaxReleifAndVoluntaryPensionContribution = EmployeeMetadata.builder()
+                .employeeId("standardWithVoluntaryPensionContribution")
+                .companyId("1234567")
+                .employeeType(EmployeeType.FULL_TIME)
+                .isNHFSubscribed(false)
+                .customTaxReliefApplicable(BigDecimal.ZERO)
+                .voluntaryPensionContribution(BigDecimal.valueOf(1000))
+                .isPensioned(true)
+                .build();
+
         EmployeeMetadata standardNotPensioned = EmployeeMetadata.builder()
                 .employeeId("standardNotPensioned")
                 .companyId("1234567")
@@ -186,6 +196,7 @@ public class LoadComputationConfig {
         employeeMetaDataRepo.save(contractStaff);
         employeeMetaDataRepo.save(regularStaffWithNHF);
         employeeMetaDataRepo.save(regularStaffNoNHF);
+        employeeMetaDataRepo.save(regularStaffWithCustomTaxReleifAndVoluntaryPensionContribution);
 
         String morufoye_international_payment_distribution = """
     [
