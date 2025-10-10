@@ -76,9 +76,6 @@ public class LoanServiceImpl implements LoanService {
 
         List<Loan> loans = mongoTemplate.find(query, Loan.class);
         long total = mongoTemplate.count(Query.of(query).limit(-1).skip(-1), Loan.class);
-
-        LOGGER.info(" ====> getLoans {} ", loans);
-
         return new PageImpl<>(loans, pageable, total);
     }
 
