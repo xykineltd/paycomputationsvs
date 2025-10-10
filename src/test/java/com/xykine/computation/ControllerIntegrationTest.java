@@ -220,6 +220,12 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
 
         loanOptional = loanRepo.findOneByCompanyIdAndEmployeeIdAndDescriptionAndActiveIsTrue(companyId, employeeId, loanDescription);
         assertThat(loanOptional.get().getOutstandingAmount()).isEqualTo(BigDecimal.valueOf(1000000).subtract(BigDecimal.valueOf(10000)));
+
+        when(adminService.getEmployeeIdListForFilter(any(), anyString())).thenReturn(List.of(employeeId));
+        Map<String, Object> response = geReportByFilter();
+        assertThat(response).isNotNull().satisfies((x) -> {
+            assertThat(x.get("totalItems")).isEqualTo(1);
+        });
     }
 
     @Test

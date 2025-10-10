@@ -5,6 +5,7 @@ import com.xykine.computation.domain.JobStatus;
 import com.xykine.computation.entity.PayrollStatus;
 import com.xykine.computation.repo.PayrollReportDetailRepo;
 import com.xykine.computation.repo.PayrollReportSummaryRepo;
+import com.xykine.computation.request.EmployeeFilterRequest;
 import com.xykine.computation.request.PaymentInfoRequest;
 import com.xykine.computation.request.RetrievePaymentElementPayload;
 import com.xykine.computation.request.UpdateReportRequest;
@@ -208,6 +209,18 @@ public abstract class AbstractIntegrationTest {
                 .getResponseBody();
     }
 
+    protected Map<String, Object> getReportByFilter(String url, EmployeeFilterRequest employeeFilterRequest) {
+        return webTestClient.post()
+                .uri(url)
+                .headers(headers -> headers.setBearerAuth(jwt.getTokenValue()))
+                .bodyValue(employeeFilterRequest)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(new ParameterizedTypeReference<Map<String, Object>>() {})
+                .returnResult()
+                .getResponseBody();
+    }
+
     Object getReportGenericDirect(String url) {
         return webTestClient.get()
                 .uri(url)
@@ -233,8 +246,6 @@ public abstract class AbstractIntegrationTest {
                 .expectBody(new ParameterizedTypeReference<JobStatus>() {})
                 .returnResult()
                 .getResponseBody();
-
-
     }
 
     protected Map<String, Object> getReportDetail(ReportResponse reportSummary) {
@@ -277,6 +288,18 @@ public abstract class AbstractIntegrationTest {
         String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX + TEST_COMPANY_ID + "/" + TEST_EMPLOYEE_ID)
                 .toUriString();
         return getReport(url);
+    }
+
+    Map<String, Object> geReportByFilter() {
+        String URL_PREFIX = "http://localhost:" + port + "/compute/reports/filterReports";
+        String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX).toUriString();
+        EmployeeFilterRequest employeeFilterRequest = new EmployeeFilterRequest();
+        employeeFilterRequest.setCompanyID("1234567");
+        employeeFilterRequest.setStarDate("2025-06-01");
+        employeeFilterRequest.setEndDate("2025-06-30");
+        employeeFilterRequest.setPage(0);
+        employeeFilterRequest.setSize(10);
+        return getReportByFilter(url, employeeFilterRequest);
     }
 
     ReportResponse getReportByStartDateAndCompanyId() {

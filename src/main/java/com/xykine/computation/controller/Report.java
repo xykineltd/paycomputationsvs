@@ -6,9 +6,12 @@ import com.xykine.computation.request.*;
 
 import com.xykine.computation.response.ReportAnalytics;
 import com.xykine.computation.response.ReportResponse;
+import com.xykine.computation.service.AdminService;
 import com.xykine.computation.service.ReportGeneratorService;
 import com.xykine.computation.service.ReportPersistenceService;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +30,9 @@ public class Report {
 
     private final ReportPersistenceService reportPersistenceService;
     private final ReportGeneratorService reportGeneratorService;
+    private final AdminService adminService;
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(Report.class);
 
     @GetMapping("/{companyId}/")
     public List<ReportResponse> getReports(@PathVariable String companyId) {
@@ -56,6 +62,17 @@ public class Report {
             @RequestParam(defaultValue = "3") int size
             ) {
         Map<String, Object> response =  reportPersistenceService.getReportByEmployeeID(companyId,  employeeId, page, size);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping("/filterReports")
+    public ResponseEntity<?> getReportByFilter(
+            @RequestBody EmployeeFilterRequest employeeFilterRequest,
+            @RequestHeader("Authorization") String authorizationHeader) {
+        List<String> filteredList = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
+        Map<String, Object> response =  reportPersistenceService.getReportByEmployeeIDList(employeeFilterRequest.getCompanyID(),
+                filteredList, employeeFilterRequest.getStarDate(), employeeFilterRequest.getEndDate(),
+                employeeFilterRequest.getPage(), employeeFilterRequest.getSize());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
