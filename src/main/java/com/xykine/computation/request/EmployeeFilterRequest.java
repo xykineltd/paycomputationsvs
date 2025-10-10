@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import org.xykine.payroll.model.UserRole;
 import java.util.Set;
+
 @Data
 public class EmployeeFilterRequest {
     private String firstName;
