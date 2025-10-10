@@ -7,7 +7,6 @@ import com.xykine.computation.request.*;
 
 import com.xykine.computation.response.ReportAnalytics;
 import com.xykine.computation.response.ReportResponse;
-import com.xykine.computation.service.PaymentCalculatorImpl;
 import com.xykine.computation.service.AdminService;
 import com.xykine.computation.service.ReportGeneratorService;
 import com.xykine.computation.service.ReportPersistenceService;
@@ -17,11 +16,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -39,7 +34,6 @@ public class Report {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Report.class);
 
-
     @PostMapping("/{companyId}")
     public ResponseEntity<?> getReports(
             @PathVariable String companyId,
@@ -50,7 +44,6 @@ public class Report {
         Map<String, Object> response = reportPersistenceService.getPayRollReports(companyId, page, size);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
-
 
     @GetMapping("/{companyId}/status/{status}")
     public List<ReportResponse> getReportsByStatus(@PathVariable String companyId, @PathVariable String status) {
@@ -73,14 +66,14 @@ public class Report {
             @PathVariable String employeeId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "3") int size
-            ) {
+    ) {
         Map<String, Object> response =  reportPersistenceService.getReportByEmployeeID(companyId,  employeeId, page, size);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @PostMapping("/filterReports")
     public ResponseEntity<?> getReportByFilter(
-            EmployeeFilterRequest employeeFilterRequest,
+            @RequestBody EmployeeFilterRequest employeeFilterRequest,
             @RequestHeader("Authorization") String authorizationHeader) {
         List<String> filteredList = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
         Map<String, Object> response =  reportPersistenceService.getReportByEmployeeIDList(employeeFilterRequest.getCompanyID(),
@@ -94,8 +87,7 @@ public class Report {
                                                      @RequestParam(defaultValue = "0") int page,
                                                      @RequestParam(defaultValue = "12") int size
     ) {
-            var respo = reportPersistenceService.getReportAnalytics(companyId, page, size);
-            return respo;
+        return reportPersistenceService.getReportAnalytics(companyId, page, size);
     }
 
     @GetMapping("/get-by-start-date/{companyId}/{startDate}")
@@ -154,7 +146,7 @@ public class Report {
             @RequestParam() List<String> endDates,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "3") int size
-            ) {
+    ) {
         Map<String, Object> response  = reportPersistenceService
                 .getPaymentDetailForDates(employeeId, companyId, endDates, page, size);
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -198,6 +190,7 @@ public class Report {
                 (request.getDocType().equalsIgnoreCase("pdf") ? "pdf" : "xlsx");
 
         HttpHeaders headers = new HttpHeaders();
+
         headers.setContentType(
                 request.getDocType().equalsIgnoreCase("pdf") ?
                         MediaType.APPLICATION_PDF :
@@ -222,7 +215,7 @@ public class Report {
 
     @GetMapping("/payment-header-options/company-id/{companyID}/report-id/{reportId}")
     public Set<String> getAllHeadersForReport(@PathVariable String companyID, @PathVariable String reportId) {
-         return reportGeneratorService.getHeadersForReport(companyID, reportId);
+        return reportGeneratorService.getHeadersForReport(companyID, reportId);
     }
 
     @PostMapping("/total-netpay-by-report-id")
