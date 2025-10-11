@@ -17,9 +17,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 public interface ReportPersistenceService {
-    void computePayrollAsync(String jobId, String authorizationHeader, PaymentInfoRequest paymentRequest, Sinks.Many<JobStatus> jobStatusSink);
+    void computePayrollAsync(Consumer<JobStatusStore> progressCallback, String jobId, String authorizationHeader, PaymentInfoRequest paymentRequest);
     ReportResponse serializeAndSaveReport(PaymentComputeResponse paymentComputeResponse, String companyId) throws IOException, ClassNotFoundException;
     ReportResponse getPayRollReport(String startData, String companyId);
 

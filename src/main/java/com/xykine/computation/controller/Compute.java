@@ -11,14 +11,17 @@ import com.xykine.computation.service.*;
 import com.xykine.computation.session.SessionCalculationObject;
 import com.xykine.computation.utils.AuthUtil;
 import com.xykine.computation.utils.OperationUtils;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.socket.handler.TextWebSocketHandler;
 import org.xykine.payroll.model.PaymentInfo;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -35,10 +38,12 @@ import reactor.core.publisher.Sinks;
 @RestController
 @RequestMapping("/compute")
 @RequiredArgsConstructor
-public class Compute {
+public class Compute extends TextWebSocketHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Compute.class);
 
+
+    private final SimpMessagingTemplate messagingTemplate;
     private final ComputeService computeService;
     private final ReportPersistenceService reportPersistenceService;
     private final ComputationConstantsRepo computationConstantsRepo;
@@ -46,7 +51,6 @@ public class Compute {
     private final EmployeeMetadataService employeeMetadataService;
     private final JobStatusStore jobStatusStore;
 
-    private final Sinks.Many<JobStatus> jobStatusSink = Sinks.many().multicast().onBackpressureBuffer();
 
     @Autowired
     private SessionCalculationObject sessionCalculationObject;
@@ -66,7 +70,10 @@ public class Compute {
         String jobId = UUID.randomUUID().toString();
         jobStatusStore.createJob(jobId);
 
-        reportPersistenceService.computePayrollAsync(jobId, authorizationHeader, paymentRequest,jobStatusSink);
+        // Run asynchronously
+        reportPersistenceService.computePayrollAsync(progress -> {
+            messagingTemplate.convertAndSend("/topic/job-status", progress);
+        }, jobId, authorizationHeader, paymentRequest);
 
         Map<String, String> response = new HashMap<>();
         response.put("jobId", jobId);
@@ -86,11 +93,11 @@ public class Compute {
     }
 
     // Server sent event
-    @GetMapping(value = "/payroll/stream/{jobId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<JobStatus> streamJobStatus(@PathVariable String jobId) {
-        return jobStatusSink.asFlux()
-                .filter(status -> status.getJobId().equals(jobId));
-    }
+//    @GetMapping(value = "/payroll/stream/{jobId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+//    public Flux<JobStatus> streamJobStatus(@PathVariable String jobId) {
+//        return jobStatusSink.asFlux()
+//                .filter(status -> status.getJobId().equals(jobId));
+//    }
 
     @PostMapping("/payroll")
     public Mono<ReportResponse> computePayroll(
