@@ -15,8 +15,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Component
-@Profile({"dev"})
+//@Component
+//@Profile({"dev"})
 @AllArgsConstructor
 public class LoadComputationConfig {
 

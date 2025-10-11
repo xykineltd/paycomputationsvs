@@ -79,6 +79,7 @@ public class Report {
         Map<String, Object> response =  reportPersistenceService.getReportByEmployeeIDList(employeeFilterRequest.getCompanyID(),
                 filteredList, employeeFilterRequest.getStarDate(), employeeFilterRequest.getEndDate(),
                 employeeFilterRequest.getPage(), employeeFilterRequest.getSize());
+
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
