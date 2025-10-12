@@ -495,10 +495,9 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     }
 
     @Override
-    public Map<String, Object> getReportByEmployeeIDList(String companyId, List<String> employeeIDList, String startDate, String endDate, int page, int size) {
-        List<PayrollReportDetail> payrollDetails;
+    public Map<String, Object> getReportByEmployeeIDList(String companyId, List<String> employeeIDList, String summaryId, int page, int size) {
         Pageable paging = PageRequest.of(page, size);
-        Page<PayrollReportDetail> payrollReportDetailPage = payrollReportDetailRepo.findPayrollReportDetailByCompanyIdAndEmployeeIdInAndStartDateAndEndDate(companyId, employeeIDList,  startDate,  endDate, paging);
+        Page<PayrollReportDetail> payrollReportDetailPage = payrollReportDetailRepo.findPayrollReportDetailByCompanyIdAndEmployeeIdInAndSummaryId(companyId, employeeIDList, summaryId, paging);
         Map<String, Object> response = retrievePayrolDetails(payrollReportDetailPage);
         return response;
     }

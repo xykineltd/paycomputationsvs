@@ -19,8 +19,7 @@ public class EmployeeFilterRequest {
     private Set<UserRole> roles;
     private String email;
     private String phoneNumber;
-    private String starDate;
-    private String endDate;
+    private String reportId;
     private int page = 0;
     private int size = 10;
 }

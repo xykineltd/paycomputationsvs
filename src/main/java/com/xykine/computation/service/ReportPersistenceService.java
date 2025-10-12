@@ -30,7 +30,7 @@ public interface ReportPersistenceService {
     List<ReportResponse> getPayRollReports(String companyId);
     List<ReportResponse> getPayRollReportsByStatus(String companyId, String status);
     Map<String, Object> getReportByEmployeeID(String companyId, String employeeID, int page, int size);
-    Map<String, Object> getReportByEmployeeIDList(String companyId, List<String> employeeIDList, String startDate, String endDate, int page, int size);
+    Map<String, Object> getReportByEmployeeIDList(String companyId, List<String> employeeIDList, String summaryId, int page, int size);
     PayrollReportSummary approveReport(UpdateReportRequest updateReportRequest);
     boolean deleteReport(UpdateReportRequest updateReportRequest);
     PayrollReportSummary completeReport(UpdateReportRequest updateReportRequest);
