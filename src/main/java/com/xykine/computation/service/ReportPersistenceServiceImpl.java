@@ -42,6 +42,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import com.xykine.computation.entity.simulate.PayrollReportDetailSimulate;
@@ -76,9 +77,11 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
     @Override
     @Async
-    public void computePayrollAsync(String jobId, String authorizationHeader, PaymentInfoRequest paymentRequest, Sinks.Many<JobStatus> jobStatusSink) {
+    public void computePayrollAsync(Consumer<JobStatusStore> progressCallback,
+                                    String jobId, String authorizationHeader,
+                                    PaymentInfoRequest paymentRequest) {
         jobStatusStore.updateJob(jobId, "IN_PROGRESS", "Computation started", "");
-        jobStatusSink.tryEmitNext(jobStatusStore.getJob(jobId));
+        progressCallback.accept(jobStatusStore);
         try {
             sessionCalculationObject = OperationUtils.doPreflight(
                     sessionCalculationObject,
@@ -86,22 +89,19 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                     employeeMetadataService,
                     paymentRequest
             );
-
             List<PaymentInfo> paymentInfoList = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
             if (paymentInfoList == null || paymentInfoList.isEmpty()) {
                 throw new PayrollValidationException("No payment information found for request");
             }
-
             PaymentComputeResponse computeResponse = computeService.computePayroll(paymentInfoList);
             computeResponse = OperationUtils.refineResponse(computeResponse, sessionCalculationObject, paymentRequest);
-
             ReportResponse reportResponse = serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
-
             jobStatusStore.updateJob(jobId, "COMPLETED", "Payroll computation complete", reportResponse.getReportId());
-            jobStatusSink.tryEmitNext(jobStatusStore.getJob(jobId));
+            progressCallback.accept(jobStatusStore);
+
         } catch (Exception e) {
             jobStatusStore.updateJob(jobId, "FAILED", e.getMessage(), "");
-            jobStatusSink.tryEmitNext(jobStatusStore.getJob(jobId));
+            progressCallback.accept(jobStatusStore);
         }
     }
 
@@ -495,10 +495,9 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     }
 
     @Override
-    public Map<String, Object> getReportByEmployeeIDList(String companyId, List<String> employeeIDList, String startDate, String endDate, int page, int size) {
-        List<PayrollReportDetail> payrollDetails;
+    public Map<String, Object> getReportByEmployeeIDList(String companyId, List<String> employeeIDList, String summaryId, int page, int size) {
         Pageable paging = PageRequest.of(page, size);
-        Page<PayrollReportDetail> payrollReportDetailPage = payrollReportDetailRepo.findPayrollReportDetailByCompanyIdAndEmployeeIdInAndStartDateAndEndDate(companyId, employeeIDList,  startDate,  endDate, paging);
+        Page<PayrollReportDetail> payrollReportDetailPage = payrollReportDetailRepo.findPayrollReportDetailByCompanyIdAndEmployeeIdInAndSummaryId(companyId, employeeIDList, summaryId, paging);
         Map<String, Object> response = retrievePayrolDetails(payrollReportDetailPage);
         return response;
     }
