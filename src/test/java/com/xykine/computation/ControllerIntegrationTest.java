@@ -141,7 +141,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         String startDate = "2025-06-01";
         when(adminService.getPaymentInfoList(any(), anyString())).thenReturn(TestDataFactory.getPaymentSettings("standard with payment distribution list"));
         ReportResponse reportSummary = getReportSummaryCustom(companyId);
-
+        String summaryId = reportSummary.getReportId();
         assert reportSummary != null;
         Map<String, Object> body = getReportDetail(reportSummary);
         assertThat(body).isNotNull().satisfies((x) -> {
@@ -222,7 +222,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         assertThat(loanOptional.get().getOutstandingAmount()).isEqualTo(BigDecimal.valueOf(1000000).subtract(BigDecimal.valueOf(10000)));
 
         when(adminService.getEmployeeIdListForFilter(any(), anyString())).thenReturn(List.of(employeeId));
-        Map<String, Object> response = geReportByFilter();
+        Map<String, Object> response = geReportByFilter(summaryId);
         assertThat(response).isNotNull().satisfies((x) -> {
             assertThat(x.get("totalItems")).isEqualTo(1);
         });

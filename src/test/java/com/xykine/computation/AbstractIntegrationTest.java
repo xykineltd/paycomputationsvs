@@ -290,13 +290,12 @@ public abstract class AbstractIntegrationTest {
         return getReport(url);
     }
 
-    Map<String, Object> geReportByFilter() {
+    Map<String, Object> geReportByFilter(String summaryId) {
         String URL_PREFIX = "http://localhost:" + port + "/compute/reports/filterReports";
         String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX).toUriString();
         EmployeeFilterRequest employeeFilterRequest = new EmployeeFilterRequest();
         employeeFilterRequest.setCompanyID("1234567");
-        employeeFilterRequest.setStarDate("2025-06-01");
-        employeeFilterRequest.setEndDate("2025-06-30");
+        employeeFilterRequest.setReportId(summaryId);
         employeeFilterRequest.setPage(0);
         employeeFilterRequest.setSize(10);
         return getReportByFilter(url, employeeFilterRequest);

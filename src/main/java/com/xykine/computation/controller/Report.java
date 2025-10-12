@@ -77,7 +77,7 @@ public class Report {
             @RequestHeader("Authorization") String authorizationHeader) {
         List<String> filteredList = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
         Map<String, Object> response =  reportPersistenceService.getReportByEmployeeIDList(employeeFilterRequest.getCompanyID(),
-                filteredList, employeeFilterRequest.getStarDate(), employeeFilterRequest.getEndDate(),
+                filteredList, employeeFilterRequest.getReportId(),
                 employeeFilterRequest.getPage(), employeeFilterRequest.getSize());
 
         return new ResponseEntity<>(response, HttpStatus.OK);
