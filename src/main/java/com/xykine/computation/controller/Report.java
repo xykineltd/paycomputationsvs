@@ -6,6 +6,7 @@ import com.xykine.computation.request.*;
 
 import com.xykine.computation.response.ReportAnalytics;
 import com.xykine.computation.response.ReportResponse;
+import com.xykine.computation.response.SummaryDetail;
 import com.xykine.computation.service.AdminService;
 import com.xykine.computation.service.ReportGeneratorService;
 import com.xykine.computation.service.ReportPersistenceService;
@@ -22,6 +23,7 @@ import java.util.Map;
 import java.util.Set;
 
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 @RequestMapping("/compute/reports")
@@ -184,5 +186,15 @@ public class Report {
     @PostMapping("/total-netpay-by-report-id")
     public Map<String, Object> getTotalNetPayByReportId(@RequestBody RetrieveSummaryElementRequest request){
         return reportGeneratorService.extractDataFromSummary(request);
+    }
+
+    @PostMapping("/variance-details")
+    public ResponseEntity<?> getVarianceDetails(
+            @RequestBody EmployeeFilterRequest employeeFilterRequest,
+            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestParam() String header) {
+        List<String> filteredList = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
+        ConcurrentHashMap<String, Set<SummaryDetail>> response = reportPersistenceService.getSummaryVarianceDetails(employeeFilterRequest.getReportId(), filteredList,header);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

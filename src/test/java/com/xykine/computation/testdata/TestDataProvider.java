@@ -501,6 +501,36 @@ public class TestDataProvider {
                              ]
             """;
 
+    public static String STANDARD_PAYROLL_ENTRY_WITH_PAYMENT_DISTRIBUTION_LIST_NOT_PENSIONED_VOLUNTARY_PENSION_CONTRIBUTION_2 =
+            """
+                   [
+                     {
+                                 "id": null,
+                                 "numberOfDaysOfUnpaidAbsence": 2,
+                                 "startDate": "2025-07-01",
+                                 "endDate": "2025-007-30",
+                                 "employeeID": "standardWithVoluntaryPensionContribution",
+                                 "companyID": "1234567",
+                                 "completed": false,
+                                 "employeeIsLock": false,
+                                 "basicSalary": 10351833.82,
+                                 "fullName": "Maudie Steuber",
+                                 "offCycleID": null,
+                                 "offCycle": false,
+                                 "offCycleActualValueSupplied": false,
+                                 "currency": "NGN",
+                                 "salaryFrequency": "MONTHLY",
+                                 "exchangeInfo": {
+                                   "currency": "NGN",
+                                   "rateDateAndTime": null,
+                                   "exchangeRate": 1.0
+                                 },
+                                 "totalNumberOfEmployees": 1,
+                                 "ytdReport": null
+                               }
+                             ]
+            """;
+
     public static String STANDARD_PAYROLL_ENTRY_WITH_PERFORMANCE_BONUS_DISTRIBUTION_LIST  =
             """
                    [
@@ -814,5 +844,190 @@ public class TestDataProvider {
                         "ytdReport": null
                       }
                     ]
+            """;
+
+    public static String STANDARD_PAYROLL_ENTRY_2 =
+            """
+                   [
+                     {
+                                 "id": null,
+                                 "numberOfDaysOfUnpaidAbsence": 2,
+                                 "startDate": "2025-06-01",
+                                 "endDate": "2025-06-30",
+                                 "employeeID": "682cf69592b07e60fa10991b",
+                                 "companyID": "682cf69492b07e60fa109911",
+                                 "completed": false,
+                                 "employeeIsLock": false,
+                                 "paymentSettings": [
+                                   {
+                                     "paymentSettingID": null,
+                                     "employeeID": "682cf69592b07e60fa10991b",
+                                     "type": "BASIC_SALARY_ANNUAL",
+                                     "name": "Basic Salary",
+                                     "value":   1704911.85,
+                                     "currency": "NGN",
+                                     "salaryFrequency": "YEARLY",
+                                     "active": false,
+                                     "pensionable": false,
+                                     "prorated": false,
+                                     "createdDate": null,
+                                     "lastModifiedDate": null,
+                                     "createdBy": null,
+                                     "lastModifiedBy": null,
+                                     "version": 0
+                                   },
+                                   {
+                                     "paymentSettingID": null,
+                                     "employeeID": "682cf69592b07e60fa10991b",
+                                     "type": "ALLOWANCE_ANNUAL_HOUSING",
+                                     "name": "Housing Allowance",
+                                     "value":   852955.92,
+                                     "currency": "NGN",
+                                     "salaryFrequency": "YEARLY",
+                                     "active": false,
+                                     "pensionable": false,
+                                     "prorated": false,
+                                     "createdDate": null,
+                                     "lastModifiedDate": null,
+                                     "createdBy": null,
+                                     "lastModifiedBy": null,
+                                     "version": 0
+                                   },
+                                   {
+                                     "paymentSettingID": null,
+                                     "employeeID": "682cf69592b07e60fa10991b",
+                                     "type": "ALLOWANCE_ANNUAL_TRANSPORT",
+                                     "name": "Transport Allowance",
+                                     "value": 851955.92,
+                                     "currency": "NGN",
+                                     "salaryFrequency": "YEARLY",
+                                     "active": false,
+                                     "pensionable": false,
+                                     "prorated": false,
+                                     "createdDate": null,
+                                     "lastModifiedDate": null,
+                                     "createdBy": null,
+                                     "lastModifiedBy": null,
+                                     "version": 0
+                                   },
+                                   {
+                                     "paymentSettingID": null,
+                                     "employeeID": "682cf69592b07e60fa10991b",
+                                     "type": "ALLOWANCE_ANNUAL",
+                                     "name": "Utility",
+                                     "value": 1035183.38,
+                                     "currency": "NGN",
+                                     "salaryFrequency": "YEARLY",
+                                     "active": false,
+                                     "pensionable": false,
+                                     "prorated": false,
+                                     "createdDate": null,
+                                     "lastModifiedDate": null,
+                                     "createdBy": null,
+                                     "lastModifiedBy": null,
+                                     "version": 0
+                                   },
+                                   {
+                                     "paymentSettingID": null,
+                                     "employeeID": "682cf69592b07e60fa10991b",
+                                     "type": "ALLOWANCE_ANNUAL",
+                                     "name": "Entertainment",
+                                     "value": 1035183.38,
+                                     "currency": "NGN",
+                                     "salaryFrequency": "YEARLY",
+                                     "active": false,
+                                     "pensionable": false,
+                                     "prorated": false,
+                                     "createdDate": null,
+                                     "lastModifiedDate": null,
+                                     "createdBy": null,
+                                     "lastModifiedBy": null,
+                                     "version": 0
+                                   },
+                                   {
+                                     "paymentSettingID": null,
+                                     "employeeID": "682cf69592b07e60fa10991b",
+                                     "type": "ALLOWANCE_ANNUAL",
+                                     "name": "Medical",
+                                     "value": 1035183.38,
+                                     "currency": "NGN",
+                                     "salaryFrequency": "YEARLY",
+                                     "active": false,
+                                     "pensionable": false,
+                                     "prorated": false,
+                                     "createdDate": null,
+                                     "lastModifiedDate": null,
+                                     "createdBy": null,
+                                     "lastModifiedBy": null,
+                                     "version": 0
+                                   },
+                                   {
+                                     "paymentSettingID": null,
+                                     "employeeID": "682cf69592b07e60fa10991b",
+                                     "type": "ALLOWANCE_ANNUAL",
+                                     "name": "Leave",
+                                     "value": 1035183.38,
+                                     "currency": "NGN",
+                                     "salaryFrequency": "YEARLY",
+                                     "active": false,
+                                     "pensionable": false,
+                                     "prorated": false,
+                                     "createdDate": null,
+                                     "lastModifiedDate": null,
+                                     "createdBy": null,
+                                     "lastModifiedBy": null,
+                                     "version": 0
+                                   },
+                                   {
+                                     "paymentSettingID": null,
+                                     "employeeID": "682cf69592b07e60fa10991b",
+                                     "type": "ALLOWANCE_ANNUAL",
+                                     "name": "Training",
+                                     "value": 1035183.38,
+                                     "currency": "NGN",
+                                     "salaryFrequency": "YEARLY",
+                                     "active": false,
+                                     "pensionable": false,
+                                     "prorated": false,
+                                     "createdDate": null,
+                                     "lastModifiedDate": null,
+                                     "createdBy": null,
+                                     "lastModifiedBy": null,
+                                     "version": 0
+                                   },
+                                   {
+                                     "paymentSettingID": null,
+                                     "employeeID": "682cf69592b07e60fa10991b",
+                                     "type": "ALLOWANCE_ANNUAL",
+                                     "name": "PERSONAL OUTFIT",
+                                     "value":  1768093.22,
+                                     "currency": "NGN",
+                                     "salaryFrequency": "YEARLY",
+                                     "active": false,
+                                     "pensionable": false,
+                                     "prorated": false,
+                                     "createdDate": null,
+                                     "lastModifiedDate": null,
+                                     "createdBy": null,
+                                     "lastModifiedBy": null,
+                                     "version": 0
+                                   }
+                                 ],
+                                 "basicSalary": 10351833.82,
+                                 "fullName": "Maudie Steuber",
+                                 "offCycleID": null,
+                                 "offCycle": false,
+                                 "offCycleActualValueSupplied": false,
+                                 "currency": "NGN",
+                                 "salaryFrequency": "MONTHLY",
+                                 "exchangeInfo": {
+                                   "currency": "NGN",
+                                   "rateDateAndTime": null,
+                                   "exchangeRate": 1.0
+                                 },
+                                 "totalNumberOfEmployees": 1,
+                                 "ytdReport": null
+                               }
+                             ]
             """;
 }
