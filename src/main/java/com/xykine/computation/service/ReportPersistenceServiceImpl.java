@@ -75,13 +75,41 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     @Autowired
     private SessionCalculationObject sessionCalculationObject;
 
+//    @Override
+//    @Async
+//    public void computePayrollAsync(Consumer<JobStatusStore> progressCallback,
+//                                    String jobId, String authorizationHeader,
+//                                    PaymentInfoRequest paymentRequest) {
+//        jobStatusStore.updateJob(jobId, "IN_PROGRESS", "Computation started", "");
+//        progressCallback.accept(jobStatusStore);
+//        try {
+//            sessionCalculationObject = OperationUtils.doPreflight(
+//                    sessionCalculationObject,
+//                    computationConstantsRepo,
+//                    employeeMetadataService,
+//                    paymentRequest
+//            );
+//            List<PaymentInfo> paymentInfoList = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
+//            if (paymentInfoList == null || paymentInfoList.isEmpty()) {
+//                throw new PayrollValidationException("No payment information found for request");
+//            }
+//            PaymentComputeResponse computeResponse = computeService.computePayroll(paymentInfoList);
+//            computeResponse = OperationUtils.refineResponse(computeResponse, sessionCalculationObject, paymentRequest);
+//            ReportResponse reportResponse = serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
+//            jobStatusStore.updateJob(jobId, "COMPLETED", "Payroll computation complete", reportResponse.getReportId());
+//            progressCallback.accept(jobStatusStore);
+//
+//        } catch (Exception e) {
+//            jobStatusStore.updateJob(jobId, "FAILED", e.getMessage(), "");
+//            progressCallback.accept(jobStatusStore);
+//        }
+//    }
+
     @Override
     @Async
-    public void computePayrollAsync(Consumer<JobStatusStore> progressCallback,
-                                    String jobId, String authorizationHeader,
-                                    PaymentInfoRequest paymentRequest) {
+    public void computePayrollAsync(String jobId, String authorizationHeader, PaymentInfoRequest paymentRequest, Sinks.Many<JobStatus> jobStatusSink) {
         jobStatusStore.updateJob(jobId, "IN_PROGRESS", "Computation started", "");
-        progressCallback.accept(jobStatusStore);
+        jobStatusSink.tryEmitNext(jobStatusStore.getJob(jobId));
         try {
             sessionCalculationObject = OperationUtils.doPreflight(
                     sessionCalculationObject,
@@ -89,19 +117,22 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                     employeeMetadataService,
                     paymentRequest
             );
+
             List<PaymentInfo> paymentInfoList = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
             if (paymentInfoList == null || paymentInfoList.isEmpty()) {
                 throw new PayrollValidationException("No payment information found for request");
             }
+
             PaymentComputeResponse computeResponse = computeService.computePayroll(paymentInfoList);
             computeResponse = OperationUtils.refineResponse(computeResponse, sessionCalculationObject, paymentRequest);
-            ReportResponse reportResponse = serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
-            jobStatusStore.updateJob(jobId, "COMPLETED", "Payroll computation complete", reportResponse.getReportId());
-            progressCallback.accept(jobStatusStore);
 
+            ReportResponse reportResponse = serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
+
+            jobStatusStore.updateJob(jobId, "COMPLETED", "Payroll computation complete", reportResponse.getReportId());
+            jobStatusSink.tryEmitNext(jobStatusStore.getJob(jobId));
         } catch (Exception e) {
             jobStatusStore.updateJob(jobId, "FAILED", e.getMessage(), "");
-            progressCallback.accept(jobStatusStore);
+            jobStatusSink.tryEmitNext(jobStatusStore.getJob(jobId));
         }
     }
 
