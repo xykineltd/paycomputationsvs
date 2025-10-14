@@ -17,7 +17,9 @@ public class EmployeeFilterRequest {
     private String active;
     private Set<UserRole> roles;
     private String email;
+    private String header;
     private String phoneNumber;
+    @NotNull(message = "Report Id is required")
     private String reportId;
     private int page = 0;
     private int size = 10;

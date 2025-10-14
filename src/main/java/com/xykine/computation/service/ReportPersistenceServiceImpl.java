@@ -6,10 +6,7 @@ import com.xykine.computation.exceptions.PayrollValidationException;
 import com.xykine.computation.repo.*;
 import com.xykine.computation.repo.simulate.PayrollReportDetailSimulateRepo;
 import com.xykine.computation.repo.simulate.PayrollReportSummarySimulateRepo;
-import com.xykine.computation.request.PaymentInfoRequest;
-import com.xykine.computation.request.ReportByTypeRequest;
-import com.xykine.computation.request.UpdateLoanRequest;
-import com.xykine.computation.request.UpdateReportRequest;
+import com.xykine.computation.request.*;
 import com.xykine.computation.response.*;
 
 import com.xykine.computation.session.SessionCalculationObject;
@@ -645,18 +642,27 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     }
 
     @Override
-    public PayrollReportSummary completeReport(UpdateReportRequest request) {
-        PayrollReportSummary existingSummaryReport;
-        if (request.isOffCycle()) {
-            existingSummaryReport = payrollReportSummaryRepo.findPayrollReportSummaryByStartDateAndCompanyIdAndOffCycleIdAndPayrollSimulation(
-                    request.getStartDate(),
-                    request.getCompanyId(),
-                    request.getOffCycleId(),
-                    false);
-        } else {
-            existingSummaryReport = payrollReportSummaryRepo
-                    .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(request.getStartDate(), request.getCompanyId(), false);
-        }
+    public CompletePayrollResponse completeReport(CompletePayrollRequest request) {
+        PayrollReportSummary existingSummaryReport =
+                payrollReportSummaryRepo.findPayrollReportSummaryByIdAndCompanyIdAndPayrollSimulation(
+                        request.getReportId(),
+                        request.getCompanyId(),
+                        false
+                );
+
+        LOGGER.debug("Existing summary report: {}, ------->{}", existingSummaryReport, request);
+//        if (request.isOffCycle()) {
+//            existingSummaryReport = payrollReportSummaryRepo.findPayrollReportSummaryByStartDateAndCompanyIdAndOffCycleIdAndPayrollSimulation(
+//                    request.getStartDate(),
+//                    request.getCompanyId(),
+//                    request.getOffCycleId(),
+//                    false);
+//        } else {
+//            existingSummaryReport = payrollReportSummaryRepo
+//                    .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(request.getStartDate(), request.getCompanyId(), false);
+//        }
+
+
 
         if (existingSummaryReport == null) {
             throw new RuntimeException("Unable to pull payroll report");
@@ -665,7 +671,21 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         existingSummaryReport.setPayrollStatus(PayrollStatus.COMPLETED);
         var payrollReportSummary = payrollReportSummaryRepo.save(existingSummaryReport);
         logPostReportToFinanceEvent(request.getCompanyId(), payrollReportSummary);
-        return existingSummaryReport;
+
+        var response = ReportUtils.transform(payrollReportSummary);
+
+        return CompletePayrollResponse.builder()
+                .companyId(response.getCompanyId())
+                .reportId(response.getReportId())
+                .completedDate(response.getCreatedDate())
+                .payrollStatus(response.getPayrollStatus())
+                .summary(response.getSummary().getSummary())
+                .startDate(response.getStartDate())
+                .endDate(response.getEndDate())
+                .code(response.getCode())
+                .offCycle(response.isOffCycle())
+                .build();
+
     }
 
     private boolean deleteReportByDate(String startDate,

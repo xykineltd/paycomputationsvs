@@ -126,8 +126,8 @@ public class Report {
         return reportPersistenceService.deleteReport(request);
     }
 
-    @PutMapping("/post-to-finance")
-    public PayrollReportSummary completeReport(@RequestBody UpdateReportRequest request) {
+    @PostMapping("/complete")
+    public CompletePayrollResponse completeReport(@RequestBody CompletePayrollRequest request) {
         return reportPersistenceService.completeReport(request);
     }
 
@@ -229,10 +229,14 @@ public class Report {
     @PostMapping("/variance-details")
     public ResponseEntity<?> getVarianceDetails(
             @RequestBody EmployeeFilterRequest employeeFilterRequest,
-            @RequestHeader("Authorization") String authorizationHeader,
-            @RequestParam() String header) {
+            @RequestHeader("Authorization") String authorizationHeader) {
         List<String> filteredList = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
-        ConcurrentHashMap<String, Set<SummaryDetail>> response = reportPersistenceService.getSummaryVarianceDetails(employeeFilterRequest.getReportId(), filteredList,header);
+        ConcurrentHashMap<String, Set<SummaryDetail>> response =
+                reportPersistenceService.getSummaryVarianceDetails(
+                        employeeFilterRequest.getReportId(),
+                        filteredList,
+                        employeeFilterRequest.getHeader()
+                );
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }
