@@ -20,6 +20,7 @@ public class EmployeeFilterRequest {
     private String email;
     private String phoneNumber;
     private String reportId;
+    private String header;
     private int page = 0;
     private int size = 10;
 }

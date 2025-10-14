@@ -556,10 +556,12 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         assertThat(details)
                 .isNotEmpty()
                 .first()
-                .satisfies(detailMap ->
-                        assertThat(new BigDecimal(detailMap.get("value").toString()))
-                                .isEqualByComparingTo(BigDecimal.valueOf(-14285.72))
-                );
+                .satisfies(detailMap -> {
+                    BigDecimal variance = new BigDecimal(detailMap.get("variance").toString());
+                    BigDecimal value = new BigDecimal(detailMap.get("value").toString());
+                    assertThat(variance).isEqualByComparingTo(BigDecimal.valueOf(-14285.72));
+                    assertThat(value).isEqualByComparingTo(BigDecimal.valueOf(135714.28));
+                });
     }
 
 

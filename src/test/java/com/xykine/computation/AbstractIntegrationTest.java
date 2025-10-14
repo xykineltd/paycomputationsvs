@@ -320,11 +320,10 @@ public abstract class AbstractIntegrationTest {
 
     Map<String, Object> getVarianceDetails(String reportId, String header) {
         String URL_PREFIX = "http://localhost:" + port + "/compute/reports/variance-details";
-        String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX)
-                .queryParam("header", header)
-                .toUriString();
+        String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX).toUriString();
         EmployeeFilterRequest employeeFilterRequest = new EmployeeFilterRequest();
         employeeFilterRequest.setCompanyID("1234567");
+        employeeFilterRequest.setHeader(header);
         employeeFilterRequest.setReportId(reportId);
         employeeFilterRequest.setPage(0);
         employeeFilterRequest.setSize(10);

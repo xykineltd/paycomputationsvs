@@ -19,4 +19,5 @@ public class SummaryDetail implements Serializable {
     private String employeeName;
     private String departmentName;
     private BigDecimal value;
+    private BigDecimal variance;
 }
