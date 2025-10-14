@@ -183,7 +183,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         pension.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION,
                 ComputationUtils.prorate(employeePension, unpaidDays, salaryFrequency));
         BigDecimal voluntaryPensionContribution =  getEmployeeMetaData(paymentInfo).getVoluntaryPensionContribution();
-        pension.put("VOLUNTARY PENSION CONTRIBUTION", voluntaryPensionContribution);
+        pension.put("Voluntary Pension Contribution", voluntaryPensionContribution);
 
         BigDecimal employerPensionContribution = ComputationUtils.roundToTwoDecimalPlaces(
                 sessionCalculationObject.getComputationConstants().get("employerPensionContributionPercent")
@@ -241,7 +241,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         nonTaxableIncomeExemptMap.put("ANNUAL EMPLOYEE PENSION @ 8%", annualEmployeePensionAtEightPercent);
         nonTaxableIncomeExemptMap.put("RELIEF ALLOWANCE", reliefAllowance);
         nonTaxableIncomeExemptMap.put("CHARGEABLE INCOME", chargeableIncome);
-        nonTaxableIncomeExemptMap.put("ANNUAL VOLUNTARY PENSION CONTRIBUTION", annualVoluntaryPensionContribution);
+        nonTaxableIncomeExemptMap.put("Annual Voluntary Pension Contribution", annualVoluntaryPensionContribution);
 
         paymentInfo.setTaxRelief(nonTaxableIncomeExemptMap);
         return paymentInfo;
@@ -324,7 +324,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
             payeeTax.put("ANNUAL PAYEE TAX", ComputationUtils.getAnnualTaxAmount(chargeableIncome, jsonTaxRule));
         }
 
-        payeeTax.put(!paymentInfo.isOffCycle() ?  "MONTHLY PAYEE" : "Payee Tax on " + getOffCyclePaymentDetails(paymentInfo).getName(), monthlyPayeeTax);
+        payeeTax.put(!paymentInfo.isOffCycle() ?  "Monthly Payee" : "Payee Tax on " + getOffCyclePaymentDetails(paymentInfo).getName(), monthlyPayeeTax);
         paymentInfo.setPayeeTax(payeeTax);
         updateReportSummary(paymentInfo, sessionCalculationObject, MapKeys.TOTAL_PAYEE_TAX,
                 monthlyPayeeTax);
@@ -344,7 +344,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 paymentInfo.setDeduction(deductionMap);
                 return paymentInfo;
             }
-        payee_tax_key = "MONTHLY PAYEE";
+        payee_tax_key = "Monthly Payee";
         deductionMap.put(payee_tax_key, paymentInfo.getPayeeTax().get(payee_tax_key));
         deductionMap.put(MapKeys.PENSION_FUND, paymentInfo.getPension().get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION));
         deductionMap.put(MapKeys.NATIONAL_HOUSING_FUND, paymentInfo.getNhf().get(MapKeys.NATIONAL_HOUSING_FUND));
@@ -355,8 +355,8 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                     updateReportSummary(paymentInfo, sessionCalculationObject, MapKeys.TOTAL_PERSONAL_DEDUCTION, x.getValue());
                 });
         BigDecimal voluntaryPensionContribution = getEmployeeMetaData(paymentInfo).getVoluntaryPensionContribution();
-        deductionMap.put("VOLUNTARY PENSION CONTRIBUTION", voluntaryPensionContribution);
-        updateReportSummary(paymentInfo, sessionCalculationObject, "TOTAL VOLUNTARY PENSION CONTRIBUTION", voluntaryPensionContribution);
+        deductionMap.put("Voluntary Pension Contribution", voluntaryPensionContribution);
+        updateReportSummary(paymentInfo, sessionCalculationObject, "Total Voluntary Pension Contribution", voluntaryPensionContribution);
 
         deductionMap.put(MapKeys.TOTAL_DEDUCTION, getTotal(deductionMap));
         paymentInfo.setDeduction(deductionMap);
@@ -368,7 +368,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
             deductionMap.put("WHT", withHoldingTaxAmount);
             deductionMap.put(MapKeys.TOTAL_DEDUCTION, getTotal(deductionMap));
             paymentInfo.setDeduction(deductionMap);
-            updateReportSummary(paymentInfo, sessionCalculationObject, "TOTAL WITHHOLDING TAX", withHoldingTaxAmount);
+            updateReportSummary(paymentInfo, sessionCalculationObject, "TotaL Withholding Tax", withHoldingTaxAmount);
         }
         return paymentInfo;
     }
