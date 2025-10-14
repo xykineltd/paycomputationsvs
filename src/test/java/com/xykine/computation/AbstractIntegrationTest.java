@@ -221,6 +221,18 @@ public abstract class AbstractIntegrationTest {
                 .getResponseBody();
     }
 
+    protected Map<String, Object> getVarinceDetails(String url, EmployeeFilterRequest employeeFilterRequest) {
+        return webTestClient.post()
+                .uri(url)
+                .headers(headers -> headers.setBearerAuth(jwt.getTokenValue()))
+                .bodyValue(employeeFilterRequest)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(new ParameterizedTypeReference<Map<String, Object>>() {})
+                .returnResult()
+                .getResponseBody();
+    }
+
     Object getReportGenericDirect(String url) {
         return webTestClient.get()
                 .uri(url)
@@ -299,6 +311,19 @@ public abstract class AbstractIntegrationTest {
         employeeFilterRequest.setPage(0);
         employeeFilterRequest.setSize(10);
         return getReportByFilter(url, employeeFilterRequest);
+    }
+
+    Map<String, Object> getVarianceDetails(String reportId, String header) {
+        String URL_PREFIX = "http://localhost:" + port + "/compute/reports/variance-details";
+        String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX)
+                .queryParam("header", header)
+                .toUriString();
+        EmployeeFilterRequest employeeFilterRequest = new EmployeeFilterRequest();
+        employeeFilterRequest.setCompanyID("1234567");
+        employeeFilterRequest.setReportId(reportId);
+        employeeFilterRequest.setPage(0);
+        employeeFilterRequest.setSize(10);
+        return getVarinceDetails(url, employeeFilterRequest);
     }
 
     ReportResponse getReportByStartDateAndCompanyId() {

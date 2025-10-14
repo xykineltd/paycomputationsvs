@@ -10,23 +10,20 @@ import com.xykine.computation.request.UpdateReportRequest;
 import com.xykine.computation.response.PaymentComputeResponse;
 import com.xykine.computation.response.ReportAnalytics;
 import com.xykine.computation.response.ReportResponse;
+import com.xykine.computation.response.SummaryDetail;
 import reactor.core.publisher.Sinks;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 public interface ReportPersistenceService {
 //    void computePayrollAsync(Consumer<JobStatusStore> progressCallback, String jobId, String authorizationHeader, PaymentInfoRequest paymentRequest);
     void computePayrollAsync(String jobId, String authorizationHeader, PaymentInfoRequest paymentRequest, Sinks.Many<JobStatus> jobStatusSink);
-
+    ConcurrentHashMap<String, Set<SummaryDetail>> getSummaryVarianceDetails(String reportId, List<String> employeeIds, String header);
     ReportResponse serializeAndSaveReport(PaymentComputeResponse paymentComputeResponse, String companyId) throws IOException, ClassNotFoundException;
     ReportResponse getPayRollReport(String startData, String companyId);
-
-    //TODO we need to accept the companyID so that we do not mix up other company reports
     ReportResponse getPayRollReport(UUID reportId, boolean isSimulate);
     ReportResponse getPayRollReport(UUID reportId);
     Map<String, Object> getPayRollReports(String companyId, int page, int size);

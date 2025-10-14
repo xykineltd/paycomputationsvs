@@ -62,7 +62,9 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
     @BeforeEach
     void setupReportTestData() {
         when(adminService.getPaymentInfoList(any(), anyString())).thenReturn(TestDataFactory.getPaymentSettings("standard"));
-        getReportSummary();
+        ReportResponse reportResponse = getReportSummary();
+        String reportId = reportResponse.getReportId();
+        System.out.println(" first report id : " + reportId);
     }
 
     @AfterEach
@@ -514,7 +516,17 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         assertThat(payeeTax).isNotNull().satisfies((x) -> {
             assertThat(x.get("VOLUNTARY PENSION CONTRIBUTION")).isEqualByComparingTo(BigDecimal.valueOf(1000));
         });
+
+        when(adminService.getPaymentInfoList(any(), anyString())).thenReturn(TestDataFactory.getPaymentSettings("standard with voluntary pension contribution 2"));
+        reportSummary = getReportSummary();
+        assertThat(reportSummary).isNotNull();
+        String reportId = reportSummary.getReportId();
+        System.out.println(" second report id : " + reportId);
+        when(adminService.getEmployeeIdListForFilter(any(), anyString())).thenReturn(List.of("standardWithVoluntaryPensionContribution"));
+        Map<String, Object> summaryDetails = getVarianceDetails(reportId, "Total Gross Pay");
+        LOGGER.info(" ======> summary details {} ", summaryDetails);
     }
+
 
     /****         REPORT CONTROLLER ENDPOINTS      *********/
     @Test

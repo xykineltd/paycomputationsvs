@@ -1,15 +1,9 @@
 package com.xykine.computation.utils;
 
-import com.xykine.computation.entity.AuditTrail;
-import com.xykine.computation.entity.DashboardGraph;
-import com.xykine.computation.entity.PayrollReportDetail;
-import com.xykine.computation.entity.PayrollReportSummary;
+import com.xykine.computation.entity.*;
 import com.xykine.computation.entity.simulate.PayrollReportDetailSimulate;
 import com.xykine.computation.entity.simulate.PayrollReportSummarySimulate;
-import com.xykine.computation.response.AuditTrailResponse;
-import com.xykine.computation.response.DashboardGraphResponse;
-import com.xykine.computation.response.PayComputeSummaryResponse;
-import com.xykine.computation.response.ReportResponse;
+import com.xykine.computation.response.*;
 import org.apache.commons.lang3.SerializationUtils;
 
 import java.io.Serializable;
@@ -147,6 +141,12 @@ public class ReportUtils {
                 .name(x.getName())
                 .dateTime(x.getDateTime().toString())
                 .build()).collect(Collectors.toList());
+    }
+
+    public static SummaryVarianceDetailsResponse transform(PayrollVarianceDetails payrollVarianceDetails) {
+        return SummaryVarianceDetailsResponse.builder()
+                .payComputeVarianceDetails(SerializationUtils.deserialize(payrollVarianceDetails.getSummaryVarianceDetails()))
+                .build();
     }
 }
 

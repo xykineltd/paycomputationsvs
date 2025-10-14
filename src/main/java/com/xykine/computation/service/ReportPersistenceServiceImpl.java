@@ -3,10 +3,7 @@ package com.xykine.computation.service;
 import com.xykine.computation.domain.JobStatus;
 import com.xykine.computation.entity.*;
 import com.xykine.computation.exceptions.PayrollValidationException;
-import com.xykine.computation.repo.ComputationConstantsRepo;
-import com.xykine.computation.repo.PayrollReportDetailRepo;
-import com.xykine.computation.repo.PayrollReportSummaryRepo;
-import com.xykine.computation.repo.YTDReportRepo;
+import com.xykine.computation.repo.*;
 import com.xykine.computation.repo.simulate.PayrollReportDetailSimulateRepo;
 import com.xykine.computation.repo.simulate.PayrollReportSummarySimulateRepo;
 import com.xykine.computation.request.PaymentInfoRequest;
@@ -34,6 +31,8 @@ import org.xykine.payroll.model.*;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
@@ -51,7 +50,6 @@ import com.xykine.computation.exceptions.PayrollReportNotException;
 import com.xykine.computation.exceptions.PayrollUnmodifiableException;
 import com.xykine.computation.utils.ReportUtils;
 import com.xykine.computation.utils.AppConstants;
-import reactor.core.publisher.Sinks;
 
 @Service
 @RequiredArgsConstructor
@@ -72,6 +70,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     private final EmployeeMetadataService employeeMetadataService;
     private final AdminService adminService;
     private final ComputeService computeService;
+    private final PayrollVarianceDetailsRepo payrollVarianceDetailsRepo;
     @Autowired
     private SessionCalculationObject sessionCalculationObject;
 
@@ -136,6 +135,40 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         }
     }
 
+    public ConcurrentHashMap<String, Set<SummaryDetail>> getSummaryVarianceDetails(String reportId, List<String> employeeIds, String header) {
+        PayrollVarianceDetails payrollVarianceDetails = payrollVarianceDetailsRepo.findById(UUID.fromString(reportId)).orElse(null);
+        ConcurrentHashMap<String, Set<SummaryDetail>> summaryVarianceDetails = new ConcurrentHashMap<>();
+        if (payrollVarianceDetails == null) {
+            return summaryVarianceDetails;
+        }
+
+        PayComputeVarianceDetails payComputeVarianceDetails = ReportUtils.transform(payrollVarianceDetails).getPayComputeVarianceDetails();
+        summaryVarianceDetails = payComputeVarianceDetails.getSummaryDetailsVariance();
+
+        header = URLDecoder.decode(header, StandardCharsets.UTF_8);
+
+        String finalHeader = header;
+        return summaryVarianceDetails.entrySet()
+                .stream()
+                .filter(entry -> finalHeader.equalsIgnoreCase(entry.getKey()))
+                .map(entry -> {
+                    // Filter the Set<SummaryDetail> for this key
+                    Set<SummaryDetail> filteredSet = entry.getValue()
+                            .stream()
+                            .filter(sd -> employeeIds.contains(sd.getEmployeeId()))
+                            .collect(Collectors.toSet());
+                    return Map.entry(entry.getKey(), filteredSet);
+                })
+                // Keep only entries where the filtered set is not empty
+                .filter(entry -> !entry.getValue().isEmpty())
+                .collect(Collectors.toConcurrentMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (a, b) -> a,
+                        ConcurrentHashMap::new
+                ));
+    }
+
     @Transactional
     public ReportResponse serializeAndSaveReport(PaymentComputeResponse paymentComputeResponse, String companyId)
             throws IOException {
@@ -179,7 +212,16 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 .summary(paymentComputeResponse.getSummary())
                 .summaryDetails(paymentComputeResponse.getSummaryDetails())
                 .summaryVariance(processSummaryVariance(paymentComputeResponse.getSummary(), previousReportSummary))
+                //.summaryDetailsVariance(processSummaryDetailsVariance(paymentComputeResponse.getSummaryDetails(), previousReportSummary))
+                .build();
+
+        PayComputeVarianceDetails payComputeVarianceDetails = PayComputeVarianceDetails.builder()
                 .summaryDetailsVariance(processSummaryDetailsVariance(paymentComputeResponse.getSummaryDetails(), previousReportSummary))
+                .build();
+
+        PayrollVarianceDetails payrollVarianceDetails = PayrollVarianceDetails.builder()
+                .id(paymentComputeResponse.getId())
+                .summaryVarianceDetails(ReportUtils.serializeResponse(payComputeVarianceDetails))
                 .build();
 
         PayrollReportSummary payrollReportSummary = PayrollReportSummary.builder()
@@ -197,6 +239,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 .paymentFrequency(paymentFrequency)
                 .code(generateReportCode(startDate, paymentComputeResponse.isOffCycle(), totalNumberOfEmployees))
                 .build();
+
+        payrollVarianceDetailsRepo.save(payrollVarianceDetails);
         payrollReportSummaryRepo.save(payrollReportSummary);
         saveReportDetails(paymentComputeResponse, companyId, PayrollStatus.PENDING);
         return getPayRollReport(paymentComputeResponse.getId(), false);
@@ -209,18 +253,19 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         ConcurrentHashMap<String, Set<SummaryDetail>> summaryDetailsVariance = new ConcurrentHashMap<>();
 
         if (previousPayrollReportSummary == null) {
+            return summaryDetailsVariance;
             // Previous null → variance = current values
-            currentSummaryDetails.forEach((key, currentDetails) -> {
-                Set<SummaryDetail> varianceDetails = Collections.newSetFromMap(new ConcurrentHashMap<>());
-                currentDetails.forEach(d -> {
-                    if (d.getValue().compareTo(BigDecimal.ZERO) != 0) {
-                        varianceDetails.add(d);
-                    }
-                });
-                if (!varianceDetails.isEmpty()) {
-                    summaryDetailsVariance.put(key, varianceDetails);
-                }
-            });
+//            currentSummaryDetails.forEach((key, currentDetails) -> {
+//                Set<SummaryDetail> varianceDetails = Collections.newSetFromMap(new ConcurrentHashMap<>());
+//                currentDetails.forEach(d -> {
+//                    if (d.getValue().compareTo(BigDecimal.ZERO) != 0) {
+//                        varianceDetails.add(d);
+//                    }
+//                });
+//                if (!varianceDetails.isEmpty()) {
+//                    summaryDetailsVariance.put(key, varianceDetails);
+//                }
+//            });
         } else {
             Map<String, Set<SummaryDetail>> previousSummaryDetails =
                     ReportUtils.transform(previousPayrollReportSummary).getSummary().getSummaryDetails();

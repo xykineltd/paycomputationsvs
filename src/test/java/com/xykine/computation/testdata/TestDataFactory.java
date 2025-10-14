@@ -15,12 +15,14 @@ public class TestDataFactory {
     public static <T> List<T> getPaymentSettings(String type) {
         String payload = switch (type) {
             case "standard" -> STANDARD_PAYROLL_ENTRY;
+            case "standard_2" -> STANDARD_PAYROLL_ENTRY_2;
             case "contract staff" -> CONTRACT_STAFF;
             case "standard with payment distribution list" -> STANDARD_PAYROLL_ENTRY_WITH_PAYMENT_DISTRIBUTION_LIST;
             case "standard and performance with payment distribution list" -> STANDARD_PAYROLL_ENTRY_WITH_PERFORMANCE_BONUS_DISTRIBUTION_LIST;
             case "standard and performance with payment distribution list and custom tax refief" -> STANDARD_PAYROLL_ENTRY_WITH_PERFORMANCE_BONUS_DISTRIBUTION_LIST_CUSTOM_TAX_RELEIF;
             case "standard not pensioned" -> STANDARD_PAYROLL_ENTRY_WITH_PAYMENT_DISTRIBUTION_LIST_NOT_PENSIONED;
             case "standard with voluntary pension contribution" -> STANDARD_PAYROLL_ENTRY_WITH_PAYMENT_DISTRIBUTION_LIST_NOT_PENSIONED_VOLUNTARY_PENSION_CONTRIBUTION;
+            case "standard with voluntary pension contribution 2" -> STANDARD_PAYROLL_ENTRY_WITH_PAYMENT_DISTRIBUTION_LIST_NOT_PENSIONED_VOLUNTARY_PENSION_CONTRIBUTION_2;
             case "standard with performance bonus" -> STANDARD_PAYROLL_ENTRY_WITH_PERFORMANCE_BONUS;
             case "off-cycle" -> OFF_CYCLE;
             case "ten-entries" -> TEN_ENTRIES;
