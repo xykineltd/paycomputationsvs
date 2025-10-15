@@ -191,10 +191,9 @@ public class Report {
     @PostMapping("/variance-details")
     public ResponseEntity<?> getVarianceDetails(
             @RequestBody EmployeeFilterRequest employeeFilterRequest,
-            @RequestHeader("Authorization") String authorizationHeader,
-            @RequestParam() String header) {
+            @RequestHeader("Authorization") String authorizationHeader) {
         List<String> filteredList = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
-        ConcurrentHashMap<String, Set<SummaryDetail>> response = reportPersistenceService.getSummaryVarianceDetails(employeeFilterRequest.getReportId(), filteredList,header);
+        ConcurrentHashMap<String, Set<SummaryDetail>> response = reportPersistenceService.getSummaryVarianceDetails(employeeFilterRequest.getReportId(), filteredList, employeeFilterRequest.getHeader());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

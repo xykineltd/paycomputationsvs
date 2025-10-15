@@ -84,12 +84,17 @@ public abstract class AbstractIntegrationTest {
         registry.add("spring.data.redis.port", () -> redisContainer.getMappedPort(6379));
     }
 
-    protected  PaymentInfoRequest createPayload() {
+    protected  PaymentInfoRequest createPayload(String startDate, String endDate) {
         PaymentInfoRequest paymentInfoRequest = new PaymentInfoRequest();
+        if (startDate == null || endDate == null) {
+            paymentInfoRequest.setStart(LocalDate.now());
+            paymentInfoRequest.setEnd(LocalDate.now().plusDays(30));
+        } else {
+            paymentInfoRequest.setStart(LocalDate.parse(startDate));
+            paymentInfoRequest.setEnd(LocalDate.parse(endDate));
+        }
         paymentInfoRequest.setCompanyId(TEST_COMPANY_ID);
         paymentInfoRequest.setPayrollSimulation(false);
-        paymentInfoRequest.setStart(LocalDate.now());
-        paymentInfoRequest.setEnd(LocalDate.now().plusDays(30));
         return paymentInfoRequest;
     }
 
@@ -102,11 +107,11 @@ public abstract class AbstractIntegrationTest {
         return paymentInfoRequest;
     }
 
-    Map startReportSummary() {
+    Map startReportSummary(String startDate, String endDate) {
         return webTestClient.post()
                 .uri("/compute/payroll/start")
                 .headers(headers -> headers.setBearerAuth(jwt.getTokenValue()))
-                .bodyValue(createPayload())
+                .bodyValue(createPayload(startDate, endDate))
                 .exchange()
                 .expectStatus().isAccepted()
                 .expectBody(Map.class)
@@ -118,7 +123,7 @@ public abstract class AbstractIntegrationTest {
         return webTestClient.post()
                 .uri("/compute/payroll")
                 .headers(headers -> headers.setBearerAuth(jwt.getTokenValue()))
-                .bodyValue(createPayload())
+                .bodyValue(createPayload(null, null))
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(ReportResponse.class)
@@ -315,11 +320,10 @@ public abstract class AbstractIntegrationTest {
 
     Map<String, Object> getVarianceDetails(String reportId, String header) {
         String URL_PREFIX = "http://localhost:" + port + "/compute/reports/variance-details";
-        String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX)
-                .queryParam("header", header)
-                .toUriString();
+        String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX).toUriString();
         EmployeeFilterRequest employeeFilterRequest = new EmployeeFilterRequest();
         employeeFilterRequest.setCompanyID("1234567");
+        employeeFilterRequest.setHeader(header);
         employeeFilterRequest.setReportId(reportId);
         employeeFilterRequest.setPage(0);
         employeeFilterRequest.setSize(10);
