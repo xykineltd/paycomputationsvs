@@ -142,9 +142,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
         PayComputeVarianceDetails payComputeVarianceDetails = ReportUtils.transform(payrollVarianceDetails).getPayComputeVarianceDetails();
         summaryVarianceDetails = payComputeVarianceDetails.getSummaryDetailsVariance();
-
-        header = URLDecoder.decode(header, StandardCharsets.UTF_8);
-
+        
         String finalHeader = header;
         return summaryVarianceDetails.entrySet()
                 .stream()
