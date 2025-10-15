@@ -21,6 +21,7 @@ public class EmployeeFilterRequest {
     private String phoneNumber;
     @NotNull(message = "Report Id is required")
     private String reportId;
+    private String header;
     private int page = 0;
     private int size = 10;
 }

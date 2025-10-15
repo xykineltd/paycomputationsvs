@@ -142,7 +142,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
         PayComputeVarianceDetails payComputeVarianceDetails = ReportUtils.transform(payrollVarianceDetails).getPayComputeVarianceDetails();
         summaryVarianceDetails = payComputeVarianceDetails.getSummaryDetailsVariance();
-        
+
         String finalHeader = header;
         return summaryVarianceDetails.entrySet()
                 .stream()
@@ -295,6 +295,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                                 rep.getEmployeeId(),
                                 rep.getEmployeeName(),
                                 rep.getDepartmentName(),
+                                currTotal,
                                 diff
                         ));
                     }
@@ -308,6 +309,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                                 rep.getEmployeeId(),
                                 rep.getEmployeeName(),
                                 rep.getDepartmentName(),
+                                prevTotal,
                                 prevTotal.negate()
                         ));
                     }
@@ -344,6 +346,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                                     detail.getEmployeeId(),
                                     detail.getEmployeeName(),
                                     detail.getDepartmentName(),
+                                    detail.getValue(),
                                     BigDecimal.ZERO))
                             .toList()
             ));

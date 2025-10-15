@@ -137,7 +137,7 @@ public class ComputeService {
         // --- New PaymentInfos for each off-cycle entry ---
         List<PaymentInfo> offCycleCopies = offCycleSettings.stream()
                 .map(setting -> {
-                    if (setting.getName().equalsIgnoreCase("MONTHLY PERFORMANCE BONUS")) {
+                    if (setting.getName().equalsIgnoreCase("Monthly Performance Bonus")) {
                         BigDecimal performanceBonus = ComputationUtils.prorate(mainCopy.getBasicSalary().multiply(setting.getValue().divide(BigDecimal.valueOf(100))),
                                 mainCopy.getNumberOfDaysOfUnpaidAbsence(), PaymentFrequencyEnum.MONTHLY);
                         setting.setValue(performanceBonus);

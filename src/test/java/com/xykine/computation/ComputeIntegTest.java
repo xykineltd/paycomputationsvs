@@ -28,7 +28,7 @@ public class ComputeIntegTest extends AbstractIntegrationTest {
     //@Test
     void testStartReportSummary() throws InterruptedException {
         when(adminService.getPaymentInfoList(any(), anyString())).thenReturn(TestDataFactory.getPaymentSettings("5000"));
-        Map<String, String> startJobResponse =  startReportSummary();
+        Map<String, String> startJobResponse =  startReportSummary("2025-06-01", "2025-06-30");
         String jobId = startJobResponse.get("jobId");
         JobStatus jobStatus = getStatus(jobId);
         ReportResponse reportResponse = null;
