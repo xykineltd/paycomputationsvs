@@ -38,7 +38,6 @@ spring:
     async:
       request-timeout: 300000  # 5 minutes (in milliseconds)
 
-
 mongodb:
   pool:
     max-size: 50
