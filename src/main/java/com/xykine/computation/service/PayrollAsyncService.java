@@ -35,6 +35,16 @@ public class PayrollAsyncService {
     }
 
     @Async
+    public void updateDetailStatusToPendingAsync(String summaryId) {
+        List<PayrollReportDetail> details = payrollReportDetailRepo.findPayrollReportDetailBySummaryId(summaryId);
+        details.forEach(d -> {
+            d.setPayrollSimulation(false);
+            d.setPayrollStatus(PayrollStatus.PENDING);
+            payrollReportDetailRepo.save(d);
+        });
+    }
+
+    @Async
     public void updateEmployeeLoanAsync(String summaryId, String companyId) {
         List<PayrollReportDetail> payrollReportDetails = payrollReportDetailRepo.findPayrollReportDetailBySummaryId(summaryId);
 

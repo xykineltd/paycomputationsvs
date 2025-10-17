@@ -128,7 +128,6 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
             assertThat(x.get("Taxable Income")).isEqualByComparingTo(BigDecimal.valueOf(7863366.34));
             assertThat(x.get("ANNUAL PAYEE TAX")).isEqualByComparingTo(BigDecimal.valueOf(1679207.92));
         });
-
         Map<String, BigDecimal> pension = paymentInfo.getPension();
         assertThat(pension).isNotNull().satisfies((x) -> {
             assertThat(x.get("Employer Pension Contribution")).isEqualByComparingTo(BigDecimal.valueOf(25693.9));
@@ -527,7 +526,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
                         TestDataFactory.getPaymentSettings("contract staff"),   // 1st call
                         TestDataFactory.getPaymentSettings("contract staff absent two days")  // 2nd call
                 );
-        startReportSummary("2025-05-01", "2025-05-30");
+        startReportSummary("2025-05-01", "2025-05-30", false);
         Thread.sleep(1000);
 
         UpdateReportRequest updateReportRequest = new UpdateReportRequest();
@@ -536,7 +535,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         updateReportRequest.setStartDate("2025-05-01");
         approvePayroll(updateReportRequest);
 
-        Map<String, String> startJobResponse =  startReportSummary("2025-06-01", "2025-06-30");
+        Map<String, String> startJobResponse =  startReportSummary("2025-06-01", "2025-06-30", false);
         Thread.sleep(1000);
         String jobId = startJobResponse.get("jobId");
         JobStatus jobStatus = getStatus(jobId);

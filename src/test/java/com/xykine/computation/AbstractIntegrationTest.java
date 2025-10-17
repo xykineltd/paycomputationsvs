@@ -98,6 +98,20 @@ public abstract class AbstractIntegrationTest {
         return paymentInfoRequest;
     }
 
+    protected  PaymentInfoRequest createPayload(String startDate, String endDate, boolean payrollSimulation) {
+        PaymentInfoRequest paymentInfoRequest = new PaymentInfoRequest();
+        if (startDate == null || endDate == null) {
+            paymentInfoRequest.setStart(LocalDate.now());
+            paymentInfoRequest.setEnd(LocalDate.now().plusDays(30));
+        } else {
+            paymentInfoRequest.setStart(LocalDate.parse(startDate));
+            paymentInfoRequest.setEnd(LocalDate.parse(endDate));
+        }
+        paymentInfoRequest.setCompanyId(TEST_COMPANY_ID);
+        paymentInfoRequest.setPayrollSimulation(true);
+        return paymentInfoRequest;
+    }
+
     protected  PaymentInfoRequest customCreatePayload(String companyId) {
         PaymentInfoRequest paymentInfoRequest = new PaymentInfoRequest();
         paymentInfoRequest.setCompanyId(companyId);
@@ -107,11 +121,11 @@ public abstract class AbstractIntegrationTest {
         return paymentInfoRequest;
     }
 
-    Map startReportSummary(String startDate, String endDate) {
+    Map startReportSummary(String startDate, String endDate, boolean payrollSimulation) {
         return webTestClient.post()
                 .uri("/compute/payroll/start")
                 .headers(headers -> headers.setBearerAuth(jwt.getTokenValue()))
-                .bodyValue(createPayload(startDate, endDate))
+                .bodyValue(createPayload(startDate, endDate, payrollSimulation))
                 .exchange()
                 .expectStatus().isAccepted()
                 .expectBody(Map.class)
