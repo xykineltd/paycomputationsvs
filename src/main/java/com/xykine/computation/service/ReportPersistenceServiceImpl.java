@@ -1049,7 +1049,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             jobFuture.get();
         } catch (InterruptedException | ExecutionException e) {
             LOGGER.info("Error occurred during computation********************************");
-            LOGGER.error(e.getMessage());
+            e.printStackTrace();
             throw new RuntimeException("Error while saving payroll report details", e);
         }
     }
