@@ -968,7 +968,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         } catch (InterruptedException | ExecutionException e) {
             LOGGER.error(e.getMessage());
             throw new RuntimeException("Error while saving payroll report details", e);
-        }   
+        }
     }
 
     private void saveReportDetailsSimulate(PaymentComputeResponse paymentComputeResponse, String companyId) {
@@ -1048,6 +1048,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         try {
             jobFuture.get();
         } catch (InterruptedException | ExecutionException e) {
+            LOGGER.info("Error occurred during computation********************************");
+            LOGGER.error(e.getMessage());
             throw new RuntimeException("Error while saving payroll report details", e);
         }
     }
