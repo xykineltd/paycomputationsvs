@@ -36,6 +36,7 @@ import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
@@ -1046,8 +1047,10 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         });
 
         try {
-            jobFuture.get();
-        } catch (InterruptedException | ExecutionException e) {
+//            jobFuture.get();
+            jobFuture.join();
+//        } catch (InterruptedException | ExecutionException e) {
+        } catch (CompletionException e) {
             LOGGER.info("Error occurred during computation********************************");
             e.printStackTrace();
             throw new RuntimeException("Error while saving payroll report details", e);

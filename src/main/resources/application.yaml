@@ -34,6 +34,11 @@ spring:
 #            database: ${MONGO_DB_NAME:dev_db}
 #      database: dev_db
 
+  mvc:
+    async:
+      request-timeout: 300000  # 5 minutes (in milliseconds)
+
+
 mongodb:
   pool:
     max-size: 50
