@@ -1051,8 +1051,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             jobFuture.join();
 //        } catch (InterruptedException | ExecutionException e) {
         } catch (CompletionException e) {
-            LOGGER.info("Error occurred during computation********************************");
-            e.printStackTrace();
             throw new RuntimeException("Error while saving payroll report details", e);
         }
     }
