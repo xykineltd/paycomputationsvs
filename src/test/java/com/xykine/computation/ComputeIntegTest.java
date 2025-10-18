@@ -25,10 +25,10 @@ import static org.mockito.Mockito.when;
 @ActiveProfiles("test")
 public class ComputeIntegTest extends AbstractIntegrationTest {
 
-    //@Test
+    @Test
     void testStartReportSummary() throws InterruptedException {
         when(adminService.getPaymentInfoList(any(), anyString())).thenReturn(TestDataFactory.getPaymentSettings("5000"));
-        Map<String, String> startJobResponse =  startReportSummary("2025-06-01", "2025-06-30");
+        Map<String, String> startJobResponse =  startReportSummary("2025-06-01", "2025-06-30", true);
         String jobId = startJobResponse.get("jobId");
         JobStatus jobStatus = getStatus(jobId);
         ReportResponse reportResponse = null;
@@ -42,6 +42,16 @@ public class ComputeIntegTest extends AbstractIntegrationTest {
         assertThat(body).isNotNull().satisfies((x) -> {
             assertThat(x.get("totalItems")).isEqualTo(5000);
         });
-    }
 
+        startJobResponse =  startReportSummary("2025-06-01", "2025-06-30", false);
+        jobId = startJobResponse.get("jobId");
+        jobStatus = getStatus(jobId);
+        if ("COMPLETED".equalsIgnoreCase(jobStatus.getStatus())) {
+            reportResponse = getReportById(jobStatus.getReportId());
+        }
+        body = getReportDetail(reportResponse);
+        assertThat(body).isNotNull().satisfies((x) -> {
+            assertThat(x.get("totalItems")).isEqualTo(5000);
+        });
+    }
 }
