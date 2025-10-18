@@ -92,13 +92,6 @@ public class Compute extends TextWebSocketHandler {
         return Mono.just(ResponseEntity.ok(status));
     }
 
-    // Server sent event
-//    @GetMapping(value = "/payroll/stream/{jobId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-//    public Flux<JobStatus> streamJobStatus(@PathVariable String jobId) {
-//        return jobStatusSink.asFlux()
-//                .filter(status -> status.getJobId().equals(jobId));
-//    }
-
     @PostMapping("/payroll")
     public Mono<ReportResponse> computePayroll(
             @RequestHeader("Authorization") String authorizationHeader,

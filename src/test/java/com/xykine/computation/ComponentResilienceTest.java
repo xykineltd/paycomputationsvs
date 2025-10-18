@@ -90,7 +90,7 @@ public class ComponentResilienceTest extends AbstractIntegrationTest {
 //       }
 //    }
 
-   // @Test
+//    @Test
     void testGetReportByCompanyIdForFiveThousandEntries() throws InterruptedException {
         // for (int i = 0; i < 10; i++) {
         when(adminService.getPaymentInfoList(any(), anyString())).thenReturn(TestDataFactory.getPaymentSettings("5000"));
@@ -98,7 +98,7 @@ public class ComponentResilienceTest extends AbstractIntegrationTest {
         getReportSummary();
         var report = getReportByCompanyId();
         long durationInMillis = (System.nanoTime() - start) / 1_000_000;
-        LOGGER.info("Report generation for 2000 entries took {} ms", durationInMillis);
+        LOGGER.info("Report generation for 5000 entries took {} ms", durationInMillis);
         timeTaken.add(durationInMillis);
         assertThat(report).isNotNull().satisfies(x -> {
             assertThat(x.size()).isEqualTo(1);
