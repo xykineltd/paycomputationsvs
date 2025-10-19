@@ -19,6 +19,7 @@ public class JobStatusStore {
             job.setStatus(status);
             job.setMessage(message);
             job.setReportId(reportId);
+            job.setReportId(reportId);
             return job;
         });
     }

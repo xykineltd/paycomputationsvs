@@ -52,14 +52,14 @@ public class Report {
         return reportPersistenceService.getPayRollReportsByStatus(companyId, status);
     }
 
-    @GetMapping("/by-reportId/{reportId}/isSimulate/{isSimulate}")
-    public ReportResponse getReportsByStatus( @PathVariable UUID reportId, @PathVariable boolean isSimulate) {
-        return reportPersistenceService.getPayRollReport(reportId, isSimulate);
-    }
+//    @GetMapping("/by-reportId/{reportId}/isSimulate/{isSimulate}")
+//    public ReportResponse getReportsByStatus( @PathVariable UUID reportId, @PathVariable boolean isSimulate) {
+//        return reportPersistenceService.getPayRollReport(reportId, isSimulate);
+//    }
 
-    @GetMapping("/by-reportId/{reportId}")
-    public ReportResponse getReport( @PathVariable UUID reportId) {
-        return reportPersistenceService.getPayRollReport(reportId);
+    @PostMapping("/by-reportId/")
+    public ReportResponse getReport( @RequestBody CompletePayrollRequest request) {
+        return reportPersistenceService.getPayRollReport(request.getReportId());
     }
 
     @GetMapping("/{companyId}/{employeeId}")

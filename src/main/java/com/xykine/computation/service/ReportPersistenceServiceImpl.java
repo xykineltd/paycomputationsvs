@@ -73,41 +73,13 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     @Autowired
     private SessionCalculationObject sessionCalculationObject;
 
-//    @Override
-//    @Async
-//    public void computePayrollAsync(Consumer<JobStatusStore> progressCallback,
-//                                    String jobId, String authorizationHeader,
-//                                    PaymentInfoRequest paymentRequest) {
-//        jobStatusStore.updateJob(jobId, "IN_PROGRESS", "Computation started", "");
-//        progressCallback.accept(jobStatusStore);
-//        try {
-//            sessionCalculationObject = OperationUtils.doPreflight(
-//                    sessionCalculationObject,
-//                    computationConstantsRepo,
-//                    employeeMetadataService,
-//                    paymentRequest
-//            );
-//            List<PaymentInfo> paymentInfoList = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
-//            if (paymentInfoList == null || paymentInfoList.isEmpty()) {
-//                throw new PayrollValidationException("No payment information found for request");
-//            }
-//            PaymentComputeResponse computeResponse = computeService.computePayroll(paymentInfoList);
-//            computeResponse = OperationUtils.refineResponse(computeResponse, sessionCalculationObject, paymentRequest);
-//            ReportResponse reportResponse = serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
-//            jobStatusStore.updateJob(jobId, "COMPLETED", "Payroll computation complete", reportResponse.getReportId());
-//            progressCallback.accept(jobStatusStore);
-//
-//        } catch (Exception e) {
-//            jobStatusStore.updateJob(jobId, "FAILED", e.getMessage(), "");
-//            progressCallback.accept(jobStatusStore);
-//        }
-//    }
-
     @Override
     @Async
-    public void computePayrollAsync(String jobId, String authorizationHeader, PaymentInfoRequest paymentRequest, Sinks.Many<JobStatus> jobStatusSink) {
+    public void computePayrollAsync(Consumer<JobStatusStore> progressCallback,
+                                    String jobId, String authorizationHeader,
+                                    PaymentInfoRequest paymentRequest) {
         jobStatusStore.updateJob(jobId, "IN_PROGRESS", "Computation started", "");
-        jobStatusSink.tryEmitNext(jobStatusStore.getJob(jobId));
+        progressCallback.accept(jobStatusStore);
         try {
             PayrollReportSummary payroll = payrollReportSummaryRepo
                     .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(String.valueOf(paymentRequest.getStart()), paymentRequest.getCompanyId(), true);
@@ -117,6 +89,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 PayrollReportSummary payrollReportSummary = payrollReportSummaryRepo.findPayrollReportSummaryById(UUID.fromString(String.valueOf(payroll.getId())));
                 payrollReportSummary.setPayrollSimulation(false);
                 payrollReportSummary.setPayrollStatus(PayrollStatus.PENDING);
+                payrollReportSummaryRepo.save(payrollReportSummary);
                 payrollAsyncService.updateDetailStatusToPendingAsync(String.valueOf(payroll.getId()));
                 return;
             }
@@ -132,17 +105,16 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             if (paymentInfoList == null || paymentInfoList.isEmpty()) {
                 throw new PayrollValidationException("No payment information found for request");
             }
-
             PaymentComputeResponse computeResponse = computeService.computePayroll(paymentInfoList);
             computeResponse = OperationUtils.refineResponse(computeResponse, sessionCalculationObject, paymentRequest);
-
             ReportResponse reportResponse = serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
-
             jobStatusStore.updateJob(jobId, "COMPLETED", "Payroll computation complete", reportResponse.getReportId());
-            jobStatusSink.tryEmitNext(jobStatusStore.getJob(jobId));
+            progressCallback.accept(jobStatusStore);
+
         } catch (Exception e) {
+            LOGGER.error("Exception occurred while computing payroll for companyId: {}", paymentRequest.getCompanyId(), e);
             jobStatusStore.updateJob(jobId, "FAILED", e.getMessage(), "");
-            jobStatusSink.tryEmitNext(jobStatusStore.getJob(jobId));
+            progressCallback.accept(jobStatusStore);
         }
     }
 
@@ -220,6 +192,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         PayComputeSummaryResponse payComputeSummaryResponse = PayComputeSummaryResponse.builder()
                 .summary(paymentComputeResponse.getSummary())
                 .summaryDetails(paymentComputeResponse.getSummaryDetails())
+                .summaryVariance(processSummaryVariance(paymentComputeResponse.getSummary(), previousReportSummary))
                 .summaryVariance(processSummaryVariance(paymentComputeResponse.getSummary(), previousReportSummary))
                 //.summaryDetailsVariance(processSummaryDetailsVariance(paymentComputeResponse.getSummaryDetails(), previousReportSummary))
                 .build();
@@ -853,7 +826,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     @Override
     public List<ReportAnalytics> getReportAnalytics(String companyId, int page, int size) {
         Pageable paging = PageRequest.of(page, size);
-        Page<PayrollReportSummary> payrollReportSummaryPage = payrollReportSummaryRepo.findPayrollReportSummaryByCompanyIdAndPayrollSimulationOrderByCreatedDateDesc(companyId, false, paging);
+//        Page<PayrollReportSummary> payrollReportSummaryPage = payrollReportSummaryRepo.findPayrollReportSummaryByCompanyIdAndPayrollSimulationOrderByCreatedDateDesc(companyId, true, paging);
+        Page<PayrollReportSummary> payrollReportSummaryPage = payrollReportSummaryRepo.findPayrollReportSummaryByCompanyIdOrderByCreatedDateDesc(companyId, paging);
         var reportAnalytics = payrollReportSummaryPage.getContent()
                 .stream()
                 .filter(r -> r != null && r.getId() != null)

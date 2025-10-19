@@ -51,7 +51,6 @@ public class Compute extends TextWebSocketHandler {
     private final EmployeeMetadataService employeeMetadataService;
     private final JobStatusStore jobStatusStore;
 
-    private final Sinks.Many<JobStatus> jobStatusSink = Sinks.many().multicast().onBackpressureBuffer();
 
     @Autowired
     private SessionCalculationObject sessionCalculationObject;
@@ -68,17 +67,13 @@ public class Compute extends TextWebSocketHandler {
             );
         }
 
-
         String jobId = UUID.randomUUID().toString();
         jobStatusStore.createJob(jobId);
 
         // Run asynchronously
-//        reportPersistenceService.computePayrollAsync(progress -> {
-//            messagingTemplate.convertAndSend("/topic/job-status", progress);
-//        }, jobId, authorizationHeader, paymentRequest);
-
-        reportPersistenceService.computePayrollAsync(jobId, authorizationHeader, paymentRequest,jobStatusSink);
-
+        reportPersistenceService.computePayrollAsync(progress -> {
+            messagingTemplate.convertAndSend("/topic/job-status", progress);
+        }, jobId, authorizationHeader, paymentRequest);
 
         Map<String, String> response = new HashMap<>();
         response.put("jobId", jobId);
@@ -97,44 +92,37 @@ public class Compute extends TextWebSocketHandler {
         return Mono.just(ResponseEntity.ok(status));
     }
 
-    // Server sent event
-    @GetMapping(value = "/payroll/stream/{jobId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<JobStatus> streamJobStatus(@PathVariable String jobId) {
-        return jobStatusSink.asFlux()
-                .filter(status -> status.getJobId().equals(jobId));
-    }
-
     @PostMapping("/payroll")
     public Mono<ReportResponse> computePayroll(
             @RequestHeader("Authorization") String authorizationHeader,
             @RequestBody PaymentInfoRequest paymentRequest) throws IOException, ClassNotFoundException {
 
-        sessionCalculationObject = OperationUtils.doPreflight(
-                sessionCalculationObject,
-                computationConstantsRepo,
-                employeeMetadataService,
-                paymentRequest
-        );
+            sessionCalculationObject = OperationUtils.doPreflight(
+                    sessionCalculationObject,
+                    computationConstantsRepo,
+                    employeeMetadataService,
+                    paymentRequest
+            );
 
-        if (!paymentRequest.isPayrollSimulation() || !paymentRequest.isOffCycle()) {
-            computeService.validatePayrollIsNotApprovedOrCompleted(String.valueOf(paymentRequest.getStart()), paymentRequest.getCompanyId());
-        }
+            if (!paymentRequest.isPayrollSimulation() || !paymentRequest.isOffCycle()) {
+                computeService.validatePayrollIsNotApprovedOrCompleted(String.valueOf(paymentRequest.getStart()), paymentRequest.getCompanyId());
+            }
 
         return AuthUtil.getUserName()
                 .doOnNext(username -> LOGGER.info("User: {}", username))
-                .then(Mono.fromCallable(() -> {
-                            // your blocking logic inside
-                            List<PaymentInfo> paymentInfoList = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
-                            if (paymentInfoList == null || paymentInfoList.isEmpty()) {
-                                throw new PayrollValidationException("No payment information found for request");
-                            }
+                        .then(Mono.fromCallable(() -> {
+                    // your blocking logic inside
+                    List<PaymentInfo> paymentInfoList = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
+                    if (paymentInfoList == null || paymentInfoList.isEmpty()) {
+                        throw new PayrollValidationException("No payment information found for request");
+                    }
 
-                            PaymentComputeResponse computeResponse = computeService.computePayroll(paymentInfoList);
-                            computeResponse = OperationUtils.refineResponse(computeResponse, sessionCalculationObject, paymentRequest);
+                    PaymentComputeResponse computeResponse = computeService.computePayroll(paymentInfoList);
+                    computeResponse = OperationUtils.refineResponse(computeResponse, sessionCalculationObject, paymentRequest);
 
-                            return reportPersistenceService.serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
-                        })
-                        // run the blocking part on a thread pool for blocking tasks
-                        .subscribeOn(Schedulers.boundedElastic()));
+                    return reportPersistenceService.serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
+                })
+                // run the blocking part on a thread pool for blocking tasks
+                .subscribeOn(Schedulers.boundedElastic()));
     }
 }
