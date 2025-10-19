@@ -4,7 +4,6 @@ import com.xykine.computation.config.TestSecurityConfig;
 import com.xykine.computation.domain.JobStatus;
 import com.xykine.computation.response.ReportResponse;
 import com.xykine.computation.testdata.TestDataFactory;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +32,7 @@ public class ComputeIntegTest extends AbstractIntegrationTest {
         JobStatus jobStatus = getStatus(jobId);
         ReportResponse reportResponse = null;
         assertThat(jobStatus.getStatus()).isEqualTo("IN_PROGRESS");
-        Thread.sleep(2*60*1000);
+        Thread.sleep(60*1000);
         jobStatus = getStatus(jobId);
         if ("COMPLETED".equalsIgnoreCase(jobStatus.getStatus())) {
             reportResponse = getReportById(jobStatus.getReportId());

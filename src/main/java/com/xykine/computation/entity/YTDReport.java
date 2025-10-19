@@ -25,6 +25,6 @@ public class YTDReport {
     private BigDecimal netPay;
     private BigDecimal nhf;
     private BigDecimal payeeTax;
-    private BigDecimal employeeContributedPension;
-    private BigDecimal employerContributedPension;
+    private BigDecimal pension;
+    private BigDecimal taxableIncome;
 }
