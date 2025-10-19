@@ -1,12 +1,10 @@
 package com.xykine.computation.service;
 
-import com.xykine.computation.domain.JobStatus;
 import com.xykine.computation.entity.*;
 import com.xykine.computation.exceptions.PayrollValidationException;
 import com.xykine.computation.repo.*;
 import com.xykine.computation.request.PaymentInfoRequest;
 import com.xykine.computation.request.ReportByTypeRequest;
-import com.xykine.computation.request.UpdateLoanRequest;
 import com.xykine.computation.request.UpdateReportRequest;
 import com.xykine.computation.response.*;
 
@@ -561,7 +559,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         } else {
             existingSummaryReport = payrollReportSummaryRepo
                     .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(request.getStartDate(), request.getCompanyId(), false);
-            LOGGER.info("===== existingSummaryReport {} ", existingSummaryReport);
+            LOGGER.debug("===== existingSummaryReport {} ", existingSummaryReport);
             updateDashboardData(AppConstants.payrollCountRegular, existingSummaryReport);
         }
         existingSummaryReport.setPayrollStatus(request.getPayrollStatus());
@@ -734,8 +732,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                     newReport.setNetPay(BigDecimal.ZERO);
                     newReport.setNhf(BigDecimal.ZERO);
                     newReport.setPayeeTax(BigDecimal.ZERO);
-                    newReport.setEmployeeContributedPension(BigDecimal.ZERO);
-                    newReport.setEmployerContributedPension(BigDecimal.ZERO);
+                    newReport.setPension(BigDecimal.ZERO);
+                    newReport.setTaxableIncome(BigDecimal.ZERO);
                     return newReport;
                 });
     }
