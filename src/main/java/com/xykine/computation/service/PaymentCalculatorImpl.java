@@ -368,6 +368,11 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
             deductionMap.put("WHT", withHoldingTaxAmount);
             deductionMap.put(MapKeys.TOTAL_DEDUCTION, getTotal(deductionMap));
             paymentInfo.setDeduction(deductionMap);
+
+            Map<String, BigDecimal> nonTaxableIncomeExemptMap = new HashMap<>();
+            nonTaxableIncomeExemptMap.put("CHARGEABLE INCOME",contractorGross);
+            paymentInfo.setTaxRelief(nonTaxableIncomeExemptMap);
+
             updateReportSummary(paymentInfo, sessionCalculationObject, "TotaL Withholding Tax", withHoldingTaxAmount);
         }
         return paymentInfo;

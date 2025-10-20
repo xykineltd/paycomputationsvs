@@ -543,6 +543,15 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         if ("COMPLETED".equalsIgnoreCase(jobStatus.getStatus())) {
             reportId = jobStatus.getReportId();
         }
+
+        ReportResponse response = getReportById(reportId);
+        Map<String, Object> body = getReportDetail(response);
+        assertThat(body).isNotNull().satisfies((x) -> {
+            assertThat(x.get("totalItems")).isEqualTo(1);
+        });
+        List<ReportResponse> reportResponses = MAPPER.convertValue(body.get("payrollDetails"), new TypeReference<List<ReportResponse>>() {
+        });
+
         when(adminService.getEmployeeIdListForFilter(any(), anyString())).thenReturn(List.of("8e3b6e4952e8468a84fd84556f8fdf2a"));
         Map<String, Object> summaryDetails = getVarianceDetails(reportId, "Total Gross Pay");
         assertThat(summaryDetails)
