@@ -27,4 +27,5 @@ public class YTDReport {
     private BigDecimal payeeTax;
     private BigDecimal pension;
     private BigDecimal taxableIncome;
+    private BigDecimal wht;
 }

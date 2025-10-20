@@ -287,7 +287,7 @@ public abstract class AbstractIntegrationTest {
 
     ReportResponse getReportById(String reportId) {
         // @GetMapping("/{companyId}/")
-        String URL_PREFIX = "http://localhost:" + port + "/compute/reports//by-reportId/"+ reportId;
+        String URL_PREFIX = "http://localhost:" + port + "/compute/reports/by-reportId/"+ reportId;
         String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX)
                 .toUriString();
         RetrieveSummaryElementRequest retrieveSummaryElementRequest = new RetrieveSummaryElementRequest();
