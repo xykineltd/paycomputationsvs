@@ -5,8 +5,6 @@ import com.xykine.computation.domain.JobStatus;
 import com.xykine.computation.response.ReportResponse;
 import com.xykine.computation.testdata.TestDataFactory;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
