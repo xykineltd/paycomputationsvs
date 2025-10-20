@@ -52,7 +52,7 @@ public class Report {
         return reportPersistenceService.getPayRollReportsByStatus(companyId, status);
     }
 
-    @PostMapping("/by-reportId/{reportId}")
+    @PostMapping("/by-reportId")
     public ReportResponse getReport( @RequestBody RetrieveSummaryElementRequest request) {
         return reportPersistenceService.getPayRollReport(UUID.fromString(request.getReportId()));
     }
