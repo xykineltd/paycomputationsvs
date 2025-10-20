@@ -103,21 +103,19 @@ public class DashboardDataService {
 
     private void breakJobsAndOffLoad(List<PayrollReportDetail>  payrollReportDetailList, String companyId) {
         int size = payrollReportDetailList.size();
-        List<PayrollReportDetail> job1 = new ArrayList<>();
-        List<PayrollReportDetail> job2 = new ArrayList<>();
-
-        job1.addAll(payrollReportDetailList.subList(0, size/2));
-        job2.addAll(payrollReportDetailList.subList(size/2, size));
-
-
-        CompletableFuture.supplyAsync(() -> {
-            return  offLoadNewValuesToYTD(job1, companyId);
-        }, executor);
-
-
-        CompletableFuture.supplyAsync(() -> {
-            return  offLoadNewValuesToYTD(job2, companyId);
-        }, executor);
+        int cores = Runtime.getRuntime().availableProcessors();
+        int chunkSize = (size + cores - 1) / cores;
+        List<List<PayrollReportDetail>> chunks = new ArrayList<>();
+        for (int i = 0; i < size; i += chunkSize) {
+            int end = Math.min(size, i + chunkSize);
+            chunks.add(payrollReportDetailList.subList(i, end));
+        }
+        List<CompletableFuture<Boolean>> futures = new ArrayList<>();
+        futures.addAll(
+                chunks.stream()
+                        .map(finalChunk -> CompletableFuture.supplyAsync(() -> offLoadNewValuesToYTD(finalChunk, companyId)))
+                        .toList()
+        );
     }
 
     private boolean offLoadNewValuesToYTD(List<PayrollReportDetail>  payrollReportDetailList, String companyId) {
@@ -139,9 +137,13 @@ public class DashboardDataService {
                     Map<String, BigDecimal> pension = x.getDetail().getReport().getPension();
                     newValuesForEmployee.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION,  pension.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION));
                     newValuesForEmployee.put(MapKeys.EMPLOYER_PENSION_CONTRIBUTION,  pension.get(MapKeys.EMPLOYER_PENSION_CONTRIBUTION));
+                    newValuesForEmployee.put("Voluntary Pension Contribution", pension.get("Voluntary Pension Contribution"));
 
                     BigDecimal netPay = x.getDetail().getReport().getNetPay();
                     newValuesForEmployee.put(MapKeys.NET_PAY,  netPay);
+
+                    Map<String, BigDecimal> taxRelief = x.getDetail().getReport().getTaxRelief();
+                    newValuesForEmployee.put("Taxable Income", taxRelief.get("CHARGEABLE INCOME").divide(BigDecimal.valueOf(12L), 2, BigDecimal.ROUND_HALF_UP));
                     newValuesForAllEmployees.put(x.getEmployeeId(), newValuesForEmployee);
                 });
 
@@ -157,8 +159,10 @@ public class DashboardDataService {
                 ytdReport.setNetPay(ytdReport.getNetPay().add(y.get(MapKeys.NET_PAY)));
                 ytdReport.setNhf(ytdReport.getNhf().add(y.get(MapKeys.NATIONAL_HOUSING_FUND)));
                 ytdReport.setPayeeTax(ytdReport.getPayeeTax().add(y.get(MapKeys.PAYEE_TAX)));
-                ytdReport.setEmployeeContributedPension(ytdReport.getEmployeeContributedPension().add((y.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION))));
-                ytdReport.setEmployerContributedPension(ytdReport.getEmployerContributedPension().add(y.get(MapKeys.EMPLOYER_PENSION_CONTRIBUTION)));
+                ytdReport.setPension(ytdReport.getPension().add(y.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION))
+                        .add(y.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION))
+                        .add(y.get("Voluntary Pension Contribution")));
+                ytdReport.setTaxableIncome(ytdReport.getTaxableIncome().add(y.get("Taxable Income")));
             }
             ytdReportRepo.save(ytdReport);
             latestYTDs.put(x, ytdReport);
@@ -174,8 +178,8 @@ public class DashboardDataService {
                     ytdReportMap.put(MapKeys.NET_PAY, ytdReport.getNetPay());
                     ytdReportMap.put(MapKeys.NATIONAL_HOUSING_FUND, ytdReport.getNhf());
                     ytdReportMap.put(MapKeys.PAYEE_TAX, ytdReport.getPayeeTax());
-                    ytdReportMap.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION, ytdReport.getEmployeeContributedPension());
-                    ytdReportMap.put(MapKeys.EMPLOYER_PENSION_CONTRIBUTION, ytdReport.getEmployerContributedPension());
+                    ytdReportMap.put("Pension", ytdReportMap.get("Pension"));
+                    ytdReportMap.put("Taxable Income", ytdReport.getTaxableIncome());
 
                     PayComputeDetailResponse payComputeDetailResponse = SerializationUtils.deserialize(payrollReportDetail.getReport());
                     PaymentInfo paymentInfo = payComputeDetailResponse.getReport();
@@ -197,8 +201,11 @@ public class DashboardDataService {
                 .netPay(currentValues.get(MapKeys.NET_PAY))
                 .nhf(currentValues.get(MapKeys.NATIONAL_HOUSING_FUND))
                 .payeeTax(currentValues.get(MapKeys.PAYEE_TAX))
-                .employeeContributedPension(currentValues.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION))
-                .employerContributedPension(currentValues.get(MapKeys.EMPLOYER_PENSION_CONTRIBUTION))
+                .pension(currentValues.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION)
+                        .add(currentValues.get(MapKeys.EMPLOYER_PENSION_CONTRIBUTION))
+                        .add(currentValues.get("Voluntary Pension Contribution"))
+                )
+                .taxableIncome(currentValues.get("Taxable Income"))
                 .build();
     }
 

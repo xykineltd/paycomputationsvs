@@ -36,30 +36,25 @@ public class Report {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Report.class);
 
-    @PostMapping("/{companyId}")
-    public ResponseEntity<?> getReports(
-            @PathVariable String companyId,
-            @RequestBody ReportPaginationRequest request
-    ) {
-        int page = request.getPage();
-        int size = request.getSize();
-        Map<String, Object> response = reportPersistenceService.getPayRollReports(companyId, page, size);
-        return new ResponseEntity<>(response, HttpStatus.OK);
-    }
+//    @PostMapping("/{companyId}")
+//    public ResponseEntity<?> getReports(
+//            @PathVariable String companyId,
+//            @RequestBody ReportPaginationRequest request
+//    ) {
+//        int page = request.getPage();
+//        int size = request.getSize();
+//        Map<String, Object> response = reportPersistenceService.getPayRollReports(companyId, page, size);
+//        return new ResponseEntity<>(response, HttpStatus.OK);
+//    }
 
     @GetMapping("/{companyId}/status/{status}")
     public List<ReportResponse> getReportsByStatus(@PathVariable String companyId, @PathVariable String status) {
         return reportPersistenceService.getPayRollReportsByStatus(companyId, status);
     }
 
-//    @GetMapping("/by-reportId/{reportId}/isSimulate/{isSimulate}")
-//    public ReportResponse getReportsByStatus( @PathVariable UUID reportId, @PathVariable boolean isSimulate) {
-//        return reportPersistenceService.getPayRollReport(reportId, isSimulate);
-//    }
-
-    @PostMapping("/by-reportId/")
-    public ReportResponse getReport( @RequestBody CompletePayrollRequest request) {
-        return reportPersistenceService.getPayRollReport(request.getReportId());
+    @PostMapping("/by-reportId/{reportId}")
+    public ReportResponse getReport( @RequestBody RetrieveSummaryElementRequest request) {
+        return reportPersistenceService.getPayRollReport(UUID.fromString(request.getReportId()));
     }
 
     @GetMapping("/{companyId}/{employeeId}")
