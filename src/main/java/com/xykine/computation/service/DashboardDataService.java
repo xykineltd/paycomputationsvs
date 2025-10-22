@@ -34,6 +34,7 @@ import com.xykine.computation.repo.DashboardCardRepo;
 import com.xykine.computation.response.ReportResponse;
 import com.xykine.computation.utils.ReportUtils;
 import org.xykine.payroll.model.PaymentInfo;
+import org.xykine.payroll.model.PaymentSettingsResponse;
 
 
 @Slf4j
@@ -144,7 +145,7 @@ public class DashboardDataService {
                     newValuesForEmployee.put(MapKeys.NET_PAY,  netPay);
 
                     Map<String, BigDecimal> taxRelief = x.getDetail().getReport().getTaxRelief();
-                    newValuesForEmployee.put("Taxable Income", taxRelief.get("CHARGEABLE INCOME").divide(BigDecimal.valueOf(12L), 2, BigDecimal.ROUND_HALF_UP));
+                    newValuesForEmployee.put("Taxable Income", taxRelief.get("CHARGEABLE INCOME"));
 
                     newValuesForAllEmployees.put(x.getEmployeeId(), newValuesForEmployee);
                 });
@@ -172,7 +173,6 @@ public class DashboardDataService {
             latestYTDs.put(x, ytdReport);
         });
 
-
         payrollReportDetailList
                 .forEach(x -> {
                     PayrollReportDetail payrollReportDetail = payrollReportDetailRepo.findById(x.getId()).get();
@@ -190,6 +190,7 @@ public class DashboardDataService {
                     PaymentInfo paymentInfo = payComputeDetailResponse.getReport();
                     paymentInfo.setYtdReport(ytdReportMap);
                     payComputeDetailResponse.setReport(paymentInfo);
+
                     payrollReportDetail.setReport(ReportUtils.serializeResponse(payComputeDetailResponse));
                     payrollReportDetailRepo.save(payrollReportDetail);
                 });
@@ -219,7 +220,8 @@ public class DashboardDataService {
         BigDecimal netPay = extractNetPayFromReport(payrollReportSummary);
         BigDecimal currentNetPay = dashboardCard.getTotalPayrollCost();
         dashboardCard.setTotalPayrollCost(currentNetPay.add(netPay));
-        LOGGER.debug(" ====> netPay, currentNetPay,  payrollReportSummary.getTotalNumberOfEmployees()  {} {} {} ",  netPay, currentNetPay, payrollReportSummary.getTotalNumberOfEmployees());
+        LOGGER.debug(" ====> netPay, currentNetPay,  payrollReportSummary.getTotalNumberOfEmployees()  {} {} {} ",
+                netPay, currentNetPay, payrollReportSummary.getTotalNumberOfEmployees());
         dashboardCard.setAverageEmployeeCost(ComputationUtils.roundToTwoDecimalPlaces(
                 currentNetPay.add(netPay)
                         .divide(BigDecimal.valueOf(payrollReportSummary.getTotalNumberOfEmployees()), 2, RoundingMode.HALF_UP)

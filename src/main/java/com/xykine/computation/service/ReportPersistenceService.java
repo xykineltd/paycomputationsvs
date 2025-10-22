@@ -3,6 +3,7 @@ package com.xykine.computation.service;
 import com.xykine.computation.domain.JobStatus;
 import com.xykine.computation.entity.PayrollReportDetail;
 import com.xykine.computation.entity.PayrollReportSummary;
+import com.xykine.computation.entity.PayrollStatus;
 import com.xykine.computation.entity.YTDReport;
 import com.xykine.computation.request.PaymentInfoRequest;
 import com.xykine.computation.request.ReportByTypeRequest;
@@ -29,6 +30,7 @@ public interface ReportPersistenceService {
     Map<String, Object> getReportByEmployeeID(String companyId, String employeeID, int page, int size);
     Map<String, Object> getReportByEmployeeIDList(String companyId, List<String> employeeIDList, String summaryId, int page, int size);
     PayrollReportSummary approveReport(UpdateReportRequest updateReportRequest);
+    public void updateReportStatus(String reportId, PayrollStatus payrollStatus);
     boolean deleteReport(UpdateReportRequest updateReportRequest);
     PayrollReportSummary completeReport(UpdateReportRequest updateReportRequest);
     Map<String, Object> getPaymentDetails(String id, String companyId, String fullName, int page, int size);

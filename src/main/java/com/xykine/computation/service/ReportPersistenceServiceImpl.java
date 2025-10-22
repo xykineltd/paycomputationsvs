@@ -5,6 +5,7 @@ import com.xykine.computation.exceptions.PayrollValidationException;
 import com.xykine.computation.repo.*;
 import com.xykine.computation.request.PaymentInfoRequest;
 import com.xykine.computation.request.ReportByTypeRequest;
+import com.xykine.computation.request.StartWorkflowRequest;
 import com.xykine.computation.request.UpdateReportRequest;
 import com.xykine.computation.response.*;
 
@@ -40,8 +41,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import com.xykine.computation.entity.simulate.PayrollReportDetailSimulate;
-import com.xykine.computation.entity.simulate.PayrollReportSummarySimulate;
 import com.xykine.computation.exceptions.PayrollReportNotException;
 import com.xykine.computation.exceptions.PayrollUnmodifiableException;
 import com.xykine.computation.utils.ReportUtils;
@@ -65,6 +64,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     private final AdminService adminService;
     private final ComputeService computeService;
     private final PayrollVarianceDetailsRepo payrollVarianceDetailsRepo;
+    private final WorkflowService workflowService;
+
     @Autowired
     private SessionCalculationObject sessionCalculationObject;
 
@@ -110,6 +111,16 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             ReportResponse reportResponse = serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
             jobStatusStore.updateJob(jobId, "COMPLETED", "Payroll computation complete", reportResponse.getReportId());
             progressCallback.accept(jobStatusStore);
+
+            StartWorkflowRequest startWorkflowRequest = new StartWorkflowRequest();
+            String userId = AuthUtil.getCurrentUserId().block();
+            startWorkflowRequest.setReportId(reportResponse.getReportId());
+            startWorkflowRequest.setUserId(userId);
+            startWorkflowRequest.setStartDate(paymentRequest.getStart().toString());
+            startWorkflowRequest.setEndDate(paymentRequest.getEnd().toString());
+            startWorkflowRequest.setPayrollType(paymentRequest.isOffCycle() ? "Off Cycle" : "Regular");
+
+            workflowService.startWorkflow(startWorkflowRequest, authorizationHeader);
 
         } catch (Exception e) {
             jobStatusStore.updateJob(jobId, "FAILED", e.getMessage(), "");
@@ -215,7 +226,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 .payrollSimulation(paymentComputeResponse.isPayrollSimulation())
                 .offCycle(paymentComputeResponse.isOffCycle())
                 .totalNumberOfEmployees(totalNumberOfEmployees)
-                .payrollStatus(paymentComputeResponse.isPayrollSimulation() ? PayrollStatus.SIMULATED : PayrollStatus.PENDING)
+                .payrollStatus(paymentComputeResponse.isPayrollSimulation() ? PayrollStatus.SIMULATED : PayrollStatus.INITIATED)
                 .paymentFrequency(paymentFrequency)
                 .code(generateReportCode(paymentComputeResponse.getStart(), paymentComputeResponse.isOffCycle(), totalNumberOfEmployees))
                 .build();
@@ -386,29 +397,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         throw new RuntimeException("Report with id: " + id + " was not found");
     }
 
-//    private ReportResponse getReportResponseSimulate(PaymentComputeResponse paymentComputeResponse, String companyId, String startDate) {
-//        // TODO process the variance
-//        PayComputeSummaryResponse payComputeSummaryResponse = PayComputeSummaryResponse.builder()
-//                .summary(paymentComputeResponse.getSummary())
-//                .summaryDetails(paymentComputeResponse.getSummaryDetails())
-//                .summaryVariance(processSummaryVarianceSimulate(paymentComputeResponse.getSummary()))
-//                .summaryDetailsVariance(processSummaryDetailsVarianceSimulate(paymentComputeResponse.getSummaryDetails()))
-//                .build();
-//        PayrollReportSummarySimulate payrollReportSummary = PayrollReportSummarySimulate.builder()
-//                .id(paymentComputeResponse.getId())
-//                .companyId(companyId)
-//                .startDate(startDate)
-//                .endDate(paymentComputeResponse.getEnd())
-//                .report(ReportUtils.serializeResponse(payComputeSummaryResponse))
-//                .createdDate(LocalDateTime.now())
-//                .payrollStatus(PayrollStatus.PENDING)
-//                .payrollSimulation(paymentComputeResponse.isPayrollSimulation())
-//                .build();
-//        payrollReportSummaryRepoSimulate.save(payrollReportSummary);
-//        saveReportDetailsSimulate(paymentComputeResponse, companyId);
-//        return getPayRollReportSimulate(paymentComputeResponse.getStart());
-//    }
-
     @Override
     public ReportResponse getPayRollReport(String starDate, String companyId) {
         PayrollReportSummary payrollReportSummary = payrollReportSummaryRepo
@@ -571,6 +559,22 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             payrollAsyncService.updateDetailStatusAsync(existingSummaryReport.getId().toString());
         }
         return existingSummaryReport;
+    }
+
+    @Transactional
+    public void updateReportStatus(String reportId, PayrollStatus payrollStatus) {
+        PayrollReportSummary existingSummaryReport = payrollReportSummaryRepo.findPayrollReportSummaryById(UUID.fromString(reportId));
+        if (existingSummaryReport.isOffCycle()) {
+            updateDashboardData(AppConstants.payrollCountOffCycle, existingSummaryReport);
+        } else {
+            updateDashboardData(AppConstants.payrollCountRegular, existingSummaryReport);
+        }
+        existingSummaryReport.setPayrollStatus(payrollStatus);
+        PayrollReportSummary reportResponse = payrollReportSummaryRepo.save(existingSummaryReport);
+        if (payrollStatus.equals(PayrollStatus.APPROVED)) {
+            payrollAsyncService.updateEmployeeLoanAsync(existingSummaryReport.getId().toString(), reportResponse.getCompanyId());
+            payrollAsyncService.updateDetailStatusAsync(existingSummaryReport.getId().toString());
+        }
     }
 
     public boolean deleteReport(UpdateReportRequest request) {
@@ -802,7 +806,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                     payrollReportDetail.setReport(ReportUtils.serializeResponse(payComputeDetailResponse));
                     payrollReportDetail.setCreatedDate(LocalDateTime.now());
                     payrollReportDetail.setPayrollSimulation(paymentComputeResponse.isPayrollSimulation());
-                    payrollReportDetail.setPayrollStatus(paymentComputeResponse.isPayrollSimulation() ? PayrollStatus.SIMULATED : PayrollStatus.PENDING);
+                    payrollReportDetail.setPayrollStatus(paymentComputeResponse.isPayrollSimulation() ? PayrollStatus.SIMULATED : PayrollStatus.INITIATED);
                     payrollReportDetail.setOffCycle(paymentComputeResponse.isOffCycle());
                     payrollReportDetailRepo.save(payrollReportDetail);
 

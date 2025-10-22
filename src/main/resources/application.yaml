@@ -33,8 +33,12 @@ spring:
 admin:
   service:
     url: ${ADMIN_SERVICE_URL:http://localhost:9001/}
-#    url: http://xykinehrs.com/
     maxBufferSize: 500000
+
+workflow:
+  service:
+    url: ${WORKFLOW_SERVICE_URL:http://localhost:9004/}
+
 
 xykine:
   spa-uri: ${SPA_URL:http://localhost:3000}

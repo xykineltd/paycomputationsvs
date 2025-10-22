@@ -1,8 +1,6 @@
 package com.xykine.computation.utils;
 
 import com.xykine.computation.entity.*;
-import com.xykine.computation.entity.simulate.PayrollReportDetailSimulate;
-import com.xykine.computation.entity.simulate.PayrollReportSummarySimulate;
 import com.xykine.computation.response.*;
 import org.apache.commons.lang3.SerializationUtils;
 
@@ -66,21 +64,6 @@ public class ReportUtils {
                     .build();
     }
 
-    public static ReportResponse transform(PayrollReportDetailSimulate x){
-        return ReportResponse.builder()
-                .reportId(x.getId())
-                .companyId(x.getCompanyId())
-                .departmentId(x.getDepartmentId())
-                .employeeId(x.getEmployeeId())
-                .payrollStatus(x.getPayrollStatus())
-                .startDate(x.getStartDate().toString())
-                .endDate(x.getEndDate().toString())
-                .createdDate(String.valueOf(x.getCreatedDate()))
-                .payrollSimulated(x.isPayrollSimulation())
-                .detail(SerializationUtils.deserialize(x.getReport()))
-                .build();
-    }
-
     public static ReportResponse transform(PayrollReportSummary payrollReportSummary){
         PayComputeSummaryResponse summary =  SerializationUtils.deserialize(payrollReportSummary.getReport());
         return ReportResponse.builder()
@@ -95,20 +78,6 @@ public class ReportUtils {
                 .offCycle(payrollReportSummary.isOffCycle())
                 .summary(summary)
                 .code(payrollReportSummary.getCode())
-                .build();
-    }
-
-    public static ReportResponse transform(PayrollReportSummarySimulate payrollReportSummary){
-        PayComputeSummaryResponse summary =  SerializationUtils.deserialize(payrollReportSummary.getReport());
-        return ReportResponse.builder()
-                .reportId(payrollReportSummary.getId().toString())
-                .companyId(payrollReportSummary.getCompanyId())
-                .payrollStatus(payrollReportSummary.getPayrollStatus())
-                .startDate(payrollReportSummary.getStartDate())
-                .endDate(payrollReportSummary.getEndDate())
-                .createdDate(String.valueOf(payrollReportSummary.getCreatedDate()))
-                .payrollSimulated(payrollReportSummary.isPayrollSimulation())
-                .summary(summary)
                 .build();
     }
 
