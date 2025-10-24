@@ -1,6 +1,8 @@
 package com.xykine.computation.controller;
 
 import com.xykine.computation.domain.JobStatus;
+import com.xykine.computation.entity.PayrollStatus;
+import com.xykine.computation.entity.StageEntity;
 import com.xykine.computation.exceptions.PayrollValidationException;
 import com.xykine.computation.repo.ComputationConstantsRepo;
 import com.xykine.computation.repo.TaxRepo;
@@ -51,6 +53,7 @@ public class Compute extends TextWebSocketHandler {
     private final EmployeeMetadataService employeeMetadataService;
     private final JobStatusStore jobStatusStore;
 
+    private final WorkflowService workflowService;
 
     @Autowired
     private SessionCalculationObject sessionCalculationObject;
@@ -88,6 +91,10 @@ public class Compute extends TextWebSocketHandler {
         JobStatus status = jobStatusStore.getJob(jobId);
         if (status == null) {
             return Mono.just(ResponseEntity.notFound().build());
+        }
+        if( status.getStatus().equals("COMPLETED") ){
+            // STEP-1  This is where we start the workflow creation TODO need to pass login user Id
+            workflowService.startWorkflow(StageEntity.PAYROLL, AuthUtil.getCompanyId().block(), AuthUtil.getCurrentUserId().block(), status.getReportId() );
         }
         return Mono.just(ResponseEntity.ok(status));
     }

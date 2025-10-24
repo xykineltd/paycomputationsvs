@@ -36,4 +36,8 @@ public interface ReportPersistenceService {
     Map<String, Object> getPayRollReportByType(ReportByTypeRequest request, int page, int size);
     Map<String, Object> getPayRollReportDetailByType(ReportByTypeRequest request, int page, int size);
 
+    public boolean updateReportStatus(UpdatePayrollStatusRequest request);
+
+    public boolean deleteReportById(String companyId, String reportId);
+
 }

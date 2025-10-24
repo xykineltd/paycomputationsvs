@@ -66,6 +66,9 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     private final AdminService adminService;
     private final ComputeService computeService;
     private final PayrollVarianceDetailsRepo payrollVarianceDetailsRepo;
+
+    private final ApprovalService approvalService;
+
     @Autowired
     private SessionCalculationObject sessionCalculationObject;
 
@@ -110,7 +113,9 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             PaymentComputeResponse computeResponse = computeService.computePayroll(paymentInfoList);
             computeResponse = OperationUtils.refineResponse(computeResponse, sessionCalculationObject, paymentRequest);
             ReportResponse reportResponse = serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
+
             jobStatusStore.updateJob(jobId, "COMPLETED", "Payroll computation complete", reportResponse.getReportId());
+
             progressCallback.accept(jobStatusStore);
 
         } catch (Exception e) {
@@ -632,6 +637,24 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
     }
 
+    @Override
+    public boolean updateReportStatus(UpdatePayrollStatusRequest request) {
+        System.out.println("======================"+ request);
+        PayrollReportSummary existingSummaryReport =
+                payrollReportSummaryRepo.findPayrollReportSummaryByIdAndCompanyIdAndPayrollSimulation(
+                        request.getReportId(),
+                        request.getCompanyId(),
+                        false
+                );
+
+        if (existingSummaryReport == null) {
+            throw new RuntimeException("Unable to pull payroll report");
+        }
+        existingSummaryReport.setPayrollStatus(request.getStatus());
+         payrollReportSummaryRepo.save(existingSummaryReport);
+       return true;
+    }
+
     private boolean deleteReportByDate(String startDate,
                                        String companyId,
                                        boolean isOffCycle,
@@ -655,6 +678,13 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         //canceling regular payroll
         payrollReportSummaryRepo.deletePayrollReportSummaryByStartDateAndCompanyId(startDate, companyId);
         payrollReportDetailRepo.deleteAllByStartDateAndCompanyId(LocalDate.parse(startDate), companyId);
+        return true;
+    }
+    @Override
+    public boolean deleteReportById(String companyId, String reportId) {
+        //canceling regular payroll
+        payrollReportSummaryRepo.deletePayrollReportSummaryByIdAndCompanyId(reportId, companyId);
+        payrollReportDetailRepo.deleteAllBySummaryIdAndCompanyId(reportId, companyId);
         return true;
     }
 
@@ -774,6 +804,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     }
 
 
+
+
     @Override
     public List<ReportAnalytics> getReportAnalytics(String companyId, int page, int size) {
         Pageable paging = PageRequest.of(page, size);
@@ -793,7 +825,9 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                         x.isOffCycle(),
                         x.getOffCycleId(),
                         x.isOffCycle() ? "Off-Cycle" : "Regular",
-                        x.getCreatedDate().toString()
+                        x.getCreatedDate().toString(),
+                        // TODO make this multi call
+                        approvalService.getCurrentStageInstance(x.getId())
                 ))
                 .toList();
         return !reportAnalytics.isEmpty() ? reportAnalytics : new ArrayList<>();

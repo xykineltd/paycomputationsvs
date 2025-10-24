@@ -1,6 +1,7 @@
 package com.xykine.computation.response;
 
 
+import com.xykine.computation.entity.StageInstance;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -24,4 +25,5 @@ public class ReportAnalytics {
     private String offCycleId;
     private String payrollType;
     private String createdDate;
+    private StageInstance currentStageInstance;
 }

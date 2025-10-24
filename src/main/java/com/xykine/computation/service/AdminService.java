@@ -6,6 +6,7 @@ import com.xykine.computation.exceptions.EmployeeFilterException;
 import com.xykine.computation.exceptions.PayrollValidationException;
 import com.xykine.computation.request.EmployeeFilterRequest;
 import com.xykine.computation.request.PaymentInfoRequest;
+import com.xykine.computation.request.UpdatePayrollStatusRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -69,6 +70,37 @@ public class AdminService {
                 .uri("admin/employee/get-employee-ids")
                 .header(HttpHeaders.AUTHORIZATION, token)
                 .bodyValue(employeeFilterRequest)
+                .exchangeToMono(response ->{
+                    if (response.statusCode().is2xxSuccessful()) {
+                        // Extract the body as a List if the response is successful
+                        return response.bodyToMono(List.class);
+                    } else {
+                        // Extract error message from the response body and throw custom exception
+                        return response.bodyToMono(ApiException.class)
+                                .flatMap(errorBody -> {
+                                    LOGGER.error("Non-successful response: {}", response.statusCode());
+                                    LOGGER.info("Error Message: {}", errorBody.getErrorMessage());
+                                    LOGGER.info("Error Code: {}", errorBody.getErrorCode());
+
+                                    // Throw custom exception with the error message
+                                    return Mono.error(new EmployeeFilterException(errorBody.getMessage()));
+                                });
+                    }
+                })
+                .onErrorResume(WebClientResponseException.class, ex -> {
+                    // Handle WebClient exceptions, if needed
+                    LOGGER.error("WebClient call failed: {}", ex.getMessage());
+                    return Mono.error(new EmployeeFilterException(ex.getMessage()));
+                })
+                .block(); // Block to wait for the response
+    }
+
+    public void preparePayment(UpdatePayrollStatusRequest updatePayrollRequest, String token) {
+         webClient
+                .post()
+                .uri("admin/payouts/analytics/items")
+                .header(HttpHeaders.AUTHORIZATION, token)
+                .bodyValue(updatePayrollRequest)
                 .exchangeToMono(response ->{
                     if (response.statusCode().is2xxSuccessful()) {
                         // Extract the body as a List if the response is successful
