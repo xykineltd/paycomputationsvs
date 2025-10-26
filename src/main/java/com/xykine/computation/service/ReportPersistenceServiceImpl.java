@@ -103,7 +103,10 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                     paymentRequest
             );
 
+            LOGGER.info("calling  paymentInfoList---->{}", paymentRequest);
+
             List<PaymentInfo> paymentInfoList = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
+            LOGGER.info("PaymentInfoList size: {}", paymentInfoList.size());
             if (paymentInfoList == null || paymentInfoList.isEmpty()) {
                 throw new PayrollValidationException("No payment information found for request");
             }
@@ -114,6 +117,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             progressCallback.accept(jobStatusStore);
 
         } catch (Exception e) {
+            e.printStackTrace();
             LOGGER.error("Exception occurred while computing payroll for companyId: {}", paymentRequest.getCompanyId(), e);
             jobStatusStore.updateJob(jobId, "FAILED", e.getMessage(), "");
             progressCallback.accept(jobStatusStore);

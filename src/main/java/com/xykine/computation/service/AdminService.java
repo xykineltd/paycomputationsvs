@@ -33,6 +33,7 @@ public class AdminService {
     private static final Logger LOGGER = LoggerFactory.getLogger(AdminService.class);
 
     public List getPaymentInfoList(PaymentInfoRequest paymentComputeRequest, String token) {
+        LOGGER.info("Getting payment info for company: {}", paymentComputeRequest.getCompanyId());
         return webClient
                 .post()
                 .uri("admin/paymentinfo/compute")
@@ -48,6 +49,7 @@ public class AdminService {
                                 .flatMap(errorBody -> {
                                     LOGGER.error("Non-successful response: {}", response.statusCode());
                                     LOGGER.error("Error Message: {}", errorBody.getErrorMessage());
+                                    LOGGER.error("Error Code: {}", errorBody.getErrorCode());
                                     LOGGER.error("Error Code: {}", errorBody.getErrorCode());
 
                                     // Throw custom exception with the error message

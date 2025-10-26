@@ -80,6 +80,17 @@ public class Report {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @PostMapping("/details/report")
+    public ResponseEntity<?> getDetailsReportByFilter(
+            @RequestBody EmployeeFilterRequest employeeFilterRequest) {
+        System.out.println("employeeFilterRequest--->" + employeeFilterRequest.getReportId());
+        Map<String, Object> response =  reportPersistenceService.getReportByEmployeeIDList(employeeFilterRequest.getCompanyID(),
+                employeeFilterRequest.getEmployeeIds(), employeeFilterRequest.getReportId(),
+                employeeFilterRequest.getPage(), employeeFilterRequest.getSize());
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
     @GetMapping("/analytics/{companyId}")
     public List<ReportAnalytics> getAnalyticsReports(@PathVariable String companyId,
                                                      @RequestParam(defaultValue = "0") int page,
@@ -225,7 +236,10 @@ public class Report {
     public ResponseEntity<?> getVarianceDetails(
             @RequestBody EmployeeFilterRequest employeeFilterRequest,
             @RequestHeader("Authorization") String authorizationHeader) {
+        LOGGER.info("FilteredList calling-------->");
+
         List<String> filteredList = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
+        LOGGER.info("FilteredList: {}", filteredList);
         ConcurrentHashMap<String, Set<SummaryDetail>> response =
                 reportPersistenceService.getSummaryVarianceDetails(
                         employeeFilterRequest.getReportId(),

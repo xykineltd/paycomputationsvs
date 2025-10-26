@@ -28,7 +28,8 @@ spring:
       timeout: 1s
 
     mongodb:
-      uri: ${SPRING_DATA_MONGODB_URI:mongodb://root:rootpassword@localhost:27017/dev_db?authSource=admin&connectTimeoutMS=30000&serverSelectionTimeoutMS=30000&socketTimeoutMS=90000&directConnection=true}
+#      uri: ${SPRING_DATA_MONGODB_URI:mongodb://root:rootpassword@localhost:27017/dev_db?authSource=admin&connectTimeoutMS=30000&serverSelectionTimeoutMS=30000&socketTimeoutMS=90000&directConnection=true}
+      uri: mongodb://root:rootpassword@localhost:27017/dev_db?authSource=admin&connectTimeoutMS=30000&serverSelectionTimeoutMS=30000&socketTimeoutMS=90000&directConnection=true
       database: ${MONGO_DB_NAME:dev_db}
 #      uri: mongodb://root:rootpassword@localhost:27017/dev_db?authSource=admin&connectTimeoutMS=30000&serverSelectionTimeoutMS=30000&socketTimeoutMS=90000&directConnection=true
 #            database: ${MONGO_DB_NAME:dev_db}
