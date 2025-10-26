@@ -15,7 +15,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @NoArgsConstructor
 public class SummaryDetail implements Serializable {
-    private static final long serialVersionUID = -4677589975044662049L; // Manually assigned
+//    private static final long serialVersionUID = -4677589975044662049L; // Manually assigned
     private String employeeId;
     private String employeeName;
     private String departmentName;

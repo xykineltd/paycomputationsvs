@@ -200,7 +200,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 .summary(paymentComputeResponse.getSummary())
                 .summaryDetails(paymentComputeResponse.getSummaryDetails())
                 .summaryVariance(processSummaryVariance(paymentComputeResponse.getSummary(), previousReportSummary))
-                .summaryVariance(processSummaryVariance(paymentComputeResponse.getSummary(), previousReportSummary))
                 //.summaryDetailsVariance(processSummaryDetailsVariance(paymentComputeResponse.getSummaryDetails(), previousReportSummary))
                 .build();
 
