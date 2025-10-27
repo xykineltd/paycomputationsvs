@@ -3,10 +3,7 @@ package com.xykine.computation.service;
 import com.xykine.computation.entity.*;
 import com.xykine.computation.exceptions.PayrollValidationException;
 import com.xykine.computation.repo.*;
-import com.xykine.computation.request.PaymentInfoRequest;
-import com.xykine.computation.request.ReportByTypeRequest;
-import com.xykine.computation.request.StartWorkflowRequest;
-import com.xykine.computation.request.UpdateReportRequest;
+import com.xykine.computation.request.*;
 import com.xykine.computation.response.*;
 
 import com.xykine.computation.session.SessionCalculationObject;
@@ -87,6 +84,17 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 payrollReportSummary.setPayrollStatus(PayrollStatus.PENDING);
                 payrollReportSummaryRepo.save(payrollReportSummary);
                 payrollAsyncService.updateDetailStatusToPendingAsync(String.valueOf(simulatedSummary.getId()));
+
+                StartWorkflowRequest startWorkflowRequest = new StartWorkflowRequest();
+                String userId = AuthUtil.getCurrentUserId().block();
+                startWorkflowRequest.setEntity("PAYROLL");
+                startWorkflowRequest.setPayrollId(payrollReportSummary.getId().toString());
+                startWorkflowRequest.setUserId(userId);
+                startWorkflowRequest.setCompanyId( AuthUtil.getCompanyId().block());
+                startWorkflowRequest.setNumberOfEmployees(payrollReportSummary.getTotalNumberOfEmployees());
+                startWorkflowRequest.setNetPay(ReportUtils.transform(payrollReportSummary).getSummary().getSummary().get(MapKeys.TOTAL_NET_PAY));
+                workflowService.startWorkflow(startWorkflowRequest, authorizationHeader);
+
                 return;
             }
 
@@ -112,15 +120,10 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             jobStatusStore.updateJob(jobId, "COMPLETED", "Payroll computation complete", reportResponse.getReportId());
             progressCallback.accept(jobStatusStore);
 
-            StartWorkflowRequest startWorkflowRequest = new StartWorkflowRequest();
-            String userId = AuthUtil.getCurrentUserId().block();
-            startWorkflowRequest.setReportId(reportResponse.getReportId());
-            startWorkflowRequest.setUserId(userId);
-            startWorkflowRequest.setStartDate(paymentRequest.getStart().toString());
-            startWorkflowRequest.setEndDate(paymentRequest.getEnd().toString());
-            startWorkflowRequest.setPayrollType(paymentRequest.isOffCycle() ? "Off Cycle" : "Regular");
-
-            workflowService.startWorkflow(startWorkflowRequest, authorizationHeader);
+            /*
+             payrollReportDetailRepo.countBySummaryId(x.getId().toString()),
+             ReportUtils.transform(x).getSummary().getSummary().get(MapKeys.TOTAL_NET_PAY)
+            * */
 
         } catch (Exception e) {
             jobStatusStore.updateJob(jobId, "FAILED", e.getMessage(), "");
@@ -562,16 +565,17 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     }
 
     @Transactional
-    public void updateReportStatus(String reportId, PayrollStatus payrollStatus) {
-        PayrollReportSummary existingSummaryReport = payrollReportSummaryRepo.findPayrollReportSummaryById(UUID.fromString(reportId));
+    public void updateReportStatus(UpdatePayrollStatusRequest request) {
+        PayrollReportSummary existingSummaryReport = payrollReportSummaryRepo.findPayrollReportSummaryByIdAndCompanyId(request.getReportId(), request.getCompanyId()).orElseThrow();
+
         if (existingSummaryReport.isOffCycle()) {
             updateDashboardData(AppConstants.payrollCountOffCycle, existingSummaryReport);
         } else {
             updateDashboardData(AppConstants.payrollCountRegular, existingSummaryReport);
         }
-        existingSummaryReport.setPayrollStatus(payrollStatus);
+        existingSummaryReport.setPayrollStatus(request.getStatus());
         PayrollReportSummary reportResponse = payrollReportSummaryRepo.save(existingSummaryReport);
-        if (payrollStatus.equals(PayrollStatus.APPROVED)) {
+        if (request.getStatus().equals(PayrollStatus.APPROVED)) {
             payrollAsyncService.updateEmployeeLoanAsync(existingSummaryReport.getId().toString(), reportResponse.getCompanyId());
             payrollAsyncService.updateDetailStatusAsync(existingSummaryReport.getId().toString());
         }
@@ -899,5 +903,9 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             });
         }
         return result;
+    }
+
+    private void startWorkflow(StartWorkflowRequest startWorkflowRequest) {
+
     }
 }

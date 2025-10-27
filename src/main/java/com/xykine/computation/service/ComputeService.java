@@ -2,9 +2,12 @@ package com.xykine.computation.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xykine.computation.entity.CompanyMetadata;
 import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.entity.PayrollStatus;
+import com.xykine.computation.exceptions.IncompleteEntitySetupException;
 import com.xykine.computation.exceptions.PayrollUnmodifiableException;
+import com.xykine.computation.repo.CompanyMetaDataRepo;
 import com.xykine.computation.repo.PayrollReportSummaryRepo;
 import com.xykine.computation.utils.ComputationUtils;
 import org.slf4j.Logger;
@@ -35,6 +38,7 @@ public class ComputeService {
 
     private final PaymentCalculator paymentCalculator;
     private final PayrollReportSummaryRepo payrollReportSummaryRepo;
+    private final CompanyMetaDataRepo companyMetaDataRepo;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ComputeService.class);
 
@@ -157,6 +161,13 @@ public class ComputeService {
     }
 
     public void validatePayrollIsNotApprovedOrCompleted (String startDate, String companyId) {
+
+        CompanyMetadata companyMetadata = companyMetaDataRepo.findByCompanyId(companyId).orElseThrow(() -> new IncompleteEntitySetupException("Please create company metadata for this entity before running payment"));
+
+        if (companyMetadata.getPaymentEntryMode() == null) {
+           new IncompleteEntitySetupException("Please configure payment entry mode for this entity before running payment");
+        }
+
         PayrollReportSummary payroll = payrollReportSummaryRepo
                 .findPayrollReportSummaryByStartDateAndCompanyId(startDate, companyId);
         if (payroll != null && (payroll.getPayrollStatus().compareTo(PayrollStatus.APPROVED) == 0 || payroll.getPayrollStatus().compareTo(PayrollStatus.COMPLETED)  == 0)) {

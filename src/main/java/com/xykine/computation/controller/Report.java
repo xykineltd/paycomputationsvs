@@ -112,10 +112,9 @@ public class Report {
     }
 
     @PutMapping("/update-report-status")
-    public void updateStatus(@RequestBody UpdateReportStatus request) {
+    public void updateStatus(@RequestBody UpdatePayrollStatusRequest request) {
         try {
-            PayrollStatus payrollStatus = PayrollStatus.valueOf(request.getStatus().toUpperCase());
-            reportPersistenceService.updateReportStatus(request.getReportId(), payrollStatus);
+            reportPersistenceService.updateReportStatus(request);
         } catch (IllegalArgumentException e) {
             throw new PayrollValidationException("Invalid payroll status: " + request.getStatus());
         }
