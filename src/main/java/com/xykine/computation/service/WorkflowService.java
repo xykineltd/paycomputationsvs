@@ -31,7 +31,7 @@ public class WorkflowService {
 
     public void startWorkflow(StartWorkflowRequest startWorkflowRequest, String token) {
         webClient.post()
-                .uri("workflow/start-workflow")
+                .uri("workflow/start")
                 .header(HttpHeaders.AUTHORIZATION, token)
                 .bodyValue(startWorkflowRequest)
                 .exchangeToMono(response -> {
