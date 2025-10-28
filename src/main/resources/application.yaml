@@ -54,5 +54,11 @@ admin:
 #    url: http://xykinehrs.com/
     maxBufferSize: ${ADMIN_SERVICE_MAXBUFFERSIZE:500000}
 
+
+workflow:
+  service:
+    url: ${WORKFLOW_SERVICE_URL:http://localhost:9004/}
+
+
 xykine:
   spa-uri: ${SPA_URL:http://localhost:3000}

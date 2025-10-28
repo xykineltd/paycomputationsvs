@@ -1,15 +1,16 @@
 package com.xykine.computation.service;
 
-import com.xykine.computation.domain.JobStatus;
-import com.xykine.computation.entity.PayrollReportDetail;
 import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.entity.YTDReport;
 import com.xykine.computation.request.*;
+import com.xykine.computation.request.PaymentInfoRequest;
+import com.xykine.computation.request.ReportByTypeRequest;
+import com.xykine.computation.request.UpdatePayrollStatusRequest;
+import com.xykine.computation.request.UpdateReportRequest;
 import com.xykine.computation.response.PaymentComputeResponse;
 import com.xykine.computation.response.ReportAnalytics;
 import com.xykine.computation.response.ReportResponse;
 import com.xykine.computation.response.SummaryDetail;
-import reactor.core.publisher.Sinks;
 
 import java.io.IOException;
 import java.util.*;
@@ -26,6 +27,7 @@ public interface ReportPersistenceService {
     Map<String, Object> getReportByEmployeeID(String companyId, String employeeID, int page, int size);
     Map<String, Object> getReportByEmployeeIDList(String companyId, List<String> employeeIDList, String summaryId, int page, int size);
     PayrollReportSummary approveReport(UpdateReportRequest updateReportRequest);
+    public void updateReportStatus(UpdatePayrollStatusRequest request);
     boolean deleteReport(UpdateReportRequest updateReportRequest);
     CompletePayrollResponse completeReport(CompletePayrollRequest updateReportRequest);
     Map<String, Object> getPaymentDetails(String id, String companyId, String fullName, int page, int size);

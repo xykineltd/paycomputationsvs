@@ -1,7 +1,5 @@
 package com.xykine.computation.config;
 
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,16 +14,33 @@ public class AppConfig {
     @Value("${admin.service.url}")
     private String adminServiceUrl;
 
+    @Value("${workflow.service.url}")
+    private String workFlowServiceUrl;
+
     @Value("${admin.service.maxBufferSize}")
     private Integer maxBufferSize;
 
+    private String mediaType = MediaType.APPLICATION_JSON_VALUE;
 
     @Bean
-    WebClient webClient(WebClient.Builder webClientBuilder) {
-        var mediaType = MediaType.APPLICATION_JSON_VALUE;
-
+    WebClient adminWebClient(WebClient.Builder webClientBuilder) {
         return webClientBuilder
                 .baseUrl(adminServiceUrl)
+                .exchangeStrategies(ExchangeStrategies
+                        .builder()
+                        .codecs(codecs -> codecs
+                                .defaultCodecs()
+                                .maxInMemorySize(maxBufferSize * 1024))
+                        .build())
+                .defaultHeader("Accept", mediaType)
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .build();
+    }
+
+    @Bean
+    WebClient workflowWebClient(WebClient.Builder webClientBuilder) {
+        return webClientBuilder
+                .baseUrl(workFlowServiceUrl)
                 .exchangeStrategies(ExchangeStrategies
                         .builder()
                         .codecs(codecs -> codecs

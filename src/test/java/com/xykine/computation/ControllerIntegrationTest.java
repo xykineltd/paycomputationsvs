@@ -526,7 +526,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
                         TestDataFactory.getPaymentSettings("contract staff"),   // 1st call
                         TestDataFactory.getPaymentSettings("contract staff absent two days")  // 2nd call
                 );
-        startReportSummary("2025-05-01", "2025-05-30", false);
+        Map<String, String> startJobResponse = startReportSummary("2025-05-01", "2025-05-30", false);
         Thread.sleep(1000);
 
         UpdateReportRequest updateReportRequest = new UpdateReportRequest();
@@ -535,13 +535,12 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         updateReportRequest.setStartDate("2025-05-01");
         approvePayroll(updateReportRequest);
 
-        Map<String, String> startJobResponse =  startReportSummary("2025-06-01", "2025-06-30", false);
-        Thread.sleep(1000);
         String jobId = startJobResponse.get("jobId");
         JobStatus jobStatus = getStatus(jobId);
         String reportId = "";
         if ("COMPLETED".equalsIgnoreCase(jobStatus.getStatus())) {
             reportId = jobStatus.getReportId();
+            System.out.println(" the first " + reportId);
         }
 
         ReportResponse response = getReportById(reportId);
@@ -550,6 +549,38 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
             assertThat(x.get("totalItems")).isEqualTo(1);
         });
         List<ReportResponse> reportResponses = MAPPER.convertValue(body.get("payrollDetails"), new TypeReference<List<ReportResponse>>() {
+        });
+        PaymentInfo paymentInfo = reportResponses.get(0).getDetail().getReport();
+        assertThat(paymentInfo.getYtdReport()).isNotNull().satisfies((x) -> {
+            assertThat(x.get("WHT").compareTo(BigDecimal.valueOf(7500)));
+            assertThat(x.get("Net Pay").compareTo(BigDecimal.valueOf(142500)));
+            assertThat(x.get("Taxable Income").compareTo(BigDecimal.valueOf(150000)));
+        });
+
+        startJobResponse =  startReportSummary("2025-06-01", "2025-06-30", false);
+        Thread.sleep(1000);
+         jobId = startJobResponse.get("jobId");
+         jobStatus = getStatus(jobId);
+        if ("COMPLETED".equalsIgnoreCase(jobStatus.getStatus())) {
+            reportId = jobStatus.getReportId();
+            System.out.println(" the second " + reportId);
+        }
+
+        updateReportRequest = new UpdateReportRequest();
+        updateReportRequest.setPayrollStatus(PayrollStatus.COMPLETED);
+        updateReportRequest.setCompanyId("682cf69492b07e60fa109911");
+        updateReportRequest.setStartDate("2025-06-01");
+        approvePayroll(updateReportRequest);
+
+        response = getReportById(reportId);
+        body = getReportDetail(response);
+        reportResponses = MAPPER.convertValue(body.get("payrollDetails"), new TypeReference<List<ReportResponse>>() {
+        });
+         paymentInfo = reportResponses.get(0).getDetail().getReport();
+        assertThat(paymentInfo.getYtdReport()).isNotNull().satisfies((x) -> {
+            assertThat(x.get("WHT").compareTo(BigDecimal.valueOf(7500)));
+            assertThat(x.get("Net Pay").compareTo(BigDecimal.valueOf(142500)));
+            assertThat(x.get("Taxable Income").compareTo(BigDecimal.valueOf(150000)));
         });
 
         when(adminService.getEmployeeIdListForFilter(any(), anyString())).thenReturn(List.of("8e3b6e4952e8468a84fd84556f8fdf2a"));
