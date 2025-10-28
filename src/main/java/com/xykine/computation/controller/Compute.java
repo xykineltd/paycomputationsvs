@@ -2,9 +2,7 @@ package com.xykine.computation.controller;
 
 import com.xykine.computation.domain.JobStatus;
 import com.xykine.computation.exceptions.PayrollValidationException;
-import com.xykine.computation.repo.CompanyMetaDataRepo;
 import com.xykine.computation.repo.ComputationConstantsRepo;
-import com.xykine.computation.repo.TaxRepo;
 import com.xykine.computation.request.PaymentInfoRequest;
 import com.xykine.computation.response.PaymentComputeResponse;
 import com.xykine.computation.response.ReportResponse;
@@ -12,19 +10,15 @@ import com.xykine.computation.service.*;
 import com.xykine.computation.session.SessionCalculationObject;
 import com.xykine.computation.utils.AuthUtil;
 import com.xykine.computation.utils.OperationUtils;
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 import org.xykine.payroll.model.PaymentInfo;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
@@ -33,8 +27,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
-import reactor.core.publisher.Sinks;
 
 @RestController
 @RequestMapping("/compute")
