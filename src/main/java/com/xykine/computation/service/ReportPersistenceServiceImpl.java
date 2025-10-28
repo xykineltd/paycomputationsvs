@@ -93,6 +93,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 startWorkflowRequest.setCompanyId( AuthUtil.getCompanyId().block());
                 startWorkflowRequest.setNumberOfEmployees(payrollReportSummary.getTotalNumberOfEmployees());
                 startWorkflowRequest.setNetPay(ReportUtils.transform(payrollReportSummary).getSummary().getSummary().get(MapKeys.TOTAL_NET_PAY));
+                startWorkflowRequest.setNumberOfPays(payrollReportDetailRepo.countBySummaryId(payrollReportSummary.getId().toString()));
+                startWorkflowRequest.setCreatedBy(payrollReportSummary.getCreatedBy());
                 workflowService.startWorkflow(startWorkflowRequest, authorizationHeader);
 
                 return;
