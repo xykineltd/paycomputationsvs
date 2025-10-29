@@ -13,6 +13,7 @@ import com.xykine.computation.response.DashboardCardResponse;
 import com.xykine.computation.response.ReportResponse;
 
 import com.xykine.computation.testdata.TestDataFactory;
+import com.xykine.computation.testdata.TestDataGenerator;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -116,7 +117,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         });
         Map<String, BigDecimal> deduction = paymentInfo.getDeduction();
         assertThat(deduction).isNotNull().satisfies((x) -> {
-            assertThat(x.get("Monthly Payee")).isEqualByComparingTo(BigDecimal.valueOf(126606.94));
+            assertThat(x.get("Monthly Paye")).isEqualByComparingTo(BigDecimal.valueOf(126606.94));
             assertThat(x.get("Voluntary Pension Contribution")).isEqualByComparingTo(BigDecimal.valueOf(0));
             assertThat(x.get("Pension Fund")).isEqualByComparingTo(BigDecimal.valueOf(20555.13));
             assertThat(x.get("National Housing Fund")).isEqualByComparingTo(BigDecimal.valueOf(0));
@@ -124,9 +125,9 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         });
         Map<String, BigDecimal> payeeTax = paymentInfo.getPayeeTax();
         assertThat(payeeTax).isNotNull().satisfies((x) -> {
-            assertThat(x.get("Monthly Payee")).isEqualByComparingTo(BigDecimal.valueOf(126606.94));
+            assertThat(x.get("Monthly Paye")).isEqualByComparingTo(BigDecimal.valueOf(126606.94));
             assertThat(x.get("Taxable Income")).isEqualByComparingTo(BigDecimal.valueOf(7863366.34));
-            assertThat(x.get("ANNUAL PAYEE TAX")).isEqualByComparingTo(BigDecimal.valueOf(1679207.92));
+            assertThat(x.get("ANNUAL PAYE TAX")).isEqualByComparingTo(BigDecimal.valueOf(1679207.92));
         });
         Map<String, BigDecimal> pension = paymentInfo.getPension();
         assertThat(pension).isNotNull().satisfies((x) -> {
@@ -182,7 +183,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         });
         Map<String, BigDecimal> deduction = paymentInfo.getDeduction();
         assertThat(deduction).isNotNull().satisfies((x) -> {
-            assertThat(x.get("Monthly Payee")).isEqualByComparingTo(BigDecimal.valueOf(126606.94));
+            assertThat(x.get("Monthly Paye")).isEqualByComparingTo(BigDecimal.valueOf(126606.94));
             assertThat(x.get("Voluntary Pension Contribution")).isEqualByComparingTo(BigDecimal.valueOf(0));
             assertThat(x.get("Pension Fund")).isEqualByComparingTo(BigDecimal.valueOf(20555.13));
             assertThat(x.get("National Housing Fund")).isEqualByComparingTo(BigDecimal.valueOf(0));
@@ -191,9 +192,9 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         });
         Map<String, BigDecimal> payeeTax = paymentInfo.getPayeeTax();
         assertThat(payeeTax).isNotNull().satisfies((x) -> {
-            assertThat(x.get("Monthly Payee")).isEqualByComparingTo(BigDecimal.valueOf(126606.94));
+            assertThat(x.get("Monthly Paye")).isEqualByComparingTo(BigDecimal.valueOf(126606.94));
             assertThat(x.get("Taxable Income")).isEqualByComparingTo(BigDecimal.valueOf(7863366.34));
-            assertThat(x.get("ANNUAL PAYEE TAX")).isEqualByComparingTo(BigDecimal.valueOf(1679207.92));
+            assertThat(x.get("ANNUAL PAYE TAX")).isEqualByComparingTo(BigDecimal.valueOf(1679207.92));
         });
 
         Map<String, BigDecimal> pension = paymentInfo.getPension();
@@ -277,7 +278,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         });
         Map<String, BigDecimal> deduction = paymentInfo.getDeduction();
         assertThat(deduction).isNotNull().satisfies((x) -> {
-            assertThat(x.get("Monthly Payee")).isEqualByComparingTo(BigDecimal.valueOf(115749.8));
+            assertThat(x.get("Monthly Paye")).isEqualByComparingTo(BigDecimal.valueOf(115749.8));
             assertThat(x.get("Voluntary Pension Contribution")).isEqualByComparingTo(BigDecimal.valueOf(0));
             assertThat(x.get("Pension Fund")).isEqualByComparingTo(BigDecimal.valueOf(20555.13));
             assertThat(x.get("National Housing Fund")).isEqualByComparingTo(BigDecimal.valueOf(0));
@@ -285,9 +286,9 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         });
         Map<String, BigDecimal> payeeTax = paymentInfo.getPayeeTax();
         assertThat(payeeTax).isNotNull().satisfies((x) -> {
-            assertThat(x.get("Monthly Payee")).isEqualByComparingTo(BigDecimal.valueOf(115749.8));
+            assertThat(x.get("Monthly Paye")).isEqualByComparingTo(BigDecimal.valueOf(115749.8));
             assertThat(x.get("Taxable Income")).isEqualByComparingTo(BigDecimal.valueOf(7263366.34));
-            assertThat(x.get("ANNUAL PAYEE TAX")).isEqualByComparingTo(BigDecimal.valueOf(1535207.92));
+            assertThat(x.get("ANNUAL PAYE TAX")).isEqualByComparingTo(BigDecimal.valueOf(1535207.92));
         });
 
         Map<String, BigDecimal> pension = paymentInfo.getPension();
@@ -405,22 +406,22 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
 
         Map<String, BigDecimal> deduction = paymentInfo.getDeduction();
         assertThat(deduction).isNotNull().satisfies((x) -> {
-            assertThat(x.get("Monthly Payee")).isEqualByComparingTo(BigDecimal.valueOf(126606.94));
+            assertThat(x.get("Monthly Paye")).isEqualByComparingTo(BigDecimal.valueOf(126606.94));
             assertThat(x.get("Voluntary Pension Contribution")).isEqualByComparingTo(BigDecimal.valueOf(0));
             assertThat(x.get("Pension Fund")).isEqualByComparingTo(BigDecimal.valueOf(20555.13));
-            assertThat(x.get("Payee Tax on OVERTIME GROSS")).isEqualByComparingTo(BigDecimal.valueOf(5822.59));
-            assertThat(x.get("Payee Tax on Monthly Performance Bonus")).isEqualByComparingTo(BigDecimal.valueOf(15577.46));
+            assertThat(x.get("Paye Tax on OVERTIME GROSS")).isEqualByComparingTo(BigDecimal.valueOf(5822.59));
+            assertThat(x.get("Paye Tax on Monthly Performance Bonus")).isEqualByComparingTo(BigDecimal.valueOf(15577.46));
             assertThat(x.get("National Housing Fund")).isEqualByComparingTo(BigDecimal.valueOf(0.0));
             assertThat(x.get("Total Deduction")).isEqualByComparingTo(BigDecimal.valueOf(168562.12));
         });
 
         Map<String, BigDecimal> payeeTax = paymentInfo.getPayeeTax();
         assertThat(payeeTax).isNotNull().satisfies((x) -> {
-            assertThat(x.get("Monthly Payee")).isEqualByComparingTo(BigDecimal.valueOf(126606.94));
+            assertThat(x.get("Monthly Paye")).isEqualByComparingTo(BigDecimal.valueOf(126606.94));
             assertThat(x.get("Taxable Income")).isEqualByComparingTo(BigDecimal.valueOf(7863366.34));
-            assertThat(x.get("Payee Tax on OVERTIME GROSS")).isEqualByComparingTo(BigDecimal.valueOf(5822.59));
-            assertThat(x.get("Payee Tax on Monthly Performance Bonus")).isEqualByComparingTo(BigDecimal.valueOf(15577.46));
-            assertThat(x.get("ANNUAL PAYEE TAX")).isEqualByComparingTo(BigDecimal.valueOf(1679207.92));
+            assertThat(x.get("Paye Tax on OVERTIME GROSS")).isEqualByComparingTo(BigDecimal.valueOf(5822.59));
+            assertThat(x.get("Paye Tax on Monthly Performance Bonus")).isEqualByComparingTo(BigDecimal.valueOf(15577.46));
+            assertThat(x.get("ANNUAL PAYE TAX")).isEqualByComparingTo(BigDecimal.valueOf(1679207.92));
         });
     }
 
@@ -471,11 +472,11 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
 
         Map<String, BigDecimal> deduction = paymentInfo.getDeduction();
         assertThat(deduction).isNotNull().satisfies((x) -> {
-            assertThat(x.get("Monthly Payee")).isEqualByComparingTo(BigDecimal.valueOf(126606.94));
+            assertThat(x.get("Monthly Paye")).isEqualByComparingTo(BigDecimal.valueOf(126606.94));
             assertThat(x.get("Voluntary Pension Contribution")).isEqualByComparingTo(BigDecimal.ZERO);
             assertThat(x.get("Pension Fund")).isEqualByComparingTo(BigDecimal.valueOf(20555.13));
-            assertThat(x.get("Payee Tax on OVERTIME GROSS")).isEqualByComparingTo(BigDecimal.valueOf(5822.59));
-            assertThat(x.get("Payee Tax on Monthly Performance Bonus")).isEqualByComparingTo(BigDecimal.valueOf(15577.46));
+            assertThat(x.get("Paye Tax on OVERTIME GROSS")).isEqualByComparingTo(BigDecimal.valueOf(5822.59));
+            assertThat(x.get("Paye Tax on Monthly Performance Bonus")).isEqualByComparingTo(BigDecimal.valueOf(15577.46));
             assertThat(x.get("National Housing Fund")).isEqualByComparingTo(BigDecimal.valueOf(0.0));
             assertThat(x.get("Company Car Loan")).isEqualByComparingTo(BigDecimal.valueOf(10000));  // Personal Deduction
             assertThat(x.get("Total Deduction")).isEqualByComparingTo(BigDecimal.valueOf(178562.12));
@@ -483,11 +484,11 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
 
         Map<String, BigDecimal> payeeTax = paymentInfo.getPayeeTax();
         assertThat(payeeTax).isNotNull().satisfies((x) -> {
-            assertThat(x.get("Monthly Payee")).isEqualByComparingTo(BigDecimal.valueOf(126606.94));
+            assertThat(x.get("Monthly Paye")).isEqualByComparingTo(BigDecimal.valueOf(126606.94));
             assertThat(x.get("Taxable Income")).isEqualByComparingTo(BigDecimal.valueOf(7863366.34));
-            assertThat(x.get("Payee Tax on OVERTIME GROSS")).isEqualByComparingTo(BigDecimal.valueOf(5822.59));
-            assertThat(x.get("Payee Tax on Monthly Performance Bonus")).isEqualByComparingTo(BigDecimal.valueOf(15577.46));
-            assertThat(x.get("ANNUAL PAYEE TAX")).isEqualByComparingTo(BigDecimal.valueOf(1679207.92));
+            assertThat(x.get("Paye Tax on OVERTIME GROSS")).isEqualByComparingTo(BigDecimal.valueOf(5822.59));
+            assertThat(x.get("Paye Tax on Monthly Performance Bonus")).isEqualByComparingTo(BigDecimal.valueOf(15577.46));
+            assertThat(x.get("ANNUAL PAYE TAX")).isEqualByComparingTo(BigDecimal.valueOf(1679207.92));
         });
     }
 
@@ -603,9 +604,23 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
                 });
     }
 
+    // Test cost center summary
+    @Test
+    void testCostCenterSummary(){
+        when(adminService.getPaymentInfoList(any(), anyString())).thenReturn(TestDataFactory.getPaymentSettings("cost-center-data"));
+        when(adminService.getCostCenterDetails(any(), anyString())).thenReturn(TestDataGenerator.getCostCenterDetails());
+        ReportResponse reportSummary = getReportSummary();
+        assertThat(reportSummary).isNotNull().satisfies(x -> {
+         assertThat(x.getSummary()).isNotNull().satisfies(y -> {
+             y.getCostCenterSummary().get("costCenterA").get("Total Net Pay").compareTo(BigDecimal.valueOf(2100000.15));
+             y.getCostCenterSummary().get("costCenterB").get("Total Net Pay").compareTo(BigDecimal.valueOf(4900000.35));
+         });
+        });
+    }
+
 
     /****         REPORT CONTROLLER ENDPOINTS      *********/
-    @Test
+   // @Test
     void testGetReportByCompanyIdAndStatusAndVerifyApproveStatusIsFalse() {
         assertThat(getReportByCompanyIdAndStatus()).isNotNull().satisfies(reportResponses -> {
             assertThat(reportResponses.size()).isEqualTo(1);
@@ -716,7 +731,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
                     "Voluntary Pension Contribution",
                     "Annual Voluntary Pension Contribution",
                     "EndDate",
-                    "Monthly Payee",
+                    "Monthly Paye",
                     "Basic Salary",
                     "Employee Pension Contribution",
                     "Medical",

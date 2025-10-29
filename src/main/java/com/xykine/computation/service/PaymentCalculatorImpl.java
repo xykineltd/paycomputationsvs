@@ -320,10 +320,10 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 :  ComputationUtils.getTaxAmount(paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY), jsonTaxRule);
 
         if (!paymentInfo.isOffCycle()) {
-            payeeTax.put("ANNUAL PAYEE TAX", ComputationUtils.getAnnualTaxAmount(chargeableIncome, jsonTaxRule));
+            payeeTax.put("ANNUAL PAYE TAX", ComputationUtils.getAnnualTaxAmount(chargeableIncome, jsonTaxRule));
         }
 
-        payeeTax.put(!paymentInfo.isOffCycle() ?  "Monthly Payee" : "Payee Tax on " + getOffCyclePaymentDetails(paymentInfo).getName(), monthlyPayeeTax);
+        payeeTax.put(!paymentInfo.isOffCycle() ?  "Monthly Paye" : "Paye Tax on " + getOffCyclePaymentDetails(paymentInfo).getName(), monthlyPayeeTax);
         paymentInfo.setPayeeTax(payeeTax);
         updateReportSummary(paymentInfo, sessionCalculationObject, MapKeys.TOTAL_PAYEE_TAX,
                 monthlyPayeeTax);
@@ -336,14 +336,14 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         String payee_tax_key = "";
         if (!isContract(paymentInfo)) {
             if (paymentInfo.isOffCycle()) {
-                payee_tax_key = "Payee Tax on " + getOffCyclePaymentDetails(paymentInfo).getName();
+                payee_tax_key = "Paye Tax on " + getOffCyclePaymentDetails(paymentInfo).getName();
                 deductionMap.put(payee_tax_key, paymentInfo.getPayeeTax().get(payee_tax_key));
                 deductionMap.put(MapKeys.TOTAL_DEDUCTION, paymentInfo.getPayeeTax().get(payee_tax_key));
                 updateReportSummary(paymentInfo, sessionCalculationObject, MapKeys.TOTAL_PERSONAL_DEDUCTION, paymentInfo.getPayeeTax().get(payee_tax_key));
                 paymentInfo.setDeduction(deductionMap);
                 return paymentInfo;
             }
-        payee_tax_key = "Monthly Payee";
+        payee_tax_key = "Monthly Paye";
         deductionMap.put(payee_tax_key, paymentInfo.getPayeeTax().get(payee_tax_key));
         deductionMap.put(MapKeys.PENSION_FUND, paymentInfo.getPension().get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION));
         deductionMap.put(MapKeys.NATIONAL_HOUSING_FUND, paymentInfo.getNhf().get(MapKeys.NATIONAL_HOUSING_FUND));

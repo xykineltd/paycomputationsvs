@@ -28,6 +28,7 @@ public class OperationUtils {
         ConcurrentHashMap<String, BigDecimal> sessionSummary = new ConcurrentHashMap<>();
         ConcurrentHashMap<String, Set<SummaryDetail>> sessionSummaryDetails = new ConcurrentHashMap<>();
         ConcurrentHashMap<String, BigDecimal> computationConstants = new ConcurrentHashMap<>();
+        Map<String, ConcurrentHashMap<String, BigDecimal>> costCenterSummary = new ConcurrentHashMap<>();
 
         sessionSummary.put(MapKeys.TOTAL_NET_PAY, BigDecimal.ZERO);
         sessionSummary.put(MapKeys.TOTAL_GROSS_PAY, BigDecimal.ZERO);
@@ -37,6 +38,22 @@ public class OperationUtils {
         sessionSummary.put(MapKeys.TOTAL_PERSONAL_DEDUCTION, BigDecimal.ZERO);
         sessionSummary.put(MapKeys.TOTAL_EMPLOYER_PENSION_CONTRIBUTION, BigDecimal.ZERO);
         sessionCalculationObject.setSummary(sessionSummary);
+
+        Set<String> costCenters = sessionCalculationObject.getCostCenters().keySet();
+        if (!costCenters.isEmpty()) {
+            for (String costCenter : costCenters) {
+                ConcurrentHashMap<String, BigDecimal> costCenterNetPay = new ConcurrentHashMap<>();
+                costCenterNetPay.put(MapKeys.TOTAL_NET_PAY, BigDecimal.ZERO);
+                costCenterNetPay.put(MapKeys.TOTAL_GROSS_PAY, BigDecimal.ZERO);
+                costCenterNetPay.put(MapKeys.TOTAL_PAYEE_TAX, BigDecimal.ZERO);
+                costCenterNetPay.put(MapKeys.TOTAL_EMPLOYEE_PENSION_CONTRIBUTION, BigDecimal.ZERO);
+                costCenterNetPay.put(MapKeys.TOTAL_NHF, BigDecimal.ZERO);
+                costCenterNetPay.put(MapKeys.TOTAL_PERSONAL_DEDUCTION, BigDecimal.ZERO);
+                costCenterNetPay.put(MapKeys.TOTAL_EMPLOYER_PENSION_CONTRIBUTION, BigDecimal.ZERO);
+                costCenterSummary.put(costCenter, costCenterNetPay);
+            }
+        }
+        sessionCalculationObject.setCostCenterSummary(costCenterSummary);
 
         sessionSummaryDetails.put(MapKeys.TOTAL_NET_PAY, Collections.synchronizedSet(new HashSet<>()));
         sessionSummaryDetails.put(MapKeys.TOTAL_GROSS_PAY,Collections.synchronizedSet(new HashSet<>()));
@@ -63,6 +80,7 @@ public class OperationUtils {
         paymentComputeResponse.setId(UUID.randomUUID());
         paymentComputeResponse.setSummary(sessionCalculationObject.getSummary());
         paymentComputeResponse.setSummaryDetails(sessionCalculationObject.getSummaryDetails());
+        paymentComputeResponse.setCostCenterSummary(sessionCalculationObject.getCostCenterSummary());
         paymentComputeResponse.setStart(paymentRequest.getStart().toString());
         paymentComputeResponse.setEnd(paymentRequest.getEnd().toString());
         paymentComputeResponse.setPayrollSimulation(paymentRequest.isPayrollSimulation());

@@ -7,6 +7,7 @@ public class TestDataProvider {
     public static String FIVE_THOUSAND = TestDataGenerator.generateEntries(5000);
     public static String TWO = TestDataGenerator.generateEntries(2);
     public static String TEN_ENTRIES = TestDataGenerator.generateEntries(10);
+    public static String COST_CENTER_TEST_DATA = TestDataGenerator.getTestDataForCostCenterTest();
     public static String STANDARD_PAYROLL_ENTRY_WITH_PERFORMANCE_BONUS  =
             """
                    [

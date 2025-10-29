@@ -129,7 +129,7 @@ public class DashboardDataService {
 
                     Map<String, BigDecimal> deduction = x.getDetail().getReport().getDeduction();
                     newValuesForEmployee.put(MapKeys.NATIONAL_HOUSING_FUND, deduction.get(MapKeys.NATIONAL_HOUSING_FUND) != null ? deduction.get(MapKeys.NATIONAL_HOUSING_FUND) : BigDecimal.ZERO);
-                    newValuesForEmployee.put(MapKeys.PAYEE_TAX, deduction.get(MapKeys.PAYEE_TAX) != null ? deduction.get(MapKeys.PAYEE_TAX) : BigDecimal.ZERO);
+                    newValuesForEmployee.put("PAYE TAX", deduction.get("PAYE TAX") != null ? deduction.get("PAYE TAX") : BigDecimal.ZERO);
                     newValuesForEmployee.put("WHT", deduction.get("WHT") != null ? deduction.get("WHT") : BigDecimal.ZERO);
 
                     Map<String, BigDecimal> grossPay = x.getDetail().getReport().getGrossPay();
@@ -162,7 +162,7 @@ public class DashboardDataService {
                 ytdReport.setGrossPay(ytdReport.getGrossPay().add(y.get(MapKeys.GROSS_PAY)));
                 ytdReport.setNetPay(ytdReport.getNetPay().add(y.get(MapKeys.NET_PAY)));
                 ytdReport.setNhf(ytdReport.getNhf().add(y.get(MapKeys.NATIONAL_HOUSING_FUND)));
-                ytdReport.setPayeeTax(ytdReport.getPayeeTax().add(y.get(MapKeys.PAYEE_TAX)));
+                ytdReport.setPayeeTax(ytdReport.getPayeeTax().add(y.get("PAYE TAX")));
                 ytdReport.setPension(ytdReport.getPension().add(y.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION))
                         .add(y.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION))
                         .add(y.get("Voluntary Pension Contribution")));
@@ -182,7 +182,7 @@ public class DashboardDataService {
                     ytdReportMap.put(MapKeys.GROSS_PAY, ytdReport.getGrossPay());
                     ytdReportMap.put(MapKeys.NET_PAY, ytdReport.getNetPay());
                     ytdReportMap.put(MapKeys.NATIONAL_HOUSING_FUND, ytdReport.getNhf());
-                    ytdReportMap.put(MapKeys.PAYEE_TAX, ytdReport.getPayeeTax());
+                    ytdReportMap.put("PAYE TAX", ytdReport.getPayeeTax());
                     ytdReportMap.put("Pension", ytdReport.getPension());
                     ytdReportMap.put("Taxable Income", ytdReport.getTaxableIncome());
                     ytdReportMap.put("WHT", ytdReport.getWht());
@@ -206,7 +206,7 @@ public class DashboardDataService {
                 .grossPay(currentValues.get(MapKeys.GROSS_PAY))
                 .netPay(currentValues.get(MapKeys.NET_PAY))
                 .nhf(currentValues.get(MapKeys.NATIONAL_HOUSING_FUND))
-                .payeeTax(currentValues.get(MapKeys.PAYEE_TAX))
+                .payeeTax(currentValues.get("PAYE TAX"))
                 .pension(currentValues.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION)
                         .add(currentValues.get(MapKeys.EMPLOYER_PENSION_CONTRIBUTION))
                         .add(currentValues.get("Voluntary Pension Contribution"))

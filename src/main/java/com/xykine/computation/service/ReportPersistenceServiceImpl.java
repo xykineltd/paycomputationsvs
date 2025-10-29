@@ -105,6 +105,11 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 payrollReportDetailRepo.deleteAllBySummaryId(simulatedSummary.getId().toString());
             }
 
+            EmployeeFilterRequest employeeFilterRequest = new EmployeeFilterRequest();
+            employeeFilterRequest.setCompanyID(paymentRequest.getCompanyId());
+            Map<String, List<String>> costCenters = adminService.getCostCenterDetails(employeeFilterRequest,authorizationHeader);
+            sessionCalculationObject.setCostCenters(costCenters);
+
             sessionCalculationObject = OperationUtils.doPreflight(
                     sessionCalculationObject,
                     computationConstantsRepo,
@@ -171,14 +176,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         long startTime = System.currentTimeMillis();
         ReportResponse reportResponse = null;
         try {
-//            if (paymentComputeResponse.isPayrollSimulation()) {
-//                //delete and replace
-//                payrollReportDetailRepoSimulate.deleteAll();
-//                payrollReportSummaryRepoSimulate.deleteAll();
-//                LOGGER.info("Simulated report with start date: " + paymentComputeResponse.getStart() + " will be saved.");
-//                reportResponse = getReportResponseSimulate(paymentComputeResponse, companyId, paymentComputeResponse.getStart());
-//            } else {
-                //delete and replace based on pay period, ie only 1 pay period in the database and companyID
                 deleteReportByDate(
                         paymentComputeResponse.getStart(),
                         companyId,
@@ -208,6 +205,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 .summary(paymentComputeResponse.getSummary())
                 .summaryDetails(paymentComputeResponse.getSummaryDetails())
                 .summaryVariance(processSummaryVariance(paymentComputeResponse.getSummary(), previousReportSummary))
+                .costCenterSummary(paymentComputeResponse.getCostCenterSummary())
                 //.summaryDetailsVariance(processSummaryDetailsVariance(paymentComputeResponse.getSummaryDetails(), previousReportSummary))
                 .build();
 

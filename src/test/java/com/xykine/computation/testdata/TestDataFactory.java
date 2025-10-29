@@ -30,6 +30,7 @@ public class TestDataFactory {
             case "two-thousand-entries" -> TWO_THOUSAND_ENTRIES;
             case "5000" -> FIVE_THOUSAND;
             case "two" -> TWO;
+            case "cost-center-data" -> COST_CENTER_TEST_DATA;
             default -> throw new IllegalArgumentException("Unknown type: " + type);
         };
         try {
