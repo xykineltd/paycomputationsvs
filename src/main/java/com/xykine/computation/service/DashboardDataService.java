@@ -102,22 +102,23 @@ public class DashboardDataService {
         breakJobsAndOffLoad(payrollReportDetailList, companyId);
     }
 
-    private void breakJobsAndOffLoad(List<PayrollReportDetail>  payrollReportDetailList, String companyId) {
+    private void breakJobsAndOffLoad(List<PayrollReportDetail> payrollReportDetailList, String companyId) {
         int size = payrollReportDetailList.size();
         int cores = Runtime.getRuntime().availableProcessors();
         int chunkSize = (size + cores - 1) / cores;
+
         List<List<PayrollReportDetail>> chunks = new ArrayList<>();
         for (int i = 0; i < size; i += chunkSize) {
             int end = Math.min(size, i + chunkSize);
             chunks.add(payrollReportDetailList.subList(i, end));
         }
-        List<CompletableFuture<Boolean>> futures = new ArrayList<>();
-        futures.addAll(
-                chunks.stream()
-                        .map(finalChunk -> CompletableFuture.supplyAsync(() -> offLoadNewValuesToYTD(finalChunk, companyId)))
-                        .toList()
-        );
+
+        List<CompletableFuture<Boolean>> futures = chunks.stream()
+                .map(finalChunk -> CompletableFuture.supplyAsync(() -> offLoadNewValuesToYTD(finalChunk, companyId)))
+                .toList();
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
     }
+
 
     private boolean offLoadNewValuesToYTD(List<PayrollReportDetail>  payrollReportDetailList, String companyId) {
         Map<String, Map<String, BigDecimal>> newValuesForAllEmployees = new HashMap<>();

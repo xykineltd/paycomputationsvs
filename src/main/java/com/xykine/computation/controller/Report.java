@@ -175,8 +175,10 @@ public class Report {
     }
 
     @PostMapping("/download-report")
-    public ResponseEntity<byte[]> uploadReport(@RequestBody ReportRequestPayload payload) throws IOException {
-        return new ResponseEntity<>(reportGeneratorService.generateReport(payload), HttpStatus.OK);
+    public ResponseEntity<byte[]> uploadReport(@RequestBody ReportRequestPayload payload,
+                                               @RequestHeader("Authorization") String authorizationHeader
+                                               ) throws IOException {
+        return new ResponseEntity<>(reportGeneratorService.generateReport(payload, authorizationHeader), HttpStatus.OK);
     }
 
     @PostMapping("/retrieve-payment-element")

@@ -1,5 +1,7 @@
 package com.xykine.computation.service;
 
+import com.xykine.computation.dto.EmployeeDetail;
+import com.xykine.computation.request.*;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
@@ -7,10 +9,6 @@ import com.xykine.computation.entity.PayrollReportDetail;
 import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.repo.PayrollReportDetailRepo;
 import com.xykine.computation.repo.PayrollReportSummaryRepo;
-import com.xykine.computation.request.DateRange;
-import com.xykine.computation.request.ReportRequestPayload;
-import com.xykine.computation.request.RetrievePaymentElementPayload;
-import com.xykine.computation.request.RetrieveSummaryElementRequest;
 
 import com.xykine.computation.response.ReportResponse;
 import com.xykine.computation.utils.ReportUtils;
@@ -38,15 +36,51 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
     private final PayrollReportDetailRepo payrollReportDetailRepo;
     private final PayrollReportSummaryRepo payrollReportSummaryRepo;
     private final ExcelUploadService excelUploadService;
+    private final AdminService adminService;
 
     @Override
-    public byte[] generateReport(ReportRequestPayload reportRequestPayload) throws IOException {
+    public byte[] generateReport(ReportRequestPayload reportRequestPayload, String token) throws IOException {
+
         if (reportRequestPayload.getEntityType() == null) {
             throw new RuntimeException("Report type is mandatory");
         }
 
         if (reportRequestPayload.getCompanyID() == null) {
             throw new RuntimeException("CompanyId is mandatory");
+        }
+
+        EmployeeFilterRequest employeeFilterRequest = new EmployeeFilterRequest();
+        employeeFilterRequest.setCompanyID(reportRequestPayload.getCompanyID());
+
+        Map<String, EmployeeDetail> employeeDetailMap = adminService.getEmployeesDetail(employeeFilterRequest, token);
+
+        if (reportRequestPayload.isDefaultHeaders()) {
+        List<String> defaultHeaders = new ArrayList<>();
+            defaultHeaders.add("Gross Pay");
+            defaultHeaders.add("Housing Allowance");
+            defaultHeaders.add("Transport Allowance");
+            defaultHeaders.add("Utility");
+            defaultHeaders.add("Entertainment");
+            defaultHeaders.add("Medical");
+            defaultHeaders.add("PERSONAL OUTFIT");
+            defaultHeaders.add("Leave");
+            defaultHeaders.add("Training");
+            defaultHeaders.add("Monthly Performance Bonus");
+            defaultHeaders.add("overtime");
+            defaultHeaders.add("other variable");
+            defaultHeaders.add("other allowance");
+            defaultHeaders.add("other wage types");
+            defaultHeaders.add("CHARGEABLE INCOME");
+            defaultHeaders.add("other deduction");
+            defaultHeaders.add("Loan");   // **
+            defaultHeaders.add("Monthly Paye");
+            defaultHeaders.add("National Housing Fund");
+            defaultHeaders.add("Employee Pension Contribution");
+            defaultHeaders.add("Voluntary Pension Contribution");
+            defaultHeaders.add("Employer Pension Contribution");
+            defaultHeaders.add("Net Pay");
+
+            reportRequestPayload.setHeaders(defaultHeaders);
         }
 
         List<?> source; // raw entities before transform
@@ -93,7 +127,8 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                 .map(detail -> extractDetail(
                         detail.getDetail().getReport(),
                         reportRequestPayload.getHeaders(),
-                        isDetail.get()
+                        isDetail.get(),
+                        employeeDetailMap
                 ))
                 .toList();
 
@@ -127,7 +162,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                 .findPayrollReportDetailBySummaryId(retrievePaymentElementPayload.getReportId()).stream()
                 .filter(Objects::nonNull)
                 .map(ReportUtils::transform)
-                .map(detail -> extractDetail(detail.getDetail().getReport(), retrievePaymentElementPayload.getSelectedHeader(), true))
+                .map(detail -> extractDetail(detail.getDetail().getReport(), retrievePaymentElementPayload.getSelectedHeader(), true, null))
                 .toList();
     }
 
@@ -177,21 +212,23 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                 && !startDateInstance.isAfter(dateRange.getEndDate());
     }
 
-    private Map<String, Object> extractDetail(PaymentInfo paymentInfo, List<String> selectedReports, boolean isDetail) {
+    private Map<String, Object> extractDetail(PaymentInfo paymentInfo, List<String> selectedReports, boolean isDetail, Map<String, EmployeeDetail> employeeDetailMap) {
         Map<String, Object> raw = extractRawDetail(paymentInfo);
         Map<String, Object> result = new LinkedHashMap<>();
 
-        selectedReports.forEach(key -> {
-            if (raw.containsKey(key)) {
-                result.put(key, raw.get(key));
-            }
-        });
-
         if (isDetail) {
-            result.put("FULL NAME", paymentInfo.getFullName());
+            result.put("EMP ID", employeeDetailMap != null ? employeeDetailMap.get(paymentInfo.getEmployeeID()).getMappedId() : " ");
+            result.put("EMPLOYEE NAME", paymentInfo.getFullName());
+            result.put("HIRE DATE", employeeDetailMap != null ? employeeDetailMap.get(paymentInfo.getEmployeeID()).getHireDate() : " ");
+            result.put("EXIT DATE", employeeDetailMap != null ? employeeDetailMap.get(paymentInfo.getEmployeeID()).getExitDate() : " ");
+            result.put("ROLE", employeeDetailMap != null ? employeeDetailMap.get(paymentInfo.getEmployeeID()).getRole() : " ");
         }
-
-        return result;
+        Map<String, Object> finalResult = new HashMap<>(result);
+        selectedReports.forEach(key -> {
+            Object value = raw.getOrDefault(key, " ");
+            finalResult.put(key, value);
+        });
+        return swapKey(finalResult);
     }
 
     private Map<String, Object> extractRawDetail(PaymentInfo paymentInfo) {
@@ -266,5 +303,93 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
             workbook.write(outputStream);
             return outputStream.toByteArray();
         }
+    }
+
+    private Map<String, Object> swapKey(Map<String, Object> result) {
+        Map<String, Object> renamedPayroll = new HashMap<>();
+        for (Map.Entry<String, Object> entry : result.entrySet()) {
+            String key = entry.getKey();
+            Object value = entry.getValue();
+            String newKey;
+
+            switch (key) {
+                case "Gross Pay":
+                    newKey = "GROSS PAY.";
+                    break;
+                case "Basic Salary":
+                    newKey = "BASIC SALARY.";
+                    break;
+                case "Housing Allowance":
+                    newKey = "HOUSING,";
+                    break;
+                case "Transport Allowance":
+                    newKey = "TRANSPORT,";
+                    break;
+                case "Utility":
+                    newKey = "UTILITY,";
+                    break;
+                case "Entertainment":
+                    newKey = "ENTERTAINMENT,";
+                    break;
+                case "Medical":
+                    newKey = "MEDICAL,";
+                    break;
+                case "PERSONAL OUTFIT":
+                    newKey = "PERSONAL OUTFIT,";
+                    break;
+                case "Leave":
+                    newKey = "LEAVE,";
+                    break;
+                case "Training":
+                    newKey = "TRAINING";
+                    break;
+                case "Monthly Performance Bonus":
+                    newKey = "PERFORMANCE BONUS";
+                    break;
+                case "overtime":
+                    newKey = "OVERTIME";
+                    break;
+                case "other variable":
+                    newKey = "OTHER VARIABLE";
+                    break;
+                case "other allowance":
+                    newKey = "OTHER ALLOWANCE";
+                    break;
+                case "other wage types":
+                    newKey = "OTHER WAGE TYPES";
+                    break;
+                case "CHARGEABLE INCOME":
+                    newKey = "TAXABLE INCOME";
+                    break;
+                case "other deduction":
+                    newKey = "OTHER DEDUCTION";
+                    break;
+                case "Loan.":
+                    newKey = "LOAN DEDUCTION";
+                    break;
+                case "Monthly Paye":
+                    newKey = "PAYE";
+                    break;
+                case "National Housing Fund":
+                    newKey = "NHF";
+                    break;
+                case "Employee Pension Contribution":
+                    newKey = "EMPLOYEE PENSION";
+                    break;
+                case "Voluntary Pension Contribution":
+                    newKey = "VOLUNTARY PENSION CONTRIBUTION";
+                    break;
+                case "Employer Pension Contribution":
+                    newKey = "EMPLOYER PENSION";
+                    break;
+                case "Net Pay":
+                    newKey = "NETPAY";
+                    break;
+                default:
+                    newKey = key;
+            }
+            renamedPayroll.put(newKey, value);
+        }
+        return renamedPayroll;
     }
 }

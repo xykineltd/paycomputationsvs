@@ -567,15 +567,14 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     @Transactional
     public void updateReportStatus(UpdatePayrollStatusRequest request) {
         PayrollReportSummary existingSummaryReport = payrollReportSummaryRepo.findPayrollReportSummaryByIdAndCompanyId(request.getReportId(), request.getCompanyId()).orElseThrow();
-
-        if (existingSummaryReport.isOffCycle()) {
-            updateDashboardData(AppConstants.payrollCountOffCycle, existingSummaryReport);
-        } else {
-            updateDashboardData(AppConstants.payrollCountRegular, existingSummaryReport);
-        }
         existingSummaryReport.setPayrollStatus(request.getStatus());
         PayrollReportSummary reportResponse = payrollReportSummaryRepo.save(existingSummaryReport);
         if (request.getStatus().equals(PayrollStatus.APPROVED)) {
+            if (existingSummaryReport.isOffCycle()) {
+                updateDashboardData(AppConstants.payrollCountOffCycle, existingSummaryReport);
+            } else {
+                updateDashboardData(AppConstants.payrollCountRegular, existingSummaryReport);
+            }
             payrollAsyncService.updateEmployeeLoanAsync(existingSummaryReport.getId().toString(), reportResponse.getCompanyId());
             payrollAsyncService.updateDetailStatusAsync(existingSummaryReport.getId().toString());
         }

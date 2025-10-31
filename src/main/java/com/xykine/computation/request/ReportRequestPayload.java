@@ -13,4 +13,5 @@ public class ReportRequestPayload {
     private String entityType;
     private DateRange dateRange;
     private String docType;
+    private boolean defaultHeaders;
 }
