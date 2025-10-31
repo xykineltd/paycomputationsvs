@@ -11,6 +11,7 @@ import com.xykine.computation.response.SummaryDetail;
 import com.xykine.computation.service.AdminService;
 import com.xykine.computation.service.ReportGeneratorService;
 import com.xykine.computation.service.ReportPersistenceService;
+import com.xykine.computation.utils.AppUtil;
 import com.xykine.computation.utils.AuthUtility;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -19,11 +20,8 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
@@ -74,8 +72,10 @@ public class Report {
             @RequestBody EmployeeFilterRequest employeeFilterRequest,
             @RequestHeader("Authorization") String authorizationHeader) {
 
-        LOGGER.info("currentUser, {}---->", AuthUtility.getCurrentUser());
-        List<String> filteredList = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
+        List<String> filteredList = new ArrayList<>();
+        if(AppUtil.hasAdditionalFilters(employeeFilterRequest)) {
+             filteredList = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
+        }
 
         Map<String, Object> response =  reportPersistenceService.getReportByEmployeeIDList(employeeFilterRequest.getCompanyID(),
                 filteredList, employeeFilterRequest.getReportId(),

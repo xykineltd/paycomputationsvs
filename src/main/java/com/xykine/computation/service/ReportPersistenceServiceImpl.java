@@ -7,8 +7,7 @@ import com.xykine.computation.request.*;
 import com.xykine.computation.response.*;
 
 import com.xykine.computation.session.SessionCalculationObject;
-import com.xykine.computation.utils.AuthUtil;
-import com.xykine.computation.utils.OperationUtils;
+import com.xykine.computation.utils.*;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,8 +40,6 @@ import java.util.stream.Collectors;
 
 import com.xykine.computation.exceptions.PayrollReportNotException;
 import com.xykine.computation.exceptions.PayrollUnmodifiableException;
-import com.xykine.computation.utils.ReportUtils;
-import com.xykine.computation.utils.AppConstants;
 import reactor.core.publisher.Sinks;
 
 @Service
@@ -89,11 +86,10 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 payrollAsyncService.updateDetailStatusToPendingAsync(String.valueOf(simulatedSummary.getId()));
 
                 StartWorkflowRequest startWorkflowRequest = new StartWorkflowRequest();
-                String userId = AuthUtil.getCurrentUserId().block();
                 startWorkflowRequest.setEntity("PAYROLL");
                 startWorkflowRequest.setPayrollId(payrollReportSummary.getId().toString());
-                startWorkflowRequest.setUserId(userId);
-                startWorkflowRequest.setCompanyId( AuthUtil.getCompanyId().block());
+                startWorkflowRequest.setUserId(AuthUtility.getCurrentUser());
+                startWorkflowRequest.setCompanyId(paymentRequest.getCompanyId());
                 startWorkflowRequest.setNumberOfEmployees(payrollReportSummary.getTotalNumberOfEmployees());
                 startWorkflowRequest.setNetPay(ReportUtils.transform(payrollReportSummary).getSummary().getSummary().get(MapKeys.TOTAL_NET_PAY));
                 workflowService.startWorkflow(startWorkflowRequest, authorizationHeader);
@@ -515,10 +511,26 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         return response;
     }
 
+//    @Override
+//    public Map<String, Object> getReportByEmployeeIDList(String companyId, List<String> employeeIDList, String summaryId, int page, int size) {
+//        Pageable paging = PageRequest.of(page, size);
+//        Page<PayrollReportDetail> payrollReportDetailPage = payrollReportDetailRepo.findPayrollReportDetailByCompanyIdAndEmployeeIdInAndSummaryId(companyId, employeeIDList, summaryId, paging);
+//        Map<String, Object> response = retrievePayrolDetails(payrollReportDetailPage);
+//        return response;
+//    }
+
     @Override
     public Map<String, Object> getReportByEmployeeIDList(String companyId, List<String> employeeIDList, String summaryId, int page, int size) {
         Pageable paging = PageRequest.of(page, size);
-        Page<PayrollReportDetail> payrollReportDetailPage = payrollReportDetailRepo.findPayrollReportDetailByCompanyIdAndEmployeeIdInAndSummaryId(companyId, employeeIDList, summaryId, paging);
+
+        Page<PayrollReportDetail> payrollReportDetailPage ;
+
+        if(employeeIDList.isEmpty()) {
+            payrollReportDetailPage = payrollReportDetailRepo.findPayrollReportDetailByCompanyIdAndSummaryId(companyId, summaryId, paging);
+        } else {
+            payrollReportDetailPage = payrollReportDetailRepo.findPayrollReportDetailByCompanyIdAndEmployeeIdInAndSummaryId(companyId, employeeIDList, summaryId, paging);
+        }
+
         Map<String, Object> response = retrievePayrolDetails(payrollReportDetailPage);
         return response;
     }
@@ -557,6 +569,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                     .findPayrollReportSummaryByCompanyIdAndOffCycleId(request.getCompanyId(), request.getOffCycleId());
             updateDashboardData(AppConstants.payrollCountOffCycle, existingSummaryReport);
         } else {
+            LOGGER.info("Updating payroll report for company id : {}", request.getCompanyId());
             existingSummaryReport = payrollReportSummaryRepo
                     .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(request.getStartDate(), request.getCompanyId(), false);
             updateDashboardData(AppConstants.payrollCountRegular, existingSummaryReport);
@@ -565,10 +578,10 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         PayrollReportSummary reportResponse = payrollReportSummaryRepo.save(existingSummaryReport);
 
         logApproveReportEvent(request.getCompanyId(), reportResponse);
-        if (request.getPayrollStatus().equals(PayrollStatus.APPROVED)) {
-            payrollAsyncService.updateEmployeeLoanAsync(existingSummaryReport.getId().toString(), request.getCompanyId());
-            payrollAsyncService.updateDetailStatusAsync(existingSummaryReport.getId().toString());
-        }
+//        if (request.getPayrollStatus().equals(PayrollStatus.APPROVED)) {
+//            payrollAsyncService.updateEmployeeLoanAsync(existingSummaryReport.getId().toString(), request.getCompanyId());
+//            payrollAsyncService.updateDetailStatusAsync(existingSummaryReport.getId().toString());
+//        }
         return existingSummaryReport;
     }
 
@@ -576,14 +589,15 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     public void updateReportStatus(UpdatePayrollStatusRequest request) {
         PayrollReportSummary existingSummaryReport = payrollReportSummaryRepo.findPayrollReportSummaryByIdAndCompanyId(request.getReportId(), request.getCompanyId()).orElseThrow();
 
-        if (existingSummaryReport.isOffCycle()) {
-            updateDashboardData(AppConstants.payrollCountOffCycle, existingSummaryReport);
-        } else {
-            updateDashboardData(AppConstants.payrollCountRegular, existingSummaryReport);
-        }
         existingSummaryReport.setPayrollStatus(request.getStatus());
         PayrollReportSummary reportResponse = payrollReportSummaryRepo.save(existingSummaryReport);
         if (request.getStatus().equals(PayrollStatus.APPROVED)) {
+            if (existingSummaryReport.isOffCycle()) {
+                updateDashboardData(AppConstants.payrollCountOffCycle, existingSummaryReport);
+            } else {
+                updateDashboardData(AppConstants.payrollCountRegular, existingSummaryReport);
+            }
+
             payrollAsyncService.updateEmployeeLoanAsync(existingSummaryReport.getId().toString(), reportResponse.getCompanyId());
             payrollAsyncService.updateDetailStatusAsync(existingSummaryReport.getId().toString());
         }
@@ -789,6 +803,9 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
     @Override
     public List<ReportAnalytics> getReportAnalytics(String companyId, int page, int size) {
+        //Get items payment items stat
+        //get current instance
+
         Pageable paging = PageRequest.of(page, size);
 //        Page<PayrollReportSummary> payrollReportSummaryPage = payrollReportSummaryRepo.findPayrollReportSummaryByCompanyIdAndPayrollSimulationOrderByCreatedDateDesc(companyId, true, paging);
         Page<PayrollReportSummary> payrollReportSummaryPage = payrollReportSummaryRepo.findPayrollReportSummaryByCompanyIdOrderByCreatedDateDesc(companyId, paging);
@@ -1003,6 +1020,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 //    }
 
     private void updateDashboardData(String updateType, PayrollReportSummary payrollReportSummary) {
+        LOGGER.info("Updating payroll report updateType : {}", updateType);
+
         switch (updateType) {
             case(AppConstants.payrollCountOffCycle) : dashboardDataService.updatePayrollCountTypeOffCycle(payrollReportSummary); break;
             case(AppConstants.payrollCountRegular) : dashboardDataService.updatePayrollCountTypeRegular(payrollReportSummary); break;

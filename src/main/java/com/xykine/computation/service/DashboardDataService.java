@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import org.xykine.payroll.model.MapKeys;
@@ -62,6 +63,7 @@ public class DashboardDataService {
     }
 
     public void updatePayrollCountTypeRegular(PayrollReportSummary payrollReportSummary) {
+        LOGGER.debug(" ====> updatePayrollCountTypeRegular payrollReportSummary.getTotalNumberOfEmployees()  {}", payrollReportSummary.getTotalNumberOfEmployees());
         DashboardCard dashboardCard;
         Optional<DashboardCard> dashboardCardOptional = dashboardCardRepo.findByCompanyId(payrollReportSummary.getCompanyId());
 
@@ -102,21 +104,22 @@ public class DashboardDataService {
         breakJobsAndOffLoad(payrollReportDetailList, companyId);
     }
 
-    private void breakJobsAndOffLoad(List<PayrollReportDetail>  payrollReportDetailList, String companyId) {
+    @Async
+    protected void breakJobsAndOffLoad(List<PayrollReportDetail> payrollReportDetailList, String companyId) {
         int size = payrollReportDetailList.size();
         int cores = Runtime.getRuntime().availableProcessors();
         int chunkSize = (size + cores - 1) / cores;
+
         List<List<PayrollReportDetail>> chunks = new ArrayList<>();
         for (int i = 0; i < size; i += chunkSize) {
             int end = Math.min(size, i + chunkSize);
             chunks.add(payrollReportDetailList.subList(i, end));
         }
-        List<CompletableFuture<Boolean>> futures = new ArrayList<>();
-        futures.addAll(
-                chunks.stream()
-                        .map(finalChunk -> CompletableFuture.supplyAsync(() -> offLoadNewValuesToYTD(finalChunk, companyId)))
-                        .toList()
-        );
+
+        List<CompletableFuture<Boolean>> futures = chunks.stream()
+                .map(finalChunk -> CompletableFuture.supplyAsync(() -> offLoadNewValuesToYTD(finalChunk, companyId)))
+                .toList();
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
     }
 
     private boolean offLoadNewValuesToYTD(List<PayrollReportDetail>  payrollReportDetailList, String companyId) {
@@ -217,27 +220,34 @@ public class DashboardDataService {
     }
 
     private void updateDashboardData(DashboardCard dashboardCard, PayrollReportSummary payrollReportSummary) {
-        BigDecimal netPay = extractNetPayFromReport(payrollReportSummary);
-        BigDecimal currentNetPay = dashboardCard.getTotalPayrollCost();
-        dashboardCard.setTotalPayrollCost(currentNetPay.add(netPay));
-        LOGGER.debug(" ====> netPay, currentNetPay,  payrollReportSummary.getTotalNumberOfEmployees()  {} {} {} ",
-                netPay, currentNetPay, payrollReportSummary.getTotalNumberOfEmployees());
-        dashboardCard.setAverageEmployeeCost(ComputationUtils.roundToTwoDecimalPlaces(
-                currentNetPay.add(netPay)
-                        .divide(BigDecimal.valueOf(payrollReportSummary.getTotalNumberOfEmployees()), 2, RoundingMode.HALF_UP)
-        ));
-        dashboardCardRepo.save(dashboardCard);
-        DashboardGraph dashboardGraph = DashboardGraph.builder()
-                .id(UUID.randomUUID().toString())
-                .companyId(payrollReportSummary.getCompanyId())
-                .startDate(payrollReportSummary.getStartDate().toString())
-                .endDate(payrollReportSummary.getEndDate().toString())
-                .paymentFrequency(payrollReportSummary.getPaymentFrequency())
-                .netPay(netPay)
-                .dateAdded(LocalDateTime.now())
-                .build();
-        dashboardGraphRepo.save(dashboardGraph);
-        updateYTDReport(payrollReportSummary.getId().toString(), payrollReportSummary.getCompanyId());
+        try{
+            BigDecimal netPay = extractNetPayFromReport(payrollReportSummary);
+            BigDecimal currentNetPay = dashboardCard.getTotalPayrollCost();
+            dashboardCard.setTotalPayrollCost(currentNetPay.add(netPay));
+            LOGGER.info(" ====> netPay, currentNetPay,  payrollReportSummary.getTotalNumberOfEmployees()  {} {} {} ",
+                    netPay, currentNetPay, payrollReportSummary.getTotalNumberOfEmployees());
+            dashboardCard.setAverageEmployeeCost(ComputationUtils.roundToTwoDecimalPlaces(
+                    currentNetPay.add(netPay)
+                            .divide(BigDecimal.valueOf(payrollReportSummary.getTotalNumberOfEmployees()), 2, RoundingMode.HALF_UP)
+            ));
+            dashboardCardRepo.save(dashboardCard);
+            DashboardGraph dashboardGraph = DashboardGraph.builder()
+                    .id(UUID.randomUUID().toString())
+                    .companyId(payrollReportSummary.getCompanyId())
+                    .startDate(payrollReportSummary.getStartDate().toString())
+                    .endDate(payrollReportSummary.getEndDate().toString())
+                    .paymentFrequency(payrollReportSummary.getPaymentFrequency())
+                    .netPay(netPay)
+                    .dateAdded(LocalDateTime.now())
+                    .build();
+            dashboardGraphRepo.save(dashboardGraph);
+            LOGGER.info(" ====> netPay, currentNetPay,  payrollReportSummary.getTotalNumberOfEmployees() ");
+
+            updateYTDReport(payrollReportSummary.getId().toString(), payrollReportSummary.getCompanyId());
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+
     }
 
     private BigDecimal extractNetPayFromReport(PayrollReportSummary payrollReportSummary){
