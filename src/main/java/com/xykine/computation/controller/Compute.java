@@ -64,9 +64,17 @@ public class Compute extends TextWebSocketHandler {
         jobStatusStore.createJob(jobId);
 
         // Run asynchronously
-        reportPersistenceService.computePayrollAsync(progress -> {
-            messagingTemplate.convertAndSend("/topic/job-status", progress);
-        }, jobId, authorizationHeader, paymentRequest);
+        if(paymentRequest.isOffCycle()) {
+            reportPersistenceService.computeOffCyclePayrollAsync(
+                    progress ->
+                            messagingTemplate.convertAndSend("/topic/job-status", progress),
+                    jobId, authorizationHeader, paymentRequest);
+        } else {
+            reportPersistenceService.computePayrollAsync(
+                    progress ->
+                            messagingTemplate.convertAndSend("/topic/job-status", progress),
+                    jobId, authorizationHeader, paymentRequest);
+        }
 
         Map<String, String> response = new HashMap<>();
         response.put("jobId", jobId);
