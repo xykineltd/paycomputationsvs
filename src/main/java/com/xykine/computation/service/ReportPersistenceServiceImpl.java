@@ -235,15 +235,15 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         long startTime = System.currentTimeMillis();
         ReportResponse reportResponse = null;
         try {
-                deleteReportByDate(
-                        paymentComputeResponse.getStart(),
-                        companyId,
-                        paymentComputeResponse.isOffCycle(),
-                        false,
-                        paymentComputeResponse.getOffCycleId()
-                );
-                reportResponse = getReportResponse(paymentComputeResponse, companyId);
-          //  }
+            deleteReportByDate(
+                    paymentComputeResponse.getStart(),
+                    companyId,
+                    paymentComputeResponse.isOffCycle(),
+                    false,
+                    paymentComputeResponse.getOffCycleId()
+            );
+            reportResponse = getReportResponse(paymentComputeResponse, companyId);
+            //  }
         } catch (RuntimeException e) {
             LOGGER.info(" exception {} ", e.toString());
             throw e;
@@ -295,16 +295,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
         payrollVarianceDetailsRepo.save(payrollVarianceDetails);
         payrollReportSummaryRepo.save(payrollReportSummary);
-
-        //saveReportDetails(paymentComputeResponse, companyId);
-
-        saveReportDetailsAsync(paymentComputeResponse, companyId)
-                .thenRun(() -> LOGGER.info("Report details successfully saved for companyId={}", companyId))
-                .exceptionally(ex -> {
-                    LOGGER.error("Async error while saving payroll reports for companyId={}", companyId, ex);
-                    return null;
-                });
-
+        payrollAsyncService.saveReportDetails(paymentComputeResponse, companyId);
         return getPayRollReport(paymentComputeResponse.getId());
     }
 
@@ -1200,3 +1191,4 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         return result;
     }
 }
+
