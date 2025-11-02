@@ -24,6 +24,8 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import org.xykine.payroll.model.PaymentInfo;
 import reactor.core.publisher.Mono;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -102,34 +104,38 @@ public class AdminService {
     }
 
     public Map<String, List<String>> getCostCenterDetails(EmployeeFilterRequest employeeFilterRequest, String token) {
-        return webClient
-                .post()
-                .uri("admin/employee/cost-centers")
-                .header(HttpHeaders.AUTHORIZATION, token)
-                .bodyValue(employeeFilterRequest)
-                .exchangeToMono(response ->{
-                    if (response.statusCode().is2xxSuccessful()) {
-                        // Extract the body as a List if the response is successful
-                        return response.bodyToMono(Map.class);
-                    } else {
-                        // Extract error message from the response body and throw custom exception
-                        return response.bodyToMono(ApiException.class)
-                                .flatMap(errorBody -> {
-                                    LOGGER.error("Non-successful response: {}", response.statusCode());
-                                    LOGGER.info("Error Message: {}", errorBody.getErrorMessage());
-                                    LOGGER.info("Error Code: {}", errorBody.getErrorCode());
-
-                                    // Throw custom exception with the error message
-                                    return Mono.error(new EmployeeFilterException(errorBody.getMessage()));
-                                });
-                    }
-                })
-                .onErrorResume(WebClientResponseException.class, ex -> {
-                    // Handle WebClient exceptions, if needed
-                    LOGGER.error("WebClient call failed: {}", ex.getMessage());
-                    return Mono.error(new EmployeeFilterException(ex.getMessage()));
-                })
-                .block(); // Block to wait for the response
+        List<String> emplloyeeList = new ArrayList<>();
+        Map<String, List<String>> costCenterDetails = new HashMap<>();
+        costCenterDetails.put("", emplloyeeList);
+        return costCenterDetails;
+//        return webClient
+//                .post()
+//                .uri("admin/employee/cost-centers")
+//                .header(HttpHeaders.AUTHORIZATION, token)
+//                .bodyValue(employeeFilterRequest)
+//                .exchangeToMono(response ->{
+//                    if (response.statusCode().is2xxSuccessful()) {
+//                        // Extract the body as a List if the response is successful
+//                        return response.bodyToMono(Map.class);
+//                    } else {
+//                        // Extract error message from the response body and throw custom exception
+//                        return response.bodyToMono(ApiException.class)
+//                                .flatMap(errorBody -> {
+//                                    LOGGER.error("Non-successful response: {}", response.statusCode());
+//                                    LOGGER.info("Error Message: {}", errorBody.getErrorMessage());
+//                                    LOGGER.info("Error Code: {}", errorBody.getErrorCode());
+//
+//                                    // Throw custom exception with the error message
+//                                    return Mono.error(new EmployeeFilterException(errorBody.getMessage()));
+//                                });
+//                    }
+//                })
+//                .onErrorResume(WebClientResponseException.class, ex -> {
+//                    // Handle WebClient exceptions, if needed
+//                    LOGGER.error("WebClient call failed: {}", ex.getMessage());
+//                    return Mono.error(new EmployeeFilterException(ex.getMessage()));
+//                })
+//                .block(); // Block to wait for the response
     }
 
     public Map<String, EmployeeDetail> getEmployeesDetail(EmployeeFilterRequest employeeFilterRequest, String token) {

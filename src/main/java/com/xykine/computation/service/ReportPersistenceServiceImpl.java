@@ -759,101 +759,126 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 });
     }
 
-    private CompletableFuture<Void> saveReportDetailsAsync(PaymentComputeResponse paymentComputeResponse, String companyId) {
+    private CompletableFuture<Void> saveReportDetailsAsync(
+            PaymentComputeResponse paymentComputeResponse, String companyId) {
 
         List<PaymentInfo> paymentInfoList = Optional.ofNullable(paymentComputeResponse.getReport())
                 .orElse(Collections.emptyList());
 
         return CompletableFuture.runAsync(() -> {
             try {
-                List<PayrollReportDetail> reportsToSave = paymentInfoList.stream()
-                        .map(x -> {
+                if (paymentInfoList.isEmpty()) {
+                    LOGGER.warn("No payment info found for companyId={}", companyId);
+                    return;
+                }
+
+                String summaryId = String.valueOf(paymentComputeResponse.getId());
+
+                // 🔹 Step 1: Group by (employeeId, startDate, endDate, summaryId)
+                Map<String, List<PaymentInfo>> grouped = paymentInfoList.stream()
+                        .collect(Collectors.groupingBy(
+                                x -> buildKey(companyId, x.getEmployeeID(), x.getStartDate(), x.getEndDate(), summaryId)
+                        ));
+
+                // 🔹 Step 2: Merge PaymentInfo objects in each group
+                List<PayrollReportDetail> mergedReports = grouped.values().stream()
+                        .map(group -> {
                             try {
-                                PayrollReportDetail existingReport =
-                                        payrollReportDetailRepo.findPayrollReportDetailByCompanyIdAndEmployeeIdAndStartDateAndEndDateAndSummaryId(
-                                                companyId,
-                                                x.getEmployeeID(),
-                                                x.getStartDate(),
-                                                x.getEndDate(),
-                                                String.valueOf(paymentComputeResponse.getId()));
+                                PaymentInfo merged = group.stream()
+                                        .reduce(this::mergePaymentInfos)
+                                        .orElse(null);
 
-                                PaymentInfo paymentInfoToSave = x;
-                                if (existingReport != null) {
-                                    PaymentInfo oldPaymentInfo = Optional.ofNullable(ReportUtils.transform(existingReport))
-                                            .map(r -> r.getDetail())
-                                            .map(d -> d.getReport())
-                                            .orElse(new PaymentInfo());
+                                if (merged == null) return null;
 
-                                    boolean mapsDifferent = !Objects.equals(oldPaymentInfo.getPayeeTax(), x.getPayeeTax()) ||
-                                            !Objects.equals(oldPaymentInfo.getPension(), x.getPension());
-
-                                    if (mapsDifferent) {
-                                        oldPaymentInfo.setGrossPay(mergeMaps(oldPaymentInfo.getGrossPay(), x.getGrossPay()));
-                                        oldPaymentInfo.setDeduction(mergeMaps(oldPaymentInfo.getDeduction(), x.getDeduction()));
-                                        oldPaymentInfo.setTaxRelief(mergeMaps(oldPaymentInfo.getTaxRelief(), x.getTaxRelief()));
-                                        oldPaymentInfo.setPayeeTax(mergeMaps(oldPaymentInfo.getPayeeTax(), x.getPayeeTax()));
-                                        oldPaymentInfo.setEarning(mergeMaps(oldPaymentInfo.getEarning(), x.getEarning()));
-                                        oldPaymentInfo.setNhf(mergeMaps(oldPaymentInfo.getNhf(), x.getNhf()));
-                                        oldPaymentInfo.setOthers(mergeMaps(oldPaymentInfo.getOthers(), x.getOthers()));
-                                        oldPaymentInfo.setPension(mergeMaps(oldPaymentInfo.getPension(), x.getPension()));
-                                        oldPaymentInfo.setNetPay(oldPaymentInfo.getNetPay().add(x.getNetPay()));
-                                        paymentInfoToSave = oldPaymentInfo;
-                                    }
-                                }
-
-                                PayComputeDetailResponse payComputeDetailResponse = PayComputeDetailResponse.builder()
-                                        .report(paymentInfoToSave)
+                                PayComputeDetailResponse detailResponse = PayComputeDetailResponse.builder()
+                                        .report(merged)
                                         .build();
 
-                                PayrollReportDetail payrollReportDetail = existingReport != null
-                                        ? existingReport
-                                        : PayrollReportDetail.builder()
+                                PayrollReportDetail report = PayrollReportDetail.builder()
                                         .id(UUID.randomUUID().toString())
+                                        .companyId(companyId)
+                                        .employeeId(merged.getEmployeeID())
+                                        .fullName(Optional.ofNullable(merged.getFullName()).orElse("Unknown"))
+                                        .summaryId(summaryId)
+                                        .currency(merged.getCurrency() != null ? merged.getCurrency().getCode() : null)
+                                        .exchangeInfo(merged.getExchangeInfo())
+                                        .offCycleId(paymentComputeResponse.getOffCycleId())
+                                        .departmentId(merged.getDepartmentID())
+                                        .startDate(merged.getStartDate())
+                                        .endDate(merged.getEndDate())
+                                        .report(ReportUtils.serializeResponse(detailResponse))
+                                        .createdDate(LocalDateTime.now())
+                                        .payrollSimulation(paymentComputeResponse.isPayrollSimulation())
+                                        .payrollStatus(paymentComputeResponse.isPayrollSimulation()
+                                                ? PayrollStatus.SIMULATED
+                                                : PayrollStatus.INITIATED)
+                                        .offCycle(paymentComputeResponse.isOffCycle())
                                         .build();
 
-                                payrollReportDetail.setEmployeeId(paymentInfoToSave.getEmployeeID());
-                                payrollReportDetail.setFullName(Optional.ofNullable(paymentInfoToSave.getFullName()).orElse("Unknown"));
-                                payrollReportDetail.setSummaryId(String.valueOf(paymentComputeResponse.getId()));
-                                payrollReportDetail.setCurrency(paymentInfoToSave.getCurrency() != null
-                                        ? paymentInfoToSave.getCurrency().getCode()
-                                        : null);
-                                payrollReportDetail.setExchangeInfo(paymentInfoToSave.getExchangeInfo());
-                                payrollReportDetail.setCompanyId(companyId);
-                                payrollReportDetail.setOffCycleId(paymentComputeResponse.getOffCycleId());
-                                payrollReportDetail.setDepartmentId(paymentInfoToSave.getDepartmentID());
-                                payrollReportDetail.setStartDate(paymentInfoToSave.getStartDate());
-                                payrollReportDetail.setEndDate(paymentInfoToSave.getEndDate());
-                                payrollReportDetail.setReport(ReportUtils.serializeResponse(payComputeDetailResponse));
-                                payrollReportDetail.setCreatedDate(LocalDateTime.now());
-                                payrollReportDetail.setPayrollSimulation(paymentComputeResponse.isPayrollSimulation());
-                                payrollReportDetail.setPayrollStatus(paymentComputeResponse.isPayrollSimulation()
-                                        ? PayrollStatus.SIMULATED
-                                        : PayrollStatus.INITIATED);
-                                payrollReportDetail.setOffCycle(paymentComputeResponse.isOffCycle());
-
-                                return payrollReportDetail;
+                                return report;
 
                             } catch (Exception e) {
-                                LOGGER.error("Error processing report for employeeId={} startDate={} endDate={}",
-                                        x.getEmployeeID(), x.getStartDate(), x.getEndDate(), e);
+                                LOGGER.error("Error merging payment info group for companyId={}", companyId, e);
                                 return null;
                             }
                         })
                         .filter(Objects::nonNull)
                         .toList();
 
-                if (!reportsToSave.isEmpty()) {
-                    payrollReportDetailRepo.saveAll(reportsToSave);
-                    LOGGER.info("Saved {} payroll report details for companyId={}", reportsToSave.size(), companyId);
+                // 🔹 Step 3: Save all merged reports in one batch
+                if (!mergedReports.isEmpty()) {
+                    payrollReportDetailRepo.saveAll(mergedReports);
+                    LOGGER.info("Saved {} merged payroll report details for companyId={}", mergedReports.size(), companyId);
                 } else {
-                    LOGGER.warn("No valid payroll report details to save for companyId={}", companyId);
+                    LOGGER.warn("No payroll report details to save after merging for companyId={}", companyId);
                 }
 
             } catch (Exception e) {
-                LOGGER.error("Error while saving payroll report details for companyId={}", companyId, e);
+                LOGGER.error("Error while merging and saving payroll report details for companyId={}", companyId, e);
                 throw new RuntimeException("Error while saving payroll report details", e);
             }
         });
+    }
+
+    /**
+     * Builds a unique grouping key for merging.
+     */
+    private static String buildKey(String companyId, String employeeId, String startDate, String endDate, String summaryId) {
+        return String.join("|", companyId, employeeId, startDate.toString(), endDate.toString(), summaryId);
+    }
+
+    /**
+     * Merges two PaymentInfo objects safely.
+     */
+    private PaymentInfo mergePaymentInfos(PaymentInfo a, PaymentInfo b) {
+        if (a == null) return b;
+        if (b == null) return a;
+
+        PaymentInfo merged = new PaymentInfo();
+        merged.setEmployeeID(a.getEmployeeID());
+        merged.setFullName(Optional.ofNullable(a.getFullName()).orElse(b.getFullName()));
+        merged.setStartDate(a.getStartDate());
+        merged.setEndDate(a.getEndDate());
+        merged.setCurrency(a.getCurrency() != null ? a.getCurrency() : b.getCurrency());
+        merged.setExchangeInfo(a.getExchangeInfo() != null ? a.getExchangeInfo() : b.getExchangeInfo());
+        merged.setDepartmentID(Optional.ofNullable(a.getDepartmentID()).orElse(b.getDepartmentID()));
+
+        merged.setGrossPay(mergeMaps(a.getGrossPay(), b.getGrossPay()));
+        merged.setDeduction(mergeMaps(a.getDeduction(), b.getDeduction()));
+        merged.setTaxRelief(mergeMaps(a.getTaxRelief(), b.getTaxRelief()));
+        merged.setPayeeTax(mergeMaps(a.getPayeeTax(), b.getPayeeTax()));
+        merged.setEarning(mergeMaps(a.getEarning(), b.getEarning()));
+        merged.setNhf(mergeMaps(a.getNhf(), b.getNhf()));
+        merged.setOthers(mergeMaps(a.getOthers(), b.getOthers()));
+        merged.setPension(mergeMaps(a.getPension(), b.getPension()));
+
+        // combine numeric values
+        merged.setNetPay(
+                Optional.ofNullable(a.getNetPay()).orElse(BigDecimal.ZERO)
+                        .add(Optional.ofNullable(b.getNetPay()).orElse(BigDecimal.ZERO))
+        );
+
+        return merged;
     }
 
     private void updateDashboardData(String updateType, PayrollReportSummary payrollReportSummary) {
