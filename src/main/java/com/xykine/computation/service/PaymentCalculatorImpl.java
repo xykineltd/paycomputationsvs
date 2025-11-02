@@ -48,9 +48,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                         : new HashSet<>();
 
         // TODO we need to throw proper error if the payment settings is not present for both custom or the company metatdata payment distribution
-        LOGGER.info("Original Settings List:******************* {}", originalSettingsList);
-        LOGGER.info("####################################################******************* ");
-        LOGGER.info("paymentSettingsFromPaymentDistributionList: {}", paymentSettingsFromPaymentDistributionList);
         originalSettingsList.addAll(paymentSettingsFromPaymentDistributionList);
         paymentInfo.setPaymentSettings(originalSettingsList);
         return paymentInfo;
