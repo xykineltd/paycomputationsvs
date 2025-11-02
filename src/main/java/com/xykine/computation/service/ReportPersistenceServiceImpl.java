@@ -176,15 +176,15 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         long startTime = System.currentTimeMillis();
         ReportResponse reportResponse = null;
         try {
-                deleteReportByDate(
-                        paymentComputeResponse.getStart(),
-                        companyId,
-                        paymentComputeResponse.isOffCycle(),
-                        false,
-                        paymentComputeResponse.getOffCycleId()
-                );
-                reportResponse = getReportResponse(paymentComputeResponse, companyId);
-          //  }
+            deleteReportByDate(
+                    paymentComputeResponse.getStart(),
+                    companyId,
+                    paymentComputeResponse.isOffCycle(),
+                    false,
+                    paymentComputeResponse.getOffCycleId()
+            );
+            reportResponse = getReportResponse(paymentComputeResponse, companyId);
+            //  }
         } catch (RuntimeException e) {
             LOGGER.info(" exception {} ", e.toString());
             throw e;
@@ -236,16 +236,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
         payrollVarianceDetailsRepo.save(payrollVarianceDetails);
         payrollReportSummaryRepo.save(payrollReportSummary);
-
-        //saveReportDetails(paymentComputeResponse, companyId);
-
-        saveReportDetailsAsync(paymentComputeResponse, companyId)
-                .thenRun(() -> LOGGER.info("Report details successfully saved for companyId={}", companyId))
-                .exceptionally(ex -> {
-                    LOGGER.error("Async error while saving payroll reports for companyId={}", companyId, ex);
-                    return null;
-                });
-
+        payrollAsyncService.saveReportDetails(paymentComputeResponse, companyId);
         return getPayRollReport(paymentComputeResponse.getId());
     }
 
@@ -424,23 +415,23 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     public Map<String, Object> getPayRollReportByType(ReportByTypeRequest request, int page, int size) {
         Pageable paging = PageRequest.of(page, size);
 
-       // if (category == null) {
-            Page<PayrollReportSummary> payrollReportReportPage = payrollReportSummaryRepo
-                    .findAllByCompanyIdAndStartDateBetween(
-                            request.getCompanyId(),
-                            getStartDateRange(request.getStart(), request.getEnd()),
-                            getEndDateRange(request.getEnd()), paging);
+        // if (category == null) {
+        Page<PayrollReportSummary> payrollReportReportPage = payrollReportSummaryRepo
+                .findAllByCompanyIdAndStartDateBetween(
+                        request.getCompanyId(),
+                        getStartDateRange(request.getStart(), request.getEnd()),
+                        getEndDateRange(request.getEnd()), paging);
 
         List<PayrollReportSummary> payrollReportReportPageList = payrollReportReportPage.getContent();
 
-            if (request.getCategory() != null) {
-                boolean categoryFound = request.getCategory().compareTo(PayrollCategory.OFFCYLE) == 0 ? true : false;
-                payrollReportReportPageList = payrollReportReportPageList.stream().filter(x -> x.isOffCycle() == categoryFound).toList();
-            }
+        if (request.getCategory() != null) {
+            boolean categoryFound = request.getCategory().compareTo(PayrollCategory.OFFCYLE) == 0 ? true : false;
+            payrollReportReportPageList = payrollReportReportPageList.stream().filter(x -> x.isOffCycle() == categoryFound).toList();
+        }
 
-            if (request.getPayrollStatus() != null) {
-                payrollReportReportPageList = payrollReportReportPageList.stream().filter(x -> x.getPayrollStatus().compareTo(request.getPayrollStatus()) == 0).toList();
-            }
+        if (request.getPayrollStatus() != null) {
+            payrollReportReportPageList = payrollReportReportPageList.stream().filter(x -> x.getPayrollStatus().compareTo(request.getPayrollStatus()) == 0).toList();
+        }
 
         payrollReportReportPage = new PageImpl<>(
                 payrollReportReportPageList,
@@ -757,128 +748,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                     newReport.setTaxableIncome(BigDecimal.ZERO);
                     return newReport;
                 });
-    }
-
-    private CompletableFuture<Void> saveReportDetailsAsync(
-            PaymentComputeResponse paymentComputeResponse, String companyId) {
-
-        List<PaymentInfo> paymentInfoList = Optional.ofNullable(paymentComputeResponse.getReport())
-                .orElse(Collections.emptyList());
-
-        return CompletableFuture.runAsync(() -> {
-            try {
-                if (paymentInfoList.isEmpty()) {
-                    LOGGER.warn("No payment info found for companyId={}", companyId);
-                    return;
-                }
-
-                String summaryId = String.valueOf(paymentComputeResponse.getId());
-
-                // 🔹 Step 1: Group by (employeeId, startDate, endDate, summaryId)
-                Map<String, List<PaymentInfo>> grouped = paymentInfoList.stream()
-                        .collect(Collectors.groupingBy(
-                                x -> buildKey(companyId, x.getEmployeeID(), x.getStartDate(), x.getEndDate(), summaryId)
-                        ));
-
-                // 🔹 Step 2: Merge PaymentInfo objects in each group
-                List<PayrollReportDetail> mergedReports = grouped.values().stream()
-                        .map(group -> {
-                            try {
-                                PaymentInfo merged = group.stream()
-                                        .reduce(this::mergePaymentInfos)
-                                        .orElse(null);
-
-                                if (merged == null) return null;
-
-                                PayComputeDetailResponse detailResponse = PayComputeDetailResponse.builder()
-                                        .report(merged)
-                                        .build();
-
-                                PayrollReportDetail report = PayrollReportDetail.builder()
-                                        .id(UUID.randomUUID().toString())
-                                        .companyId(companyId)
-                                        .employeeId(merged.getEmployeeID())
-                                        .fullName(Optional.ofNullable(merged.getFullName()).orElse("Unknown"))
-                                        .summaryId(summaryId)
-                                        .currency(merged.getCurrency() != null ? merged.getCurrency().getCode() : null)
-                                        .exchangeInfo(merged.getExchangeInfo())
-                                        .offCycleId(paymentComputeResponse.getOffCycleId())
-                                        .departmentId(merged.getDepartmentID())
-                                        .startDate(merged.getStartDate())
-                                        .endDate(merged.getEndDate())
-                                        .report(ReportUtils.serializeResponse(detailResponse))
-                                        .createdDate(LocalDateTime.now())
-                                        .payrollSimulation(paymentComputeResponse.isPayrollSimulation())
-                                        .payrollStatus(paymentComputeResponse.isPayrollSimulation()
-                                                ? PayrollStatus.SIMULATED
-                                                : PayrollStatus.INITIATED)
-                                        .offCycle(paymentComputeResponse.isOffCycle())
-                                        .build();
-
-                                return report;
-
-                            } catch (Exception e) {
-                                LOGGER.error("Error merging payment info group for companyId={}", companyId, e);
-                                return null;
-                            }
-                        })
-                        .filter(Objects::nonNull)
-                        .toList();
-
-                // 🔹 Step 3: Save all merged reports in one batch
-                if (!mergedReports.isEmpty()) {
-                    payrollReportDetailRepo.saveAll(mergedReports);
-                    LOGGER.info("Saved {} merged payroll report details for companyId={}", mergedReports.size(), companyId);
-                } else {
-                    LOGGER.warn("No payroll report details to save after merging for companyId={}", companyId);
-                }
-
-            } catch (Exception e) {
-                LOGGER.error("Error while merging and saving payroll report details for companyId={}", companyId, e);
-                throw new RuntimeException("Error while saving payroll report details", e);
-            }
-        });
-    }
-
-    /**
-     * Builds a unique grouping key for merging.
-     */
-    private static String buildKey(String companyId, String employeeId, String startDate, String endDate, String summaryId) {
-        return String.join("|", companyId, employeeId, startDate.toString(), endDate.toString(), summaryId);
-    }
-
-    /**
-     * Merges two PaymentInfo objects safely.
-     */
-    private PaymentInfo mergePaymentInfos(PaymentInfo a, PaymentInfo b) {
-        if (a == null) return b;
-        if (b == null) return a;
-
-        PaymentInfo merged = new PaymentInfo();
-        merged.setEmployeeID(a.getEmployeeID());
-        merged.setFullName(Optional.ofNullable(a.getFullName()).orElse(b.getFullName()));
-        merged.setStartDate(a.getStartDate());
-        merged.setEndDate(a.getEndDate());
-        merged.setCurrency(a.getCurrency() != null ? a.getCurrency() : b.getCurrency());
-        merged.setExchangeInfo(a.getExchangeInfo() != null ? a.getExchangeInfo() : b.getExchangeInfo());
-        merged.setDepartmentID(Optional.ofNullable(a.getDepartmentID()).orElse(b.getDepartmentID()));
-
-        merged.setGrossPay(mergeMaps(a.getGrossPay(), b.getGrossPay()));
-        merged.setDeduction(mergeMaps(a.getDeduction(), b.getDeduction()));
-        merged.setTaxRelief(mergeMaps(a.getTaxRelief(), b.getTaxRelief()));
-        merged.setPayeeTax(mergeMaps(a.getPayeeTax(), b.getPayeeTax()));
-        merged.setEarning(mergeMaps(a.getEarning(), b.getEarning()));
-        merged.setNhf(mergeMaps(a.getNhf(), b.getNhf()));
-        merged.setOthers(mergeMaps(a.getOthers(), b.getOthers()));
-        merged.setPension(mergeMaps(a.getPension(), b.getPension()));
-
-        // combine numeric values
-        merged.setNetPay(
-                Optional.ofNullable(a.getNetPay()).orElse(BigDecimal.ZERO)
-                        .add(Optional.ofNullable(b.getNetPay()).orElse(BigDecimal.ZERO))
-        );
-
-        return merged;
     }
 
     private void updateDashboardData(String updateType, PayrollReportSummary payrollReportSummary) {
