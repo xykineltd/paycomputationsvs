@@ -134,6 +134,7 @@ public class Report {
     @PutMapping("/update-report-status")
     public void updateStatus(@RequestBody UpdatePayrollStatusRequest request) {
         try {
+            LOGGER.info("Updating report status to {}", request.getStatus());
             reportPersistenceService.updateReportStatus(request);
         } catch (IllegalArgumentException e) {
             throw new PayrollValidationException("Invalid payroll status: " + request.getStatus());

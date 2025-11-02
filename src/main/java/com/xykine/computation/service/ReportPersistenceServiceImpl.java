@@ -642,6 +642,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     @Transactional
     public void updateReportStatus(UpdatePayrollStatusRequest request) {
 
+        LOGGER.info("Updating payroll report status for company id : {}", request.getStatus().equals(PayrollStatus.REJECTED));
         if (request.getStatus().equals(PayrollStatus.REJECTED)) {
             request.setStatus(PayrollStatus.SIMULATED);
         }
