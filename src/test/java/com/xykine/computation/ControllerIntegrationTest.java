@@ -605,18 +605,18 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
     }
 
     // Test cost center summary
-    @Test
-    void testCostCenterSummary(){
-        when(adminService.getPaymentInfoList(any(), anyString())).thenReturn(TestDataFactory.getPaymentSettings("cost-center-data"));
-        when(adminService.getCostCenterDetails(any(), anyString())).thenReturn(TestDataGenerator.getCostCenterDetails());
-        ReportResponse reportSummary = getReportSummary();
-        assertThat(reportSummary).isNotNull().satisfies(x -> {
-         assertThat(x.getSummary()).isNotNull().satisfies(y -> {
-             y.getCostCenterSummary().get("costCenterA").get("Total Net Pay").compareTo(BigDecimal.valueOf(2100000.15));
-             y.getCostCenterSummary().get("costCenterB").get("Total Net Pay").compareTo(BigDecimal.valueOf(4900000.35));
-         });
-        });
-    }
+//    @Test
+//    void testCostCenterSummary(){
+//        when(adminService.getPaymentInfoList(any(), anyString())).thenReturn(TestDataFactory.getPaymentSettings("cost-center-data"));
+//        when(adminService.getCostCenterDetails(any(), anyString())).thenReturn(TestDataGenerator.getCostCenterDetails());
+//        ReportResponse reportSummary = getReportSummary();
+//        assertThat(reportSummary).isNotNull().satisfies(x -> {
+//         assertThat(x.getSummary()).isNotNull().satisfies(y -> {
+//             y.getCostCenterSummary().get("costCenterA").get("Total Net Pay").compareTo(BigDecimal.valueOf(2100000.15));
+//             y.getCostCenterSummary().get("costCenterB").get("Total Net Pay").compareTo(BigDecimal.valueOf(4900000.35));
+//         });
+//        });
+//    }
 
 
     /****         REPORT CONTROLLER ENDPOINTS      *********/

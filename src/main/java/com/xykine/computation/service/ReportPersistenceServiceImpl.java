@@ -109,8 +109,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
             EmployeeFilterRequest employeeFilterRequest = new EmployeeFilterRequest();
             employeeFilterRequest.setCompanyID(paymentRequest.getCompanyId());
-            Map<String, List<String>> costCenters = adminService.getCostCenterDetails(employeeFilterRequest,authorizationHeader);
-            sessionCalculationObject.setCostCenters(costCenters);
+//            Map<String, List<String>> costCenters = adminService.getCostCenterDetails(employeeFilterRequest,authorizationHeader);
+//            sessionCalculationObject.setCostCenters(costCenters);
 
             sessionCalculationObject = OperationUtils.doPreflight(
                     sessionCalculationObject,
