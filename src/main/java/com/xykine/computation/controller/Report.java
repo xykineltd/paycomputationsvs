@@ -194,41 +194,50 @@ public class Report {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+//    @PostMapping("/download-report")
+//    public ResponseEntity<byte[]> uploadReport(@RequestBody ReportRequestPayload request) throws IOException {
+//        byte[] excelFile = reportGeneratorService.generateReport(request);
+//
+//        // 🔹 Store file locally
+////        Path folder = Paths.get("./exports");  // relative folder inside Spring Boot run dir
+////        if (!Files.exists(folder)) {
+////            Files.createDirectories(folder);
+////        }
+////        Path filePath = folder.resolve("report-detail.xlsx");
+////        try (FileOutputStream fos = new FileOutputStream(filePath.toFile())) {
+////            fos.write(excelFile);
+////        }
+//
+//        String fileName = "payroll-report." +
+//                (request.getDocType().equalsIgnoreCase("pdf") ? "pdf" : "xlsx");
+//
+//        HttpHeaders headers = new HttpHeaders();
+//
+//        headers.setContentType(
+//                request.getDocType().equalsIgnoreCase("pdf") ?
+//                        MediaType.APPLICATION_PDF :
+//                        MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+//        );
+//
+//        headers.setContentDisposition(
+//                ContentDisposition.attachment()
+//                        .filename(fileName)
+//                        .build()
+//        );
+//
+//        headers.setCacheControl(CacheControl.noCache().getHeaderValue());
+//
+//        return new ResponseEntity<>(excelFile, headers, HttpStatus.OK);
+//    }
+
+
     @PostMapping("/download-report")
-    public ResponseEntity<byte[]> uploadReport(@RequestBody ReportRequestPayload request) throws IOException {
-        byte[] excelFile = reportGeneratorService.generateReport(request);
-
-        // 🔹 Store file locally
-//        Path folder = Paths.get("./exports");  // relative folder inside Spring Boot run dir
-//        if (!Files.exists(folder)) {
-//            Files.createDirectories(folder);
-//        }
-//        Path filePath = folder.resolve("report-detail.xlsx");
-//        try (FileOutputStream fos = new FileOutputStream(filePath.toFile())) {
-//            fos.write(excelFile);
-//        }
-
-        String fileName = "payroll-report." +
-                (request.getDocType().equalsIgnoreCase("pdf") ? "pdf" : "xlsx");
-
-        HttpHeaders headers = new HttpHeaders();
-
-        headers.setContentType(
-                request.getDocType().equalsIgnoreCase("pdf") ?
-                        MediaType.APPLICATION_PDF :
-                        MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        );
-
-        headers.setContentDisposition(
-                ContentDisposition.attachment()
-                        .filename(fileName)
-                        .build()
-        );
-
-        headers.setCacheControl(CacheControl.noCache().getHeaderValue());
-
-        return new ResponseEntity<>(excelFile, headers, HttpStatus.OK);
+    public ResponseEntity<byte[]> uploadReport(@RequestBody ReportRequestPayload payload,
+                                               @RequestHeader("Authorization") String authorizationHeader
+    ) throws IOException {
+        return new ResponseEntity<>(reportGeneratorService.generateReport(payload, authorizationHeader), HttpStatus.OK);
     }
+
 
     @PostMapping("/retrieve-payment-element")
     public List<Map<String, Object>> getPaymentElement(@RequestBody RetrievePaymentElementPayload retrievePaymentElementPayload){

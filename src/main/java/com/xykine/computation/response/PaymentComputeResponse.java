@@ -30,6 +30,7 @@ public class PaymentComputeResponse implements Serializable {
     private Map<String, BigDecimal> summaryVariance;
     private ConcurrentHashMap<String, Set<SummaryDetail>> summaryDetails;
     private ConcurrentHashMap<String, Set<SummaryDetail>> summaryDetailsVariance;
+    private Map<String, ConcurrentHashMap<String, BigDecimal>> costCenterSummary;
     private String start;
     private String end;
     private boolean payrollSimulation;

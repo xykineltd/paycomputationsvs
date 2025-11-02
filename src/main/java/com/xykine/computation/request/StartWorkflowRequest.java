@@ -19,4 +19,5 @@ public class StartWorkflowRequest {
     private long numberOfEmployees;
     private long numberOfPays;
     private BigDecimal netPay;
+    private String createdBy;
 }

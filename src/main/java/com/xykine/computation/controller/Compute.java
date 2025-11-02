@@ -3,6 +3,8 @@ package com.xykine.computation.controller;
 import com.xykine.computation.domain.JobStatus;
 import com.xykine.computation.exceptions.PayrollValidationException;
 import com.xykine.computation.repo.ComputationConstantsRepo;
+import com.xykine.computation.repo.TaxRepo;
+import com.xykine.computation.request.EmployeeFilterRequest;
 import com.xykine.computation.request.PaymentInfoRequest;
 import com.xykine.computation.response.PaymentComputeResponse;
 import com.xykine.computation.response.ReportResponse;
@@ -98,7 +100,13 @@ public class Compute extends TextWebSocketHandler {
             @RequestHeader("Authorization") String authorizationHeader,
             @RequestBody PaymentInfoRequest paymentRequest) throws IOException, ClassNotFoundException {
 
-            sessionCalculationObject = OperationUtils.doPreflight(
+        EmployeeFilterRequest employeeFilterRequest = new EmployeeFilterRequest();
+        employeeFilterRequest.setCompanyID(paymentRequest.getCompanyId());
+        Map<String, List<String>> costCenters = adminService.getCostCenterDetails(employeeFilterRequest,authorizationHeader);
+
+        sessionCalculationObject.setCostCenters(costCenters);
+
+        sessionCalculationObject = OperationUtils.doPreflight(
                     sessionCalculationObject,
                     computationConstantsRepo,
                     employeeMetadataService,

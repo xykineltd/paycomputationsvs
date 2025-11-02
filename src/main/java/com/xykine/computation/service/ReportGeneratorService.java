@@ -12,7 +12,7 @@ import java.util.Set;
 
 public interface ReportGeneratorService {
 
-    byte[] generateReport(ReportRequestPayload reportRequestPayload) throws IOException;
+    byte[] generateReport(ReportRequestPayload reportRequestPayload, String token) throws IOException;
     Set<String> getHeadersForReport(String companyId, String reportId );
     List<Map<String, Object>> retrievePaymentElementFromReport(RetrievePaymentElementPayload retrievePaymentElementPayload);
     Map<String, Object> extractDataFromSummary(RetrieveSummaryElementRequest request);

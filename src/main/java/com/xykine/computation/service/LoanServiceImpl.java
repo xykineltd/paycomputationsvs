@@ -76,6 +76,9 @@ public class LoanServiceImpl implements LoanService {
 
         List<Loan> loans = mongoTemplate.find(query, Loan.class);
         long total = mongoTemplate.count(Query.of(query).limit(-1).skip(-1), Loan.class);
+
+        LOGGER.debug(" ====> getLoans {} ", loans);
+
         return new PageImpl<>(loans, pageable, total);
     }
 
@@ -177,7 +180,7 @@ public class LoanServiceImpl implements LoanService {
             loan.setOutstandingAmount(BigDecimal.ZERO);
             loan.setActive(false);
         } else{
-          loan.setOutstandingAmount(loan.getOutstandingAmount().subtract(req.getAmount()).max(BigDecimal.ZERO));
+            loan.setOutstandingAmount(loan.getOutstandingAmount().subtract(req.getAmount()).max(BigDecimal.ZERO));
         }
         loanRepo.save(loan);
         return saved;

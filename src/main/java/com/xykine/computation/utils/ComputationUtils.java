@@ -19,6 +19,7 @@ import org.xykine.payroll.model.enums.PaymentTypeEnum;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 public class ComputationUtils {
@@ -62,6 +63,23 @@ public class ComputationUtils {
 
         // Atomic update of summary
         sessionCalculationObject.getSummary().merge(key, value, BigDecimal::add);
+
+        String employeeId = paymentInfo.getEmployeeID();
+        String employeeCostCenter = "";
+        Map<String, List<String>> costCenterDetails = sessionCalculationObject.getCostCenters();
+
+        if (costCenterDetails != null && !costCenterDetails.isEmpty()) {
+            for (Map.Entry<String, List<String>> entry : costCenterDetails.entrySet()) {
+                if (entry.getValue().contains(employeeId)) {
+                    employeeCostCenter = entry.getKey();
+                    break;
+                }
+            }
+            Map<String, ConcurrentHashMap<String, BigDecimal>> costCenterSummaryMap = sessionCalculationObject.getCostCenterSummary();
+            ConcurrentHashMap<String, BigDecimal> costCenterSummary = costCenterSummaryMap.get(employeeCostCenter);
+                costCenterSummaryMap.put(employeeCostCenter, costCenterSummary);
+                sessionCalculationObject.setCostCenterSummary(costCenterSummaryMap);
+        }
 
         // Thread-safe update of summaryDetails
         sessionCalculationObject.getSummaryDetails()
