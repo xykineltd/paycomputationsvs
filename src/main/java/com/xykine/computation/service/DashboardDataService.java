@@ -113,14 +113,14 @@ public class DashboardDataService {
             chunks.add(payrollReportDetailList.subList(i, end));
         }
 
-        List<CompletableFuture<Boolean>> futures = chunks.stream()
-                .map(finalChunk -> CompletableFuture.supplyAsync(() -> offLoadNewValuesToYTD(finalChunk, companyId)))
+        List<CompletableFuture<Void>> futures = chunks.stream()
+                .map(finalChunk -> CompletableFuture.runAsync(() -> offLoadNewValuesToYTD(finalChunk, companyId)))
                 .toList();
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
     }
 
 
-    private boolean offLoadNewValuesToYTD(List<PayrollReportDetail>  payrollReportDetailList, String companyId) {
+    private void offLoadNewValuesToYTD(List<PayrollReportDetail>  payrollReportDetailList, String companyId) {
         Map<String, Map<String, BigDecimal>> newValuesForAllEmployees = new HashMap<>();
         Map<String, YTDReport> latestYTDs = new HashMap<>();
         payrollReportDetailList.stream()
@@ -195,7 +195,6 @@ public class DashboardDataService {
                     payrollReportDetail.setReport(ReportUtils.serializeResponse(payComputeDetailResponse));
                     payrollReportDetailRepo.save(payrollReportDetail);
                 });
-        return true;
     }
 
     private YTDReport createYTDReportForNewEmployee(String employeeId, Map<String, BigDecimal> currentValues, String companyId) {
