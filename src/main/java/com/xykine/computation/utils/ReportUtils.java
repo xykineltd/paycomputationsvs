@@ -1,14 +1,7 @@
 package com.xykine.computation.utils;
 
-import com.xykine.computation.entity.AuditTrail;
-import com.xykine.computation.entity.DashboardGraph;
-import com.xykine.computation.entity.PayrollReportDetail;
-import com.xykine.computation.entity.PayrollReportSummary;
-import com.xykine.computation.entity.simulate.PayrollReportSummarySimulate;
-import com.xykine.computation.response.AuditTrailResponse;
-import com.xykine.computation.response.DashboardGraphResponse;
-import com.xykine.computation.response.PayComputeSummaryResponse;
-import com.xykine.computation.response.ReportResponse;
+import com.xykine.computation.entity.*;
+import com.xykine.computation.response.*;
 import org.apache.commons.lang3.SerializationUtils;
 
 import java.io.Serializable;
@@ -25,11 +18,10 @@ public class ReportUtils {
                 .departmentId(x.getDepartmentId())
                 .employeeId(x.getEmployeeId())
                 .fullName(x.getFullName())
-                .payrollApproved(x.isPayrollApproved())
+                .payrollStatus(x.getPayrollStatus())
                 .startDate(x.getStartDate().toString())
                 .endDate(x.getEndDate().toString())
                 .createdDate(String.valueOf(x.getCreatedDate()))
-                .payrollApproved(x.isPayrollApproved())
                 .payrollSimulated(x.isPayrollSimulation())
                 .offCycle(x.isOffCycle())
                 .detail(SerializationUtils.deserialize(x.getReport()))
@@ -43,13 +35,11 @@ public class ReportUtils {
                     .reportId(payrollReportSummary.getId().toString())
                     .companyId(payrollReportSummary.getCompanyId())
                     .offCycleId(payrollReportSummary.getOffCycleId())
-                    .payrollApproved(payrollReportSummary.isPayrollApproved())
+                    .payrollStatus(payrollReportSummary.getPayrollStatus())
                     .startDate(payrollReportSummary.getStartDate().toString())
                     .endDate(payrollReportSummary.getEndDate().toString())
                     .createdDate(String.valueOf(payrollReportSummary.getCreatedDate()))
-                    .payrollApproved(payrollReportSummary.isPayrollApproved())
                     .payrollSimulated(payrollReportSummary.isPayrollSimulation())
-                    .payrollCompleted(payrollReportSummary.isPayrollCompleted())
                     .offCycle(payrollReportSummary.isOffCycle())
                     .summary(summary)
                     .build();
@@ -64,13 +54,11 @@ public class ReportUtils {
                     .offCycleId(x.getOffCycleId())
                     .departmentId(x.getDepartmentId())
                     .employeeId(x.getEmployeeId())
-                    .payrollApproved(x.isPayrollApproved())
+                    .payrollStatus(x.getPayrollStatus())
                     .startDate(x.getStartDate().toString())
                     .endDate(x.getEndDate().toString())
                     .createdDate(String.valueOf(x.getCreatedDate()))
-                    .payrollApproved(x.isPayrollApproved())
                     .payrollSimulated(x.isPayrollSimulation())
-                    .payrollCompleted(x.isPayrollCompleted())
                     .offCycle(x.isOffCycle())
                     .detail(SerializationUtils.deserialize(x.getReport()))
                     .build();
@@ -82,30 +70,14 @@ public class ReportUtils {
                 .reportId(payrollReportSummary.getId().toString())
                 .companyId(payrollReportSummary.getCompanyId())
                 .offCycleId(payrollReportSummary.getOffCycleId())
-                .payrollApproved(payrollReportSummary.isPayrollApproved())
+                .payrollStatus(payrollReportSummary.getPayrollStatus())
                 .startDate(payrollReportSummary.getStartDate().toString())
                 .endDate(payrollReportSummary.getEndDate().toString())
                 .createdDate(String.valueOf(payrollReportSummary.getCreatedDate()))
-                .payrollApproved(payrollReportSummary.isPayrollApproved())
                 .payrollSimulated(payrollReportSummary.isPayrollSimulation())
-                .payrollCompleted(payrollReportSummary.isPayrollCompleted())
                 .offCycle(payrollReportSummary.isOffCycle())
                 .summary(summary)
-                .build();
-    }
-
-    public static ReportResponse transform(PayrollReportSummarySimulate payrollReportSummary){
-        PayComputeSummaryResponse summary =  SerializationUtils.deserialize(payrollReportSummary.getReport());
-        return ReportResponse.builder()
-                .reportId(payrollReportSummary.getId().toString())
-                .companyId(payrollReportSummary.getCompanyId())
-                .payrollApproved(payrollReportSummary.isPayrollApproved())
-                .startDate(payrollReportSummary.getStartDate())
-                .endDate(payrollReportSummary.getEndDate())
-                .createdDate(String.valueOf(payrollReportSummary.getCreatedDate()))
-                .payrollApproved(payrollReportSummary.isPayrollApproved())
-                .payrollSimulated(payrollReportSummary.isPayrollSimulation())
-                .summary(summary)
+                .code(payrollReportSummary.getCode())
                 .build();
     }
 
@@ -138,6 +110,12 @@ public class ReportUtils {
                 .name(x.getName())
                 .dateTime(x.getDateTime().toString())
                 .build()).collect(Collectors.toList());
+    }
+
+    public static SummaryVarianceDetailsResponse transform(PayrollVarianceDetails payrollVarianceDetails) {
+        return SummaryVarianceDetailsResponse.builder()
+                .payComputeVarianceDetails(SerializationUtils.deserialize(payrollVarianceDetails.getSummaryVarianceDetails()))
+                .build();
     }
 }
 

@@ -1,25 +1,21 @@
 package com.xykine.computation.loader;
 
 
-import com.xykine.computation.entity.ComputationConstants;
-import com.xykine.computation.entity.DashboardCard;
-import com.xykine.computation.entity.Tax;
-import com.xykine.computation.repo.ComputationConstantsRepo;
-import com.xykine.computation.repo.DashboardCardRepo;
-import com.xykine.computation.repo.PensionFundRepo;
-import com.xykine.computation.repo.TaxRepo;
+import com.xykine.computation.domain.LoanStatus;
+import com.xykine.computation.entity.*;
+import com.xykine.computation.repo.*;
 import lombok.AllArgsConstructor;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.xykine.payroll.model.PaymentFrequencyEnum;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Component
-@Profile("QA")
+//@Profile({"QA"})
 @AllArgsConstructor
 public class LoadComputationConfig {
 
@@ -27,54 +23,46 @@ public class LoadComputationConfig {
 	private final PensionFundRepo pensionFundRepo;
 	private final ComputationConstantsRepo computationConstantsRepo;
 	private final DashboardCardRepo dashboardCardRepo;
-
+    private final EmployeeMetadataRepo employeeMetaDataRepo;
+    private final CompanyMetaDataRepo companyMetadataRepo;
+    private final LoanRepo loanRepo;
 
     @EventListener(ApplicationReadyEvent.class)
     public void loadLegalEntityTestData() {
-        System.out.println("Loading data.......");
-
-        Tax taxClassA = Tax.builder()
-                .taxClass("TaxClassA")
-                .description(" <= 300,000 NGN")
-                .percentage(BigDecimal.valueOf(7.0))
+        String oldTaxRule = """
+    [
+      {"limit": 300000, "rate": 7},
+      {"limit": 300000, "rate": 11},
+      {"limit": 500000, "rate": 15},
+      {"limit": 500000, "rate": 19},
+      {"limit": 1600000, "rate": 21},
+      {"limit": null, "rate": 24}
+    ]
+    """;
+        String newTaxRule = """
+    [
+      { "limit": 800000,    "rate": 0 },
+      { "limit": 3000000,   "rate": 15 },
+      { "limit": 12000000,  "rate": 18 },
+      { "limit": 25000000,  "rate": 21 },
+      { "limit": 50000000,  "rate": 23 },
+      { "limit": null,      "rate": 25 }
+    ]
+    """;
+        Tax nigeriaOldTaxRule = Tax.builder()
+                .country("NIGERIA")
+                .taxRule(oldTaxRule)
+                .active(true)
                 .build();
 
-        Tax taxClassB = Tax.builder()
-                .taxClass("TaxClassB")
-                .description(" > 300,000 NGN and <= 600,000 NGN")
-                .percentage(BigDecimal.valueOf(11.0))
+        Tax nigeriaNewTaxRule = Tax.builder()
+                .country("NIGERIA")
+                .taxRule(newTaxRule)
+                .active(false)
                 .build();
 
-        Tax taxClassC = Tax.builder()
-                .taxClass("TaxClassC")
-                .description(" > 600,000 NGN and <= 1,100,000 NGN")
-                .percentage(BigDecimal.valueOf(15.0))
-                .build();
-
-        Tax taxClassD = Tax.builder()
-                .taxClass("TaxClassD")
-                .description(" > 1,100,000 NGN and <= 1,600,000 NGN")
-                .percentage(BigDecimal.valueOf(19.0))
-                .build();
-
-        Tax taxClassE = Tax.builder()
-                .taxClass("TaxClassE")
-                .description(" > 1,600,000 NGN and <= 3,200,000 NGN")
-                .percentage(BigDecimal.valueOf(21.0))
-                .build();
-
-        Tax taxClassF = Tax.builder()
-                .taxClass("TaxClassF")
-                .description(" > 3,200,000 NGN")
-                .percentage(BigDecimal.valueOf(24.0))
-                .build();
-
-        taxRepo.save(taxClassA);
-        taxRepo.save(taxClassB);
-        taxRepo.save(taxClassC);
-        taxRepo.save(taxClassD);
-        taxRepo.save(taxClassE);
-        taxRepo.save(taxClassF);
+        taxRepo.save(nigeriaOldTaxRule);
+        taxRepo.save(nigeriaNewTaxRule);
 
         ComputationConstants pensionFundPercent = ComputationConstants.builder()
                 .id("pensionFundPercent")
@@ -106,12 +94,19 @@ public class LoadComputationConfig {
                 .description("CRA cut off")
                 .value(BigDecimal.valueOf(200000))
                 .build();
+        ComputationConstants withHoldingTax = ComputationConstants.builder()
+                .id("withHoldingTax")
+                .description("WithHolding tax")
+                .value(BigDecimal.valueOf(0.05))
+                .build();
+
         computationConstantsRepo.save(pensionFundPercent);
         computationConstantsRepo.save(nationalHousingFund);
         computationConstantsRepo.save(craFraction);
         computationConstantsRepo.save(craCutOff);
         computationConstantsRepo.save(variableCRAFraction);
         computationConstantsRepo.save(employerPensionContributionPercent);
+        computationConstantsRepo.save(withHoldingTax);
 
         DashboardCard dashboardCard = DashboardCard.builder()
                 .id(UUID.randomUUID().toString())
@@ -124,5 +119,116 @@ public class LoadComputationConfig {
 
         if (dashboardCardRepo.findAll().size() == 0)
             dashboardCardRepo.save(dashboardCard);
+
+        EmployeeMetadata contractStaff = EmployeeMetadata.builder()
+                .employeeId("8e3b6e4952e8468a84fd84556f8fdf2a")
+                .companyId("682cf69492b07e60fa109911")
+                .employeeType(EmployeeType.CONTRACT)
+                .isNHFSubscribed(false)
+                .customTaxReliefApplicable(BigDecimal.ZERO)
+                .voluntaryPensionContribution(BigDecimal.ZERO)
+                .isPensioned(false)
+                .build();
+
+        EmployeeMetadata regularStaffWithNHF = EmployeeMetadata.builder()
+                .employeeId("682cf69592b07e60fa10991b")
+                .companyId("682cf69492b07e60fa109911")
+                .employeeType(EmployeeType.FULL_TIME)
+                .isNHFSubscribed(false)
+                .customTaxReliefApplicable(BigDecimal.ZERO)
+                .voluntaryPensionContribution(BigDecimal.ZERO)
+                .isPensioned(true)
+                .build();
+
+        EmployeeMetadata regularStaffNoNHF = EmployeeMetadata.builder()
+                .employeeId("682cf69592b07e60fa10992a")
+                .companyId("682cf69592b07e60fa10991b")
+                .employeeType(EmployeeType.FULL_TIME)
+                .isNHFSubscribed(false)
+                .customTaxReliefApplicable(BigDecimal.ZERO)
+                .voluntaryPensionContribution(BigDecimal.ZERO)
+                .isPensioned(true)
+                .build();
+
+        EmployeeMetadata regularStaffWithCustomTaxReleif = EmployeeMetadata.builder()
+                .employeeId("8654321")
+                .companyId("1234567")
+                .employeeType(EmployeeType.FULL_TIME)
+                .isNHFSubscribed(false)
+                .customTaxReliefApplicable(BigDecimal.valueOf(50000))
+                .voluntaryPensionContribution(BigDecimal.ZERO)
+                .isPensioned(true)
+                .build();
+
+        EmployeeMetadata regularStaffWithCustomTaxReleifAndVoluntaryPensionContribution = EmployeeMetadata.builder()
+                .employeeId("standardWithVoluntaryPensionContribution")
+                .companyId("1234567")
+                .employeeType(EmployeeType.FULL_TIME)
+                .isNHFSubscribed(false)
+                .customTaxReliefApplicable(BigDecimal.ZERO)
+                .voluntaryPensionContribution(BigDecimal.valueOf(1000))
+                .isPensioned(true)
+                .build();
+
+        EmployeeMetadata standardNotPensioned = EmployeeMetadata.builder()
+                .employeeId("standardNotPensioned")
+                .companyId("1234567")
+                .employeeType(EmployeeType.FULL_TIME)
+                .isNHFSubscribed(false)
+                .customTaxReliefApplicable(BigDecimal.ZERO)
+                .voluntaryPensionContribution(BigDecimal.ZERO)
+                .isPensioned(false)
+                .build();
+
+        employeeMetaDataRepo.save(standardNotPensioned);
+        employeeMetaDataRepo.save(regularStaffWithCustomTaxReleif);
+        employeeMetaDataRepo.save(contractStaff);
+        employeeMetaDataRepo.save(regularStaffWithNHF);
+        employeeMetaDataRepo.save(regularStaffNoNHF);
+        employeeMetaDataRepo.save(regularStaffWithCustomTaxReleifAndVoluntaryPensionContribution);
+
+        String morufoye_international_payment_distribution = """
+    [
+      {"type": "BASIC_SALARY_ANNUAL", "percentage": 16.46, "name": "Basic Salary"},
+      {"type": "ALLOWANCE_ANNUAL_HOUSING", "percentage": 8.23, "name": "Housing Allowance"},
+      {"type": "ALLOWANCE_ANNUAL_TRANSPORT", "percentage": 8.23, "name": "Transport Allowance"},
+      {"type": "ALLOWANCE_ANNUAL", "percentage": 10, "name": "UTILITY"},
+      {"type": "ALLOWANCE_ANNUAL", "percentage": 10, "name": "ENTERTAINMENT"},
+      {"type": "ALLOWANCE_ANNUAL", "percentage": 17.08, "name": "PERSONAL OUTFIT"},
+      {"type": "ALLOWANCE_ANNUAL", "percentage": 10, "name": "LEAVE"},
+      {"type": "ALLOWANCE_ANNUAL", "percentage": 10, "name": "MEDICAL"},
+      {"type": "ALLOWANCE_ANNUAL", "percentage": 10, "name": "TRAINING"}
+    ]
+    """;
+
+        CompanyMetadata xykineCompanyMetadata = CompanyMetadata.builder()
+                .companyId("682cf69492b07e60fa109911")
+                .paymentEntryMode(PaymentFrequencyEnum.YEARLY)
+                .salaryFrequency(PaymentFrequencyEnum.MONTHLY)
+                .companyName("xykine inc")
+                .build();
+        companyMetadataRepo.save(xykineCompanyMetadata);
+
+        CompanyMetadata morufoyeCompanyMetadata = CompanyMetadata.builder()
+                .companyId("1234567")
+                .paymentEntryMode(PaymentFrequencyEnum.YEARLY)
+                .salaryFrequency(PaymentFrequencyEnum.MONTHLY)
+                .companyName("morufoye international")
+                .paymentDistribution(morufoye_international_payment_distribution)
+                .build();
+        companyMetadataRepo.save(morufoyeCompanyMetadata);
+
+        Loan loan = Loan.builder()
+                .companyId("1234567")
+                .employeeId("7654321")
+                .status(LoanStatus.APPROVED)
+                .principalAmount(BigDecimal.valueOf(1000000))
+                .outstandingAmount(BigDecimal.valueOf(1000000))
+                .scheduledRepaymentAmount(BigDecimal.valueOf(10000))
+                .description("Company Car Loan")
+                .active(true)
+                .build();
+        loanRepo.save(loan);
     }
+
 }

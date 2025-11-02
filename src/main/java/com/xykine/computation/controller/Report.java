@@ -1,14 +1,20 @@
 package com.xykine.computation.controller;
 
 import com.xykine.computation.entity.PayrollReportSummary;
+import com.xykine.computation.entity.PayrollStatus;
 import com.xykine.computation.entity.YTDReport;
+import com.xykine.computation.exceptions.PayrollValidationException;
 import com.xykine.computation.request.*;
 
 import com.xykine.computation.response.ReportAnalytics;
 import com.xykine.computation.response.ReportResponse;
+import com.xykine.computation.response.SummaryDetail;
+import com.xykine.computation.service.AdminService;
 import com.xykine.computation.service.ReportGeneratorService;
 import com.xykine.computation.service.ReportPersistenceService;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +25,7 @@ import java.util.Map;
 import java.util.Set;
 
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 @RequestMapping("/compute/reports")
@@ -27,23 +34,23 @@ public class Report {
 
     private final ReportPersistenceService reportPersistenceService;
     private final ReportGeneratorService reportGeneratorService;
+    private final AdminService adminService;
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(Report.class);
 
     @GetMapping("/{companyId}/")
     public List<ReportResponse> getReports(@PathVariable String companyId) {
-        //TODO add summaryVariance field that give the difference between the current and previuos summary values
         return reportPersistenceService.getPayRollReports(companyId);
     }
 
     @GetMapping("/{companyId}/status/{status}")
     public List<ReportResponse> getReportsByStatus(@PathVariable String companyId, @PathVariable String status) {
-        //TODO add summaryVariance field that give the difference between the current and previuos summary values
         return reportPersistenceService.getPayRollReportsByStatus(companyId, status);
     }
 
-    @GetMapping("/by-reportId/{reportId}/isSimulate/{isSimulate}")
-    public ReportResponse getReportsByStatus( @PathVariable UUID reportId, @PathVariable boolean isSimulate) {
-        //TODO add summaryVariance field that give the difference between the current and previuos summary values
-        return reportPersistenceService.getPayRollReport(reportId, isSimulate);
+    @PostMapping("/by-reportId/{reportId}")
+    public ReportResponse getReport( @RequestBody RetrieveSummaryElementRequest request) {
+        return reportPersistenceService.getPayRollReport(UUID.fromString(request.getReportId()));
     }
 
     @GetMapping("/{companyId}/{employeeId}")
@@ -53,8 +60,18 @@ public class Report {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "3") int size
             ) {
-        //TODO add summaryVariance field that give the difference between the current and previuos summary values
         Map<String, Object> response =  reportPersistenceService.getReportByEmployeeID(companyId,  employeeId, page, size);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping("/filterReports")
+    public ResponseEntity<?> getReportByFilter(
+            @RequestBody EmployeeFilterRequest employeeFilterRequest,
+            @RequestHeader("Authorization") String authorizationHeader) {
+        List<String> filteredList = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
+        Map<String, Object> response =  reportPersistenceService.getReportByEmployeeIDList(employeeFilterRequest.getCompanyID(),
+                filteredList, employeeFilterRequest.getReportId(),
+                employeeFilterRequest.getPage(), employeeFilterRequest.getSize());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -91,9 +108,16 @@ public class Report {
     @PutMapping("/approve")
     public boolean approveReport(@RequestBody UpdateReportRequest request) {
         PayrollReportSummary payrollReport = reportPersistenceService.approveReport(request);
-        if (payrollReport.isPayrollApproved() != request.isPayrollApproved())
-            return false;
         return true;
+    }
+
+    @PutMapping("/update-report-status")
+    public void updateStatus(@RequestBody UpdatePayrollStatusRequest request) {
+        try {
+            reportPersistenceService.updateReportStatus(request);
+        } catch (IllegalArgumentException e) {
+            throw new PayrollValidationException("Invalid payroll status: " + request.getStatus());
+        }
     }
 
     @PutMapping("/cancel")
@@ -150,10 +174,11 @@ public class Report {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    // fire and forget
-    @PostMapping("/upload-report")
-    public void uploadReport(@RequestBody ReportRequestPayload payload){
-        reportGeneratorService.generateReport(payload);
+    @PostMapping("/download-report")
+    public ResponseEntity<byte[]> uploadReport(@RequestBody ReportRequestPayload payload,
+                                               @RequestHeader("Authorization") String authorizationHeader
+                                               ) throws IOException {
+        return new ResponseEntity<>(reportGeneratorService.generateReport(payload, authorizationHeader), HttpStatus.OK);
     }
 
     @PostMapping("/retrieve-payment-element")
@@ -169,5 +194,14 @@ public class Report {
     @PostMapping("/total-netpay-by-report-id")
     public Map<String, Object> getTotalNetPayByReportId(@RequestBody RetrieveSummaryElementRequest request){
         return reportGeneratorService.extractDataFromSummary(request);
+    }
+
+    @PostMapping("/variance-details")
+    public ResponseEntity<?> getVarianceDetails(
+            @RequestBody EmployeeFilterRequest employeeFilterRequest,
+            @RequestHeader("Authorization") String authorizationHeader) {
+        List<String> filteredList = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
+        ConcurrentHashMap<String, Set<SummaryDetail>> response = reportPersistenceService.getSummaryVarianceDetails(employeeFilterRequest.getReportId(), filteredList, employeeFilterRequest.getHeader());
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

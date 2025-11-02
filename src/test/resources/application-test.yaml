@@ -1,0 +1,40 @@
+server:
+  port: 9002
+  shutdown: graceful
+  netty:
+    connection-timeout: 2s
+    idle-timeout: 15s
+
+spring:
+  codec:
+    max-in-memory-size: 500000KB
+
+  data:
+    mongodb:
+      database: test-db
+
+  main:
+    allow-bean-definition-overriding: true
+
+management:
+  endpoint:
+    health:
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.data.mongodb.core.MongoTemplate: DEBUG
+
+admin:
+  service:
+    url: http://localhost:8081/
+    maxBufferSize: 500000
+
+xykine:
+  spa-uri: ${SPA_URL:http://localhost:3000}

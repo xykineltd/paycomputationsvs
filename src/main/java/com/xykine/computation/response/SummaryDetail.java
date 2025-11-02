@@ -15,7 +15,9 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @NoArgsConstructor
 public class SummaryDetail implements Serializable {
+    private String employeeId;
     private String employeeName;
     private String departmentName;
     private BigDecimal value;
+    private BigDecimal variance;
 }

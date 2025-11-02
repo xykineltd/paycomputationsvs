@@ -2,17 +2,32 @@ package com.xykine.computation.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xykine.computation.entity.CompanyMetadata;
+import com.xykine.computation.entity.PayrollReportSummary;
+import com.xykine.computation.entity.PayrollStatus;
+import com.xykine.computation.exceptions.IncompleteEntitySetupException;
+import com.xykine.computation.exceptions.PayrollUnmodifiableException;
+import com.xykine.computation.repo.CompanyMetaDataRepo;
+import com.xykine.computation.repo.PayrollReportSummaryRepo;
+import com.xykine.computation.utils.ComputationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.xykine.computation.response.PaymentComputeResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
+import org.xykine.payroll.model.PaymentFrequencyEnum;
 import org.xykine.payroll.model.PaymentInfo;
+import org.xykine.payroll.model.PaymentSettingsResponse;
+import org.xykine.payroll.model.enums.PaymentTypeEnum;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
@@ -22,6 +37,8 @@ import java.util.stream.Collectors;
 public class ComputeService {
 
     private final PaymentCalculator paymentCalculator;
+    private final PayrollReportSummaryRepo payrollReportSummaryRepo;
+    private final CompanyMetaDataRepo companyMetaDataRepo;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ComputeService.class);
 
@@ -31,11 +48,7 @@ public class ComputeService {
             LOGGER.debug("First data received {} ", rawInfo.get(0));
         }
             ObjectMapper mapper = new ObjectMapper();
-            List<PaymentInfo> paymentInfoList = mapper.convertValue(
-                    rawInfo,
-                    new TypeReference<List<PaymentInfo>>() {
-                    }
-            );
+            List<PaymentInfo> paymentInfoList = mapper.convertValue(rawInfo, new TypeReference<List<PaymentInfo>>() {});
 
         List<PaymentInfo> paymentReport = generateReport(paymentInfoList);
         return  PaymentComputeResponse.builder()
@@ -46,47 +59,126 @@ public class ComputeService {
     }
 
     private List<PaymentInfo> generateReport(List<PaymentInfo> rawInfo) {
+        int cores = Runtime.getRuntime().availableProcessors();
         int size = rawInfo.size();
-        List<PaymentInfo> job1 = new ArrayList<>();
-        List<PaymentInfo> job2 = new ArrayList<>();
+        int chunkSize = (size + cores - 1) / cores;
+        List<List<PaymentInfo>> chunks = new ArrayList<>();
 
-        job1.addAll(rawInfo.subList(0, size/2));
-        job2.addAll(rawInfo.subList(size/2, size));
-
-        Executor executor = Executors.newFixedThreadPool(10);
-        CompletableFuture<List<PaymentInfo>> job1Future = CompletableFuture.supplyAsync(() -> {
-            return  processReport(job1);
-        }, executor);
-
-        Executor executor2 = Executors.newFixedThreadPool(10);
-        CompletableFuture<List<PaymentInfo>> job2Future = CompletableFuture.supplyAsync(() -> {
-            return  processReport(job2);
-        }, executor2);
-
-        CompletableFuture<List<PaymentInfo>> processReportFuture =job1Future.thenCombine(job2Future, (x, y) -> {
-            x.addAll(y);
-            return x;
-        });
-        try {
-            return processReportFuture.get();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
+        for (int i = 0; i < size; i += chunkSize) {
+            int end = Math.min(size, i + chunkSize);
+            chunks.add(rawInfo.subList(i, end));
         }
+
+        List<CompletableFuture<List<PaymentInfo>>> futures = new ArrayList<>();
+
+        futures.addAll(
+                chunks.stream()
+                        .map(chunk -> splitOutOffCycles(chunk))
+                        .map(finalChunk -> CompletableFuture.supplyAsync(() -> processReport(finalChunk)))
+                        .toList()
+        );
+
+        CompletableFuture<Void> allDone = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+
+        return allDone.thenApply(v -> futures
+                .stream()
+                .map(CompletableFuture::join)
+                .flatMap(List::stream)
+                .toList())
+                .join();
     }
 
     private List<PaymentInfo> processReport(List<PaymentInfo> job){
-
         var payInfos =  job.stream()
-                .map(x -> paymentCalculator.applyExchange(x))
-                .map(x -> paymentCalculator.harmoniseToAnnual(x))
-                .map(x -> paymentCalculator.computeGrossPay(x))
-                .map(x -> paymentCalculator.computeNonTaxableIncomeExempt(x))
-                .map(x -> paymentCalculator.prorateEarnings(x))
-                .map(x -> paymentCalculator.computePayeeTax(x))
-                .map(x -> paymentCalculator.computeTotalDeduction(x))
-                .map(x -> paymentCalculator.computeNetPay(x))
-                .map(x -> paymentCalculator.computeTotalNHF(x))
+                .map(paymentCalculator::applyExchange)
+                .map(paymentCalculator::harmoniseToAnnual)
+                .map(paymentCalculator::addPersonalDeduction)
+                .map(paymentCalculator::computeGrossPay)
+                .map(paymentCalculator::computeNonTaxableIncomeExempt)
+                .map(paymentCalculator::prorateEarnings)
+                .map(paymentCalculator::computePayeeTax)
+                .map(paymentCalculator::computeTotalDeduction)
+                .map(paymentCalculator::computeNetPay)
+                .map(paymentCalculator::computeTotalNHF)
                 .collect(Collectors.toList());
         return  payInfos;
     }
+
+    private List<PaymentInfo> splitOutOffCycles(List<PaymentInfo> rawInfo) {
+        return rawInfo.stream()
+                .map(paymentCalculator::expandPaymentSettingsFromGrossAnnual)
+                .map(this::splitOffCyclePayments)
+                .flatMap(List::stream)
+                .toList();
+    }
+
+    public List<PaymentInfo> splitOffCyclePayments(PaymentInfo paymentInfo) {
+
+        if (paymentInfo.isOffCycle() || paymentInfo.getPaymentSettings() == null) {
+            return List.of(paymentInfo);
+        }
+
+        // Extract off-cycle settings
+        Set<PaymentSettingsResponse> offCycleSettings = paymentInfo.getPaymentSettings().stream()
+                .filter(setting -> setting.getType() == PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT)
+                .collect(Collectors.toSet());
+
+        // ✅ If no off-cycle payments, just return the original as-is
+        if (offCycleSettings.isEmpty()) {
+            return List.of(paymentInfo);
+        }
+
+        // Extract regular settings
+        Set<PaymentSettingsResponse> regularSettings = paymentInfo.getPaymentSettings().stream()
+                .filter(setting -> setting.getType() != PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT)
+                .collect(Collectors.toSet());
+
+        // --- Original copy with off-cycle removed ---
+        PaymentInfo mainCopy = copyPaymentInfo(paymentInfo);
+        mainCopy.setPaymentSettings(regularSettings);
+        mainCopy.setOffCycle(false);
+
+        // --- New PaymentInfos for each off-cycle entry ---
+        List<PaymentInfo> offCycleCopies = offCycleSettings.stream()
+                .map(setting -> {
+                    if (setting.getName().equalsIgnoreCase("Monthly Performance Bonus")) {
+                        BigDecimal performanceBonus = ComputationUtils.prorate(mainCopy.getBasicSalary().multiply(setting.getValue().divide(BigDecimal.valueOf(100))),
+                                mainCopy.getNumberOfDaysOfUnpaidAbsence(), PaymentFrequencyEnum.MONTHLY);
+                        setting.setValue(performanceBonus);
+                    }
+                    PaymentInfo offCycleCopy = copyPaymentInfo(paymentInfo);
+                    offCycleCopy.setPaymentSettings(Set.of(setting));
+                    offCycleCopy.setOffCycle(true);
+                    return offCycleCopy;
+                })
+                .toList();
+
+        // Combine original + new copies
+        List<PaymentInfo> result = new ArrayList<>();
+        result.add(mainCopy);
+        result.addAll(offCycleCopies);
+        return result;
+    }
+
+    public void validatePayrollIsNotApprovedOrCompleted (String startDate, String companyId) {
+
+        CompanyMetadata companyMetadata = companyMetaDataRepo.findByCompanyId(companyId).orElseThrow(() -> new IncompleteEntitySetupException("Please create company metadata for this entity before running payment"));
+
+        if (companyMetadata.getPaymentEntryMode() == null) {
+           new IncompleteEntitySetupException("Please configure payment entry mode for this entity before running payment");
+        }
+
+        PayrollReportSummary payroll = payrollReportSummaryRepo
+                .findPayrollReportSummaryByStartDateAndCompanyId(startDate, companyId);
+        if (payroll != null && (payroll.getPayrollStatus().compareTo(PayrollStatus.APPROVED) == 0 || payroll.getPayrollStatus().compareTo(PayrollStatus.COMPLETED)  == 0)) {
+            throw new PayrollUnmodifiableException(startDate);
+        }
+    }
+
+    private PaymentInfo copyPaymentInfo(PaymentInfo original) {
+        PaymentInfo copy = new PaymentInfo();
+        BeanUtils.copyProperties(original, copy); // Spring utility (shallow copy)
+        return copy;
+    }
+
 }

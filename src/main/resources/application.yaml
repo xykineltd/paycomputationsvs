@@ -28,13 +28,17 @@ spring:
       timeout: 1s
 
     mongodb:
-      uri: ${SPRING_DATA_MONGODB_URI}
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://admin:docker@localhost:27017/test?authSource=admin}
 
 admin:
   service:
     url: ${ADMIN_SERVICE_URL:http://localhost:9001/}
-#    url: http://xykinehrs.com/
     maxBufferSize: 500000
+
+workflow:
+  service:
+    url: ${WORKFLOW_SERVICE_URL:http://localhost:9004/}
+
 
 xykine:
   spa-uri: ${SPA_URL:http://localhost:3000}
