@@ -169,7 +169,7 @@ public class ComputeService {
         }
 
         PayrollReportSummary payroll = payrollReportSummaryRepo
-                .findPayrollReportSummaryByStartDateAndCompanyId(startDate, companyId);
+                .findPayrollReportSummaryByStartDateAndCompanyIdAndOffCycle(startDate, companyId, false);
         if (payroll != null && (payroll.getPayrollStatus().compareTo(PayrollStatus.APPROVED) == 0 || payroll.getPayrollStatus().compareTo(PayrollStatus.COMPLETED)  == 0)) {
             throw new PayrollUnmodifiableException(startDate);
         }
