@@ -88,6 +88,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 StartWorkflowRequest startWorkflowRequest = new StartWorkflowRequest();
                 startWorkflowRequest.setEntity("PAYROLL");
                 startWorkflowRequest.setPayrollType("PAYROLL");
+                startWorkflowRequest.setPayPeriod(formatToMonthYear(payrollReportSummary.getStartDate()));
                 startWorkflowRequest.setPayrollId(payrollReportSummary.getId().toString());
                 startWorkflowRequest.setUserId(AuthUtility.getCurrentUser());
                 startWorkflowRequest.setCompanyId(paymentRequest.getCompanyId());
@@ -143,6 +144,16 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             jobStatusStore.updateJob(jobId, "FAILED", e.getMessage(), "");
             progressCallback.accept(jobStatusStore);
         }
+    }
+
+    private static String formatToMonthYear(String inputDate) {
+        // Parse the date string (expects format "yyyy-MM-dd")
+        LocalDate date = LocalDate.parse(inputDate);
+
+        // Format to "MMM, yyyy" (e.g., "Feb, 2026")
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM, yyyy", Locale.ENGLISH);
+
+        return date.format(formatter);
     }
 
 

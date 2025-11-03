@@ -237,7 +237,10 @@ public class DashboardDataService {
                 .dateAdded(LocalDateTime.now())
                 .build();
         dashboardGraphRepo.save(dashboardGraph);
-        updateYTDReport(payrollReportSummary.getId().toString(), payrollReportSummary.getCompanyId());
+        //TODO review this
+        if (!payrollReportSummary.isOffCycle()) {
+            updateYTDReport(payrollReportSummary.getId().toString(), payrollReportSummary.getCompanyId());
+        }
     }
 
     private BigDecimal extractNetPayFromReport(PayrollReportSummary payrollReportSummary){
