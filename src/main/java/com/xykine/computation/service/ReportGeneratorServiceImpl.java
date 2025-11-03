@@ -162,7 +162,9 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                 .findPayrollReportDetailBySummaryId(retrievePaymentElementPayload.getReportId()).stream()
                 .filter(Objects::nonNull)
                 .map(ReportUtils::transform)
-                .map(detail -> extractDetail(detail.getDetail().getReport(), retrievePaymentElementPayload.getSelectedHeader(), true, null))
+                .map(detail -> extractDetailBefore(detail.getDetail().getReport(), retrievePaymentElementPayload.getSelectedHeader(), true))
+                    //TODO fix later
+//                .map(detail -> extractDetail(detail.getDetail().getReport(), retrievePaymentElementPayload.getSelectedHeader(), true, null))
                 .toList();
     }
 
@@ -211,6 +213,26 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         return !startDateInstance.isBefore(dateRange.getFromDate())
                 && !startDateInstance.isAfter(dateRange.getEndDate());
     }
+
+
+    //TODO debug and merge
+    private Map<String, Object> extractDetailBefore(PaymentInfo paymentInfo, List<String> selectedReports, boolean isDetail) {
+        Map<String, Object> raw = extractRawDetail(paymentInfo);
+        Map<String, Object> result = new LinkedHashMap<>();
+
+        if (isDetail) {
+            result.put("FULL NAME", paymentInfo.getFullName());
+        }
+        selectedReports.forEach(key -> {
+            if (raw.containsKey(key)) {
+                result.put(key, raw.get(key));
+            }
+        });
+
+        return result;
+    }
+
+
 
     private Map<String, Object> extractDetail(PaymentInfo paymentInfo, List<String> selectedReports, boolean isDetail, Map<String, EmployeeDetail> employeeDetailMap) {
         Map<String, Object> raw = extractRawDetail(paymentInfo);
