@@ -259,8 +259,7 @@ public class Report {
     public ResponseEntity<?> getVarianceDetails(
             @RequestBody EmployeeFilterRequest employeeFilterRequest,
             @RequestHeader("Authorization") String authorizationHeader) {
-        LOGGER.info("FilteredList calling-------->");
-
+        employeeFilterRequest.setSize(5000);
         List<String> filteredList = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
         LOGGER.info("FilteredList: {}", filteredList);
         ConcurrentHashMap<String, Set<SummaryDetail>> response =
