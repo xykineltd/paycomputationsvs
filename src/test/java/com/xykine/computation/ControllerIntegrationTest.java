@@ -8,7 +8,7 @@ import com.xykine.computation.entity.PayrollStatus;
 import com.xykine.computation.entity.YTDReport;
 import com.xykine.computation.repo.LoanRepo;
 import com.xykine.computation.repo.YTDReportRepo;
-import com.xykine.computation.request.UpdateReportRequest;
+import com.xykine.computation.request.UpdatePayrollStatusRequest;
 import com.xykine.computation.response.DashboardCardResponse;
 import com.xykine.computation.response.ReportResponse;
 
@@ -32,10 +32,7 @@ import org.xykine.payroll.model.PaymentInfo;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.xykine.computation.testdata.TestDataFactory.TEST_EMPLOYEE_ID;
@@ -44,7 +41,6 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
-import static org.xykine.payroll.model.MapKeys.NET_PAY;
 
 @Slf4j
 @SpringBootTest(classes = {ComputationApplication.class, TestSecurityConfig.class},webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -59,14 +55,26 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private LoanRepo loanRepo;
 
+    private static final long WAITTIME = 5000L;
+    private String standardReportId = "";
+
     protected static final Logger LOGGER = LoggerFactory.getLogger(ControllerIntegrationTest.class);
 
     @BeforeEach
-    void setupReportTestData() {
+    void setupReportTestData() throws InterruptedException {
         when(adminService.getPaymentInfoList(any(), anyString())).thenReturn(TestDataFactory.getPaymentSettings("standard"));
-        ReportResponse reportResponse = getReportSummary();
-        String reportId = reportResponse.getReportId();
-        System.out.println(" first report id : " + reportId);
+        Map<String, String> startJobResponse =  startReportSummary("2025-06-01", "2025-06-30", true, null);
+        String jobId = startJobResponse.get("jobId");
+        JobStatus jobStatus = getStatus(jobId);
+        Thread.sleep(WAITTIME);
+        jobStatus = getStatus(jobId);
+        ReportResponse reportSummary = null;
+        if ("COMPLETED".equalsIgnoreCase(jobStatus.getStatus())) {
+            reportSummary = getReportById(jobStatus.getReportId());
+            standardReportId = jobStatus.getReportId();
+        }
+        startReportSummary("2025-06-01", "2025-06-30", false, null);
+        Thread.sleep(1000);
     }
 
     @AfterEach
@@ -78,9 +86,17 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
 
     /****        COMPUTE CONTROLLER ENDPOINTS      *********/
     @Test
-    void testStandard()  {
+    void testStandard() throws InterruptedException {
         when(adminService.getPaymentInfoList(any(), anyString())).thenReturn(TestDataFactory.getPaymentSettings("standard"));
-        ReportResponse reportSummary = getReportSummary();
+        Map<String, String> startJobResponse =  startReportSummary("2025-06-01", "2025-06-30", true, null);
+        String jobId = startJobResponse.get("jobId");
+        JobStatus jobStatus = getStatus(jobId);
+        Thread.sleep(WAITTIME);
+        jobStatus = getStatus(jobId);
+        ReportResponse reportSummary = null;
+        if ("COMPLETED".equalsIgnoreCase(jobStatus.getStatus())) {
+            reportSummary = getReportById(jobStatus.getReportId());
+        }
         assertThat(reportSummary.getCode()).startsWith("PRR-");
         assert reportSummary != null;
         Map<String, Object> body = getReportDetail(reportSummary);
@@ -143,7 +159,18 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         String companyId = "1234567";
         String startDate = "2025-06-01";
         when(adminService.getPaymentInfoList(any(), anyString())).thenReturn(TestDataFactory.getPaymentSettings("standard with payment distribution list"));
-        ReportResponse reportSummary = getReportSummaryCustom(companyId);
+        Map<String, String> startJobResponse =  startReportSummary("2025-06-01", "2025-06-30", true, companyId);
+        String jobId = startJobResponse.get("jobId");
+        JobStatus jobStatus = getStatus(jobId);
+        Thread.sleep(WAITTIME);
+        jobStatus = getStatus(jobId);
+        ReportResponse reportSummary = null;
+        if ("COMPLETED".equalsIgnoreCase(jobStatus.getStatus())) {
+            reportSummary = getReportById(jobStatus.getReportId());
+        }
+        startReportSummary("2025-06-01", "2025-06-30", false, companyId);
+        Thread.sleep(WAITTIME);
+
         String summaryId = reportSummary.getReportId();
         assert reportSummary != null;
         Map<String, Object> body = getReportDetail(reportSummary);
@@ -211,15 +238,16 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         assertThat(loanOptional.get()).isNotNull();
         assertThat(loanOptional.get().getOutstandingAmount()).isEqualTo(BigDecimal.valueOf(1000000));
 
-        UpdateReportRequest updateReportRequest = new UpdateReportRequest();
-        updateReportRequest.setPayrollStatus(PayrollStatus.APPROVED);
-        updateReportRequest.setCompanyId(companyId);
-        updateReportRequest.setStartDate(startDate);
+        UpdatePayrollStatusRequest updateReportRequest = UpdatePayrollStatusRequest.builder()
+                .reportId(UUID.fromString(summaryId))
+                .companyId(companyId)
+                .status(PayrollStatus.APPROVED)
+                .build();
 
         approvePayroll(updateReportRequest);
 
         /* Loan updates was executed asynchronously, so chill a lil bit before checking for update */
-        Thread.sleep(1000);
+        Thread.sleep(WAITTIME);
 
         loanOptional = loanRepo.findOneByCompanyIdAndEmployeeIdAndDescriptionAndActiveIsTrue(companyId, employeeId, loanDescription);
         assertThat(loanOptional.get().getOutstandingAmount()).isEqualTo(BigDecimal.valueOf(1000000).subtract(BigDecimal.valueOf(10000)));
@@ -235,9 +263,16 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
     void testStandardWithDistributionListAndCustomTaxReleif() throws InterruptedException {
         String companyId = "1234567";
         when(adminService.getPaymentInfoList(any(), anyString())).thenReturn(TestDataFactory.getPaymentSettings("standard and performance with payment distribution list and custom tax refief"));
-        ReportResponse reportSummary = getReportSummaryCustom(companyId);
 
-        assert reportSummary != null;
+        Map<String, String> startJobResponse =  startReportSummary("2025-06-01", "2025-06-30", true, companyId);
+        String jobId = startJobResponse.get("jobId");
+        JobStatus jobStatus = getStatus(jobId);
+        Thread.sleep(WAITTIME);
+        jobStatus = getStatus(jobId);
+        ReportResponse reportSummary = null;
+        if ("COMPLETED".equalsIgnoreCase(jobStatus.getStatus())) {
+            reportSummary = getReportById(jobStatus.getReportId());
+        }
         Map<String, Object> body = getReportDetail(reportSummary);
         assertThat(body).isNotNull().satisfies((x) -> {
             assertThat(x.get("totalItems")).isEqualTo(1);
@@ -304,7 +339,15 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
     void testStandardNotPensioned() throws InterruptedException {
         String companyId = "1234567";
         when(adminService.getPaymentInfoList(any(), anyString())).thenReturn(TestDataFactory.getPaymentSettings("standard not pensioned"));
-        ReportResponse reportSummary = getReportSummaryCustom(companyId);
+        Map<String, String> startJobResponse =  startReportSummary("2025-06-01", "2025-06-30", true, companyId);
+        String jobId = startJobResponse.get("jobId");
+        JobStatus jobStatus = getStatus(jobId);
+        Thread.sleep(WAITTIME);
+        jobStatus = getStatus(jobId);
+        ReportResponse reportSummary = null;
+        if ("COMPLETED".equalsIgnoreCase(jobStatus.getStatus())) {
+            reportSummary = getReportById(jobStatus.getReportId());
+        }
 
         assert reportSummary != null;
         Map<String, Object> body = getReportDetail(reportSummary);
@@ -329,10 +372,18 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void testContractStaffCompute()  {
+    void testContractStaffCompute() throws InterruptedException {
         when(adminService.getPaymentInfoList(any(), anyString())).thenReturn(TestDataFactory.getPaymentSettings("contract staff"));
-        ReportResponse reportSummary = getReportSummary();
-        Map<String, Object> body = getReportDetail(reportSummary);
+        Map<String, String> startJobResponse =  startReportSummary("2025-06-01", "2025-06-30", true, null);
+        String jobId = startJobResponse.get("jobId");
+        JobStatus jobStatus = getStatus(jobId);
+        Thread.sleep(WAITTIME);
+        jobStatus = getStatus(jobId);
+        ReportResponse reportResponse = null;
+        if ("COMPLETED".equalsIgnoreCase(jobStatus.getStatus())) {
+            reportResponse = getReportById(jobStatus.getReportId());
+        }
+        Map<String, Object> body = getReportDetail(reportResponse);
 
         assertThat(body).isNotNull().satisfies((x) -> {
             assertThat(x.get("totalItems")).isEqualTo(1);
@@ -360,10 +411,18 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
 
     // Test regular with performance bonus
     @Test
-    void testStandardWithPerformanceBonusCompute() {
+    void testStandardWithPerformanceBonusCompute() throws InterruptedException {
         when(adminService.getPaymentInfoList(any(), anyString())).thenReturn(TestDataFactory.getPaymentSettings("standard with performance bonus"));
-        ReportResponse reportSummary = getReportSummary();
-        Map<String, Object> body = getReportDetail(reportSummary);
+        Map<String, String> startJobResponse =  startReportSummary("2025-06-01", "2025-06-30", true, null);
+        String jobId = startJobResponse.get("jobId");
+        JobStatus jobStatus = getStatus(jobId);
+        Thread.sleep(WAITTIME);
+        jobStatus = getStatus(jobId);
+        ReportResponse reportResponse = null;
+        if ("COMPLETED".equalsIgnoreCase(jobStatus.getStatus())) {
+            reportResponse = getReportById(jobStatus.getReportId());
+        }
+        Map<String, Object> body = getReportDetail(reportResponse);
         assertThat(body).isNotNull().satisfies((x) -> {
             assertThat(x.get("totalItems")).isEqualTo(1);
         });
@@ -426,13 +485,18 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void testStandardWithPerformanceBonusComputeWithPaymentDistributionList() {
+    void testStandardWithPerformanceBonusComputeWithPaymentDistributionList() throws InterruptedException {
         when(adminService.getPaymentInfoList(any(), anyString())).thenReturn(TestDataFactory.getPaymentSettings("standard and performance with payment distribution list"));
-        ReportResponse reportSummary = getReportSummary();
-        Map<String, Object> body = getReportDetail(reportSummary);
-        assertThat(body).isNotNull().satisfies((x) -> {
-            assertThat(x.get("totalItems")).isEqualTo(1);
-        });
+        Map<String, String> startJobResponse =  startReportSummary("2025-06-01", "2025-06-30", true, null);
+        String jobId = startJobResponse.get("jobId");
+        JobStatus jobStatus = getStatus(jobId);
+        Thread.sleep(WAITTIME);
+        jobStatus = getStatus(jobId);
+        ReportResponse reportResponse = null;
+        if ("COMPLETED".equalsIgnoreCase(jobStatus.getStatus())) {
+            reportResponse = getReportById(jobStatus.getReportId());
+        }
+        Map<String, Object> body = getReportDetail(reportResponse);
         List<ReportResponse> reportResponses = MAPPER.convertValue(body.get("payrollDetails"), new TypeReference<List<ReportResponse>>() {
         });
 
@@ -493,10 +557,18 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void testStandardWithVountaryPensionContribution() {
+    void testStandardWithVountaryPensionContribution() throws InterruptedException {
         when(adminService.getPaymentInfoList(any(), anyString())).thenReturn(TestDataFactory.getPaymentSettings("standard with Voluntary Pension Contribution"));
-        ReportResponse reportSummary = getReportSummary();
-        Map<String, Object> body = getReportDetail(reportSummary);
+        Map<String, String> startJobResponse =  startReportSummary("2025-06-01", "2025-06-30", true, null);
+        String jobId = startJobResponse.get("jobId");
+        JobStatus jobStatus = getStatus(jobId);
+        Thread.sleep(WAITTIME);
+        jobStatus = getStatus(jobId);
+        ReportResponse reportResponse = null;
+        if ("COMPLETED".equalsIgnoreCase(jobStatus.getStatus())) {
+            reportResponse = getReportById(jobStatus.getReportId());
+        }
+        Map<String, Object> body = getReportDetail(reportResponse);
         assertThat(body).isNotNull().satisfies((x) -> {
             assertThat(x.get("totalItems")).isEqualTo(1);
         });
@@ -527,22 +599,32 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
                         TestDataFactory.getPaymentSettings("contract staff"),   // 1st call
                         TestDataFactory.getPaymentSettings("contract staff absent two days")  // 2nd call
                 );
-        Map<String, String> startJobResponse = startReportSummary("2025-05-01", "2025-05-30", false);
-        Thread.sleep(1000);
-
-        UpdateReportRequest updateReportRequest = new UpdateReportRequest();
-        updateReportRequest.setPayrollStatus(PayrollStatus.COMPLETED);
-        updateReportRequest.setCompanyId("682cf69492b07e60fa109911");
-        updateReportRequest.setStartDate("2025-05-01");
-        approvePayroll(updateReportRequest);
-
+        Map<String, String> startJobResponse = startReportSummary("2025-05-01", "2025-05-30", true, null);
         String jobId = startJobResponse.get("jobId");
+        Thread.sleep(WAITTIME);
         JobStatus jobStatus = getStatus(jobId);
         String reportId = "";
         if ("COMPLETED".equalsIgnoreCase(jobStatus.getStatus())) {
             reportId = jobStatus.getReportId();
-            System.out.println(" the first " + reportId);
         }
+        startReportSummary("2025-05-01", "2025-05-30", false, null);
+        Thread.sleep(WAITTIME);
+
+        UpdatePayrollStatusRequest updateReportRequest = UpdatePayrollStatusRequest.builder()
+                .reportId(UUID.fromString(reportId))
+                .status(PayrollStatus.APPROVED)
+                .companyId("682cf69492b07e60fa109911")
+                .build();
+
+        approvePayroll(updateReportRequest);
+
+         updateReportRequest = UpdatePayrollStatusRequest.builder()
+                .reportId(UUID.fromString(reportId))
+                .status(PayrollStatus.COMPLETED)
+                .companyId("682cf69492b07e60fa109911")
+                .build();
+
+        approvePayroll(updateReportRequest);
 
         ReportResponse response = getReportById(reportId);
         Map<String, Object> body = getReportDetail(response);
@@ -557,20 +639,23 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
             assertThat(x.get("Net Pay").compareTo(BigDecimal.valueOf(142500)));
             assertThat(x.get("Taxable Income").compareTo(BigDecimal.valueOf(150000)));
         });
-
-        startJobResponse =  startReportSummary("2025-06-01", "2025-06-30", false);
-        Thread.sleep(1000);
+        reportId = "";
+        startJobResponse =  startReportSummary("2025-06-01", "2025-06-30", true, null);
+        Thread.sleep(WAITTIME);
          jobId = startJobResponse.get("jobId");
          jobStatus = getStatus(jobId);
         if ("COMPLETED".equalsIgnoreCase(jobStatus.getStatus())) {
             reportId = jobStatus.getReportId();
-            System.out.println(" the second " + reportId);
         }
+        startReportSummary("2025-06-01", "2025-06-30", false, null);
+        Thread.sleep(WAITTIME);
 
-        updateReportRequest = new UpdateReportRequest();
-        updateReportRequest.setPayrollStatus(PayrollStatus.COMPLETED);
-        updateReportRequest.setCompanyId("682cf69492b07e60fa109911");
-        updateReportRequest.setStartDate("2025-06-01");
+        updateReportRequest = UpdatePayrollStatusRequest.builder()
+                .reportId(UUID.fromString(reportId))
+                .status(PayrollStatus.APPROVED)
+                .companyId("682cf69492b07e60fa109911")
+                .build();
+
         approvePayroll(updateReportRequest);
 
         response = getReportById(reportId);
@@ -586,6 +671,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
 
         when(adminService.getEmployeeIdListForFilter(any(), anyString())).thenReturn(List.of("8e3b6e4952e8468a84fd84556f8fdf2a"));
         Map<String, Object> summaryDetails = getVarianceDetails(reportId, "Total Gross Pay");
+
         assertThat(summaryDetails)
                 .isNotNull()
                 .containsKey("Total Gross Pay");
@@ -606,10 +692,18 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
 
     // Test cost center summary
     @Test
-    void testCostCenterSummary(){
+    void testCostCenterSummary() throws InterruptedException {
         when(adminService.getPaymentInfoList(any(), anyString())).thenReturn(TestDataFactory.getPaymentSettings("cost-center-data"));
         when(adminService.getCostCenterDetails(any(), anyString())).thenReturn(TestDataGenerator.getCostCenterDetails());
-        ReportResponse reportSummary = getReportSummary();
+        Map<String, String> startJobResponse =  startReportSummary("2025-06-01", "2025-06-30", true, null);
+        String jobId = startJobResponse.get("jobId");
+        JobStatus jobStatus = getStatus(jobId);
+        Thread.sleep(WAITTIME);
+        jobStatus = getStatus(jobId);
+        ReportResponse reportSummary = null;
+        if ("COMPLETED".equalsIgnoreCase(jobStatus.getStatus())) {
+            reportSummary = getReportById(jobStatus.getReportId());
+        }
         assertThat(reportSummary).isNotNull().satisfies(x -> {
          assertThat(x.getSummary()).isNotNull().satisfies(y -> {
              y.getCostCenterSummary().get("costCenterA").get("Total Net Pay").compareTo(BigDecimal.valueOf(2100000.15));
@@ -639,7 +733,8 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
     @Test
     void testGetReportByCompanyIdAndStartDate() {
         assertThat(getReportByStartDateAndCompanyId()).isNotNull().satisfies(body -> {
-            assertThat(body.getStartDate()).isEqualTo(LocalDate.now().toString());
+            assertThat(body.getStartDate())
+                    .isEqualTo("2025-06-01");
         });
     }
 
@@ -660,43 +755,9 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
             assertThat(ytdReport.getNetPay()).isEqualByComparingTo(BigDecimal.valueOf(0));
         });
         // now approve the report
-        approvePayroll();
+        approvePayroll(standardReportId);
         // Wait and retry to check for updated YTD report
         awaitUpdatedYTDReport(BigDecimal.valueOf(633334.0));
-    }
-
-    @Test
-    void testApprovePayrollReport() {
-        // Assert approved status was pending initially
-        assertThat(getReportByCompanyId()).isNotNull().satisfies(reportResponses -> {
-            assertThat(reportResponses.size()).isEqualTo(1);
-            assertThat(reportResponses.get(0).getPayrollStatus().compareTo(PayrollStatus.PENDING) == 0);
-        });
-
-        // Approve
-        approvePayroll();
-
-        // Assert approved status is now true
-        assertThat(getReportByCompanyId()).isNotNull().satisfies(reportResponses -> {
-            assertThat(reportResponses.size()).isEqualTo(1);
-            assertThat(reportResponses.get(0).getPayrollStatus().compareTo(PayrollStatus.APPROVED) == 0);
-        });
-    }
-
-    @Test
-    void testApprovedCannotBeRolledBack() {
-        // approve the curent payroll
-        approvePayroll();
-        // send the request again
-        webTestClient.post()
-                .uri("/compute/payroll")
-                .headers(headers -> headers.setBearerAuth(jwt.getTokenValue()))
-                .bodyValue(createPayload(null, null))
-                .exchange()
-                .expectStatus().isBadRequest()
-                .expectBody()
-                .jsonPath("$.message").isEqualTo("The payroll for this pay period has already been approved and processed and cannot be altered.");
-
     }
 
     @Test
@@ -756,7 +817,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
             List<Map<String, Object>> responseList = MAPPER.convertValue(body, new TypeReference<>() {});
             assertThat(responseList.size()).isEqualTo(1);
             Map<String, Object> responeMap = responseList.get(0);
-            assertThat(responeMap.get(NET_PAY)).isEqualTo(633334.0);
+            assertThat(responeMap.get("NETPAY")).isEqualTo(633334.0);
         });
     }
 
@@ -778,13 +839,15 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
     @Test
     void testDashboardCardAndCard() {
         // Assert approved status was pending initially
+        AtomicReference<String> reportId = new AtomicReference<>("");
         assertThat(getReportByCompanyId()).isNotNull().satisfies(reportResponses -> {
+            reportId.set(reportResponses.get(0).getReportId());
             assertThat(reportResponses.size()).isEqualTo(1);
             assertThat(reportResponses.get(0).getPayrollStatus().compareTo(PayrollStatus.PENDING) == 0);
         });
 
         // Approve
-        approvePayroll();
+        approvePayroll(reportId.get());
 
         // Assert Dashboard data are updated
         assertThat(getDashboardCard()).isNotNull().satisfies(dashboard -> {

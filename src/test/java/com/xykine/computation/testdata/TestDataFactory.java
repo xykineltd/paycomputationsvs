@@ -31,6 +31,8 @@ public class TestDataFactory {
             case "5000" -> FIVE_THOUSAND;
             case "two" -> TWO;
             case "cost-center-data" -> COST_CENTER_TEST_DATA;
+            case "contract-staff-2000" -> CONTRACT_STAFF_2000_ENTRIES;
+            case "contract-staff-2000-2-days-absent" -> CONTRACT_STAFF_2000_ENTRIES_TWO_DAYS_ABSENT;
             default -> throw new IllegalArgumentException("Unknown type: " + type);
         };
         try {

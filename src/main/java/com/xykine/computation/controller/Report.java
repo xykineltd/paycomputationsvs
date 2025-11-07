@@ -1,7 +1,5 @@
 package com.xykine.computation.controller;
 
-import com.xykine.computation.entity.PayrollReportSummary;
-import com.xykine.computation.entity.PayrollStatus;
 import com.xykine.computation.entity.YTDReport;
 import com.xykine.computation.exceptions.PayrollValidationException;
 import com.xykine.computation.request.*;
@@ -105,12 +103,6 @@ public class Report {
         return reportPersistenceService.getPayRollReportDetailByType(request, page, size);
     }
 
-    @PutMapping("/approve")
-    public boolean approveReport(@RequestBody UpdateReportRequest request) {
-        PayrollReportSummary payrollReport = reportPersistenceService.approveReport(request);
-        return true;
-    }
-
     @PutMapping("/update-report-status")
     public void updateStatus(@RequestBody UpdatePayrollStatusRequest request) {
         try {
@@ -118,16 +110,6 @@ public class Report {
         } catch (IllegalArgumentException e) {
             throw new PayrollValidationException("Invalid payroll status: " + request.getStatus());
         }
-    }
-
-    @PutMapping("/cancel")
-    public boolean deleteReport(@RequestBody UpdateReportRequest request) {
-        return reportPersistenceService.deleteReport(request);
-    }
-
-    @PutMapping("/post-to-finance")
-    public PayrollReportSummary completeReport(@RequestBody UpdateReportRequest request) {
-        return reportPersistenceService.completeReport(request);
     }
 
     @GetMapping("/paymentDetails")

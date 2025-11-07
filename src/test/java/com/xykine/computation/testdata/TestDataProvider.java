@@ -7,6 +7,8 @@ public class TestDataProvider {
     public static String FIVE_THOUSAND = TestDataGenerator.generateEntries(5000);
     public static String TWO = TestDataGenerator.generateEntries(2);
     public static String TEN_ENTRIES = TestDataGenerator.generateEntries(10);
+    public static final String CONTRACT_STAFF_2000_ENTRIES = getTestDataContractStaffZeroDayAbsence(5000);
+    public static final String CONTRACT_STAFF_2000_ENTRIES_TWO_DAYS_ABSENT = getTestDataContractStaffTwoDaysAbsence(5000);
     public static String COST_CENTER_TEST_DATA = TestDataGenerator.getTestDataForCostCenterTest();
     public static String STANDARD_PAYROLL_ENTRY_WITH_PERFORMANCE_BONUS  =
             """
@@ -895,4 +897,208 @@ public class TestDataProvider {
                       }
                     ]
             """;
+
+    public static String getTestDataContractStaffZeroDayAbsence(int numberOfData) {
+        String test = "[ ";
+        for (int i = 0; i < numberOfData; i++) {
+            boolean isLast = i == numberOfData - 1;
+            test = !isLast ?
+                    test + """
+                      {
+                        "id": null,
+                        "numberOfDaysOfUnpaidAbsence": 0,
+                        "startDate": "2025-05-01",
+                        "endDate": "2025-05-31",
+                       "employeeID": "%s",
+                        "companyID": "682cf69492b07e60fa109911",
+                        "completed": false,
+                        "employeeIsLock": false,
+                        "paymentSettings": [
+                          {
+                            "paymentSettingID": null,
+                             "employeeID": "%s",
+                            "type": "BASIC_SALARY_ANNUAL",
+                            "name": "Basic Salary",
+                            "value": 1800000.00,
+                            "currency": "NGN",
+                            "salaryFrequency": "MONTHLY",
+                            "active": false,
+                            "pensionable": false,
+                            "prorated": false,
+                            "createdDate": null,
+                            "lastModifiedDate": null,
+                            "createdBy": null,
+                            "lastModifiedBy": null,
+                            "version": 0
+                          }
+                        ],
+                        "basicSalary": 1800000.00,
+                        "fullName": "Ferondo Redondo",
+                        "offCycleID": null,
+                        "offCycle": false,
+                        "offCycleActualValueSupplied": false,
+                        "currency": "NGN",
+                        "salaryFrequency": "MONTHLY",
+                        "exchangeInfo": {
+                          "currency": "NGN",
+                          "rateDateAndTime": null,
+                          "exchangeRate": 1.0
+                        },
+                        "totalNumberOfEmployees": 1,
+                        "ytdReport": null
+                      },
+           """.formatted("emp-"+i, "emp-"+i)
+                    :
+                    test + """
+                      {
+                        "id": null,
+                        "numberOfDaysOfUnpaidAbsence": 0,
+                        "startDate": "2025-05-01",
+                        "endDate": "2025-05-31",
+                       "employeeID": "%s",
+                        "companyID": "682cf69492b07e60fa109911",
+                        "completed": false,
+                        "employeeIsLock": false,
+                        "paymentSettings": [
+                          {
+                            "paymentSettingID": null,
+                             "employeeID": "%s",
+                            "type": "BASIC_SALARY_ANNUAL",
+                            "name": "Basic Salary",
+                            "value": 1800000.00,
+                            "currency": "NGN",
+                            "salaryFrequency": "MONTHLY",
+                            "active": false,
+                            "pensionable": false,
+                            "prorated": false,
+                            "createdDate": null,
+                            "lastModifiedDate": null,
+                            "createdBy": null,
+                            "lastModifiedBy": null,
+                            "version": 0
+                          }
+                        ],
+                        "basicSalary": 1800000.00,
+                        "fullName": "Ferondo Redondo",
+                        "offCycleID": null,
+                        "offCycle": false,
+                        "offCycleActualValueSupplied": false,
+                        "currency": "NGN",
+                        "salaryFrequency": "MONTHLY",
+                        "exchangeInfo": {
+                          "currency": "NGN",
+                          "rateDateAndTime": null,
+                          "exchangeRate": 1.0
+                        },
+                        "totalNumberOfEmployees": 1,
+                        "ytdReport": null
+                      }
+           """.formatted("emp-"+i, "emp-"+i)
+            ;
+        }
+        test = test + "]";
+        return test;
+    }
+
+    public static String getTestDataContractStaffTwoDaysAbsence(int numberOfData) {
+        String test = "[ ";
+        for (int i = 0; i < numberOfData; i++) {
+            boolean isLast = i == numberOfData - 1;
+            test = !isLast ?
+                    test + """
+                      {
+                        "id": null,
+                        "numberOfDaysOfUnpaidAbsence": 2,
+                        "startDate": "2025-06-01",
+                        "endDate": "2025-06-31",
+                       "employeeID": "%s",
+                        "companyID": "682cf69492b07e60fa109911",
+                        "completed": false,
+                        "employeeIsLock": false,
+                        "paymentSettings": [
+                          {
+                            "paymentSettingID": null,
+                             "employeeID": "%s",
+                            "type": "BASIC_SALARY_ANNUAL",
+                            "name": "Basic Salary",
+                            "value": 1800000.00,
+                            "currency": "NGN",
+                            "salaryFrequency": "MONTHLY",
+                            "active": false,
+                            "pensionable": false,
+                            "prorated": false,
+                            "createdDate": null,
+                            "lastModifiedDate": null,
+                            "createdBy": null,
+                            "lastModifiedBy": null,
+                            "version": 0
+                          }
+                        ],
+                        "basicSalary": 1800000.00,
+                        "fullName": "Ferondo Redondo",
+                        "offCycleID": null,
+                        "offCycle": false,
+                        "offCycleActualValueSupplied": false,
+                        "currency": "NGN",
+                        "salaryFrequency": "MONTHLY",
+                        "exchangeInfo": {
+                          "currency": "NGN",
+                          "rateDateAndTime": null,
+                          "exchangeRate": 1.0
+                        },
+                        "totalNumberOfEmployees": 1,
+                        "ytdReport": null
+                      }, 
+            """.formatted("emp-"+i, "emp-"+i)
+                    :
+                    test + """
+                      {
+                        "id": null,
+                        "numberOfDaysOfUnpaidAbsence": 2,
+                        "startDate": "2025-06-01",
+                        "endDate": "2025-06-31",
+                       "employeeID": "%s",
+                        "companyID": "682cf69492b07e60fa109911",
+                        "completed": false,
+                        "employeeIsLock": false,
+                        "paymentSettings": [
+                          {
+                            "paymentSettingID": null,
+                             "employeeID": "%s",
+                            "type": "BASIC_SALARY_ANNUAL",
+                            "name": "Basic Salary",
+                            "value": 1800000.00,
+                            "currency": "NGN",
+                            "salaryFrequency": "MONTHLY",
+                            "active": false,
+                            "pensionable": false,
+                            "prorated": false,
+                            "createdDate": null,
+                            "lastModifiedDate": null,
+                            "createdBy": null,
+                            "lastModifiedBy": null,
+                            "version": 0
+                          }
+                        ],
+                        "basicSalary": 1800000.00,
+                        "fullName": "Ferondo Redondo",
+                        "offCycleID": null,
+                        "offCycle": false,
+                        "offCycleActualValueSupplied": false,
+                        "currency": "NGN",
+                        "salaryFrequency": "MONTHLY",
+                        "exchangeInfo": {
+                          "currency": "NGN",
+                          "rateDateAndTime": null,
+                          "exchangeRate": 1.0
+                        },
+                        "totalNumberOfEmployees": 1,
+                        "ytdReport": null
+                      }
+            """.formatted("emp-"+i, "emp-"+i)
+            ;
+        }
+        test = test + "]";
+        return test;
+    }
 }

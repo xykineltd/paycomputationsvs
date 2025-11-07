@@ -123,8 +123,6 @@ public class TestDataGenerator {
         return settingsArray;
     }
 
-
-
     private static ObjectNode createPaymentSetting(ObjectMapper mapper, int index, String type, String name, double value) {
         ObjectNode setting = mapper.createObjectNode();
         setting.put("paymentSettingID", (String) null);

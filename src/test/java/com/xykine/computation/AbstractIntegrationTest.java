@@ -34,6 +34,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static com.xykine.computation.testdata.TestDataFactory.TEST_COMPANY_ID;
 import static com.xykine.computation.testdata.TestDataFactory.TEST_EMPLOYEE_ID;
@@ -80,7 +81,7 @@ public abstract class AbstractIntegrationTest {
         registry.add("spring.data.redis.port", () -> redisContainer.getMappedPort(6379));
     }
 
-    protected  PaymentInfoRequest createPayload(String startDate, String endDate) {
+    protected  PaymentInfoRequest createPayload(String startDate, String endDate, String companyId) {
         PaymentInfoRequest paymentInfoRequest = new PaymentInfoRequest();
         if (startDate == null || endDate == null) {
             paymentInfoRequest.setStart(LocalDate.now());
@@ -89,12 +90,12 @@ public abstract class AbstractIntegrationTest {
             paymentInfoRequest.setStart(LocalDate.parse(startDate));
             paymentInfoRequest.setEnd(LocalDate.parse(endDate));
         }
-        paymentInfoRequest.setCompanyId(TEST_COMPANY_ID);
+        paymentInfoRequest.setCompanyId(companyId == null ? TEST_COMPANY_ID : companyId);
         paymentInfoRequest.setPayrollSimulation(false);
         return paymentInfoRequest;
     }
 
-    protected  PaymentInfoRequest createPayload(String startDate, String endDate, boolean payrollSimulation) {
+    protected  PaymentInfoRequest createPayload(String startDate, String endDate, boolean payrollSimulation, String companyId) {
         PaymentInfoRequest paymentInfoRequest = new PaymentInfoRequest();
         if (startDate == null || endDate == null) {
             paymentInfoRequest.setStart(LocalDate.now());
@@ -103,7 +104,7 @@ public abstract class AbstractIntegrationTest {
             paymentInfoRequest.setStart(LocalDate.parse(startDate));
             paymentInfoRequest.setEnd(LocalDate.parse(endDate));
         }
-        paymentInfoRequest.setCompanyId(TEST_COMPANY_ID);
+        paymentInfoRequest.setCompanyId(companyId == null ? TEST_COMPANY_ID : companyId);
         paymentInfoRequest.setPayrollSimulation(payrollSimulation);
         return paymentInfoRequest;
     }
@@ -117,11 +118,11 @@ public abstract class AbstractIntegrationTest {
         return paymentInfoRequest;
     }
 
-    Map startReportSummary(String startDate, String endDate, boolean payrollSimulation) {
+    Map startReportSummary(String startDate, String endDate, boolean payrollSimulation, String companyId) {
         return webTestClient.post()
                 .uri("/compute/payroll/start")
                 .headers(headers -> headers.setBearerAuth(jwt.getTokenValue()))
-                .bodyValue(createPayload(startDate, endDate, payrollSimulation))
+                .bodyValue(createPayload(startDate, endDate, payrollSimulation, companyId))
                 .exchange()
                 .expectStatus().isAccepted()
                 .expectBody(Map.class)
@@ -129,29 +130,6 @@ public abstract class AbstractIntegrationTest {
                 .getResponseBody();
     }
 
-    ReportResponse getReportSummary() {
-        return webTestClient.post()
-                .uri("/compute/payroll")
-                .headers(headers -> headers.setBearerAuth(jwt.getTokenValue()))
-                .bodyValue(createPayload(null, null))
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody(ReportResponse.class)
-                .returnResult()
-                .getResponseBody();
-    }
-
-    ReportResponse getReportSummaryCustom(String companyId) {
-        return webTestClient.post()
-                .uri("/compute/payroll")
-                .headers(headers -> headers.setBearerAuth(jwt.getTokenValue()))
-                .bodyValue(customCreatePayload(companyId))
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody(ReportResponse.class)
-                .returnResult()
-                .getResponseBody();
-    }
 
     protected Map<String, Object> getReport(String url){
         return webTestClient.get()
@@ -200,7 +178,7 @@ public abstract class AbstractIntegrationTest {
                 .getResponseBody();
     }
 
-    void approveReport(String url, UpdateReportRequest request) {
+    void approveReport(String url, UpdatePayrollStatusRequest request) {
         webTestClient.put()
                 .uri(url)
                 .headers(headers -> headers.setBearerAuth(jwt.getTokenValue()))
@@ -343,44 +321,33 @@ public abstract class AbstractIntegrationTest {
     }
 
     ReportResponse getReportByStartDateAndCompanyId() {
-        // @GetMapping("/get-by-start-date/{companyId}/{startDate}")
+        // @GetMapping("/get-by-start-date/{companyId}/{startDate}"). 2025-06-01", "2025-06-30"
+        LocalDate startdDate = LocalDate.parse("2025-06-01");
         String URL_PREFIX = "http://localhost:" + port + "/compute/reports/";
-        String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX + "get-by-start-date/" + TEST_COMPANY_ID + "/" + LocalDate.now())
+        String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX + "get-by-start-date/" + TEST_COMPANY_ID + "/" + startdDate)
                 .toUriString();
         return getReportDirect(url);
     }
 
-    void approvePayroll() {
+    void approvePayroll(String reportId) {
         // @PutMapping("/approve")
         String URL_PREFIX = "http://localhost:" + port + "/compute/reports/";
 
-        UpdateReportRequest updateReportRequest = new UpdateReportRequest();
-        updateReportRequest.setStartDate(LocalDate.now().toString());
-        updateReportRequest.setCompanyId(TEST_COMPANY_ID);
-        updateReportRequest.setPayrollStatus(PayrollStatus.APPROVED);
+        UpdatePayrollStatusRequest updateReportRequest = UpdatePayrollStatusRequest.builder()
+                .reportId(UUID.fromString(reportId))
+                .status(PayrollStatus.APPROVED)
+                .companyId(TEST_COMPANY_ID)
+                .build();
 
-        String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX + "approve").toUriString();
+
+        String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX + "update-report-status").toUriString();
         approveReport(url, updateReportRequest);
     }
 
-    void approvePayroll(UpdateReportRequest updateReportRequest) {
+    void approvePayroll(UpdatePayrollStatusRequest updateReportRequest) {
         // @PutMapping("/approve")
         String URL_PREFIX = "http://localhost:" + port + "/compute/reports/";
-        String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX + "approve").toUriString();
-        approveReport(url, updateReportRequest);
-    }
-
-    void cancelPayroll() {
-        // @PutMapping("/cancel")
-        String URL_PREFIX = "http://localhost:" + port + "/compute/reports/";
-
-        UpdateReportRequest updateReportRequest = new UpdateReportRequest();
-        updateReportRequest.setStartDate(LocalDate.now().toString());
-        updateReportRequest.setCompanyId(TEST_COMPANY_ID);
-        updateReportRequest.setPayrollStatus(PayrollStatus.APPROVED);
-        updateReportRequest.setCancelPayroll(true);
-
-        String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX + "cancel").toUriString();
+        String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX + "update-report-status").toUriString();
         approveReport(url, updateReportRequest);
     }
 

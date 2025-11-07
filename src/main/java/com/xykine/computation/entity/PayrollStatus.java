@@ -8,5 +8,6 @@ public enum PayrollStatus {
     COMPLETED,
     SUBMITTED,
     IN_PROGRESS,
-    INITIATED
+    INITIATED,
+    ROLLED_BACK
 }
