@@ -143,31 +143,17 @@ public class AdminService {
     public Map<String, EmployeeDetail> getEmployeesDetail(EmployeeFilterRequest employeeFilterRequest, String token) {
         return webClient
                 .post()
-                .uri("admin/employee/employee-details")
-                .header(HttpHeaders.AUTHORIZATION, token)
+                .uri("/admin/employee/employee-details") // note leading slash if baseUrl is set
+                .header(HttpHeaders.AUTHORIZATION, token) // include "Bearer " + token if needed
                 .bodyValue(employeeFilterRequest)
-                .exchangeToMono(response ->{
-                    if (response.statusCode().is2xxSuccessful()) {
-                        // Extract the body as a List if the response is successful
-                        return response.bodyToMono(Map.class);
-                    } else {
-                        // Extract error message from the response body and throw custom exception
-                        return response.bodyToMono(ApiException.class)
-                                .flatMap(errorBody -> {
-                                    LOGGER.error("Non-successful response: {}", response.statusCode());
-                                    LOGGER.info("Error Message: {}", errorBody.getErrorMessage());
-                                    LOGGER.info("Error Code: {}", errorBody.getErrorCode());
-
-                                    // Throw custom exception with the error message
-                                    return Mono.error(new EmployeeFilterException(errorBody.getMessage()));
-                                });
-                    }
-                })
-                .onErrorResume(WebClientResponseException.class, ex -> {
-                    // Handle WebClient exceptions, if needed
-                    LOGGER.error("WebClient call failed: {}", ex.getMessage());
-                    return Mono.error(new EmployeeFilterException(ex.getMessage()));
-                })
-                .block(); // Block to wait for the response
+                .retrieve()
+                .onStatus(
+                        status -> !status.is2xxSuccessful(),
+                        resp -> resp.bodyToMono(ApiException.class).flatMap(err ->
+                                Mono.error(new EmployeeFilterException(err.getMessage()))
+                        )
+                )
+                .bodyToMono(new ParameterizedTypeReference<Map<String, EmployeeDetail>>() {})
+                .block(); // keep blocking since method returns Map; consider returning Mono instead
     }
 }

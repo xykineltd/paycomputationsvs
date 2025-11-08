@@ -128,7 +128,8 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                         detail.getDetail().getReport(),
                         reportRequestPayload.getHeaders(),
                         isDetail.get(),
-                        employeeDetailMap
+                        employeeDetailMap,
+                        detail.getReportId()
                 ))
                 .toList();
 
@@ -151,7 +152,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                 .filter(Objects::nonNull)
                 .findFirst()
                 .map(ReportUtils::transform)
-                .map(detail -> extractRawDetail(detail.getDetail().getReport()))
+                .map(detail -> extractRawDetail(detail.getDetail().getReport(), detail.getReportId()))
                 .map(Map::keySet)
                 .orElse(Collections.emptySet());
     }
@@ -162,7 +163,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                 .findPayrollReportDetailBySummaryId(retrievePaymentElementPayload.getReportId()).stream()
                 .filter(Objects::nonNull)
                 .map(ReportUtils::transform)
-                .map(detail -> extractDetailBefore(detail.getDetail().getReport(), retrievePaymentElementPayload.getSelectedHeader(), true))
+                .map(detail -> extractDetailBefore(detail.getDetail().getReport(), retrievePaymentElementPayload.getSelectedHeader(), true, detail.getReportId()))
                     //TODO fix later
 //                .map(detail -> extractDetail(detail.getDetail().getReport(), retrievePaymentElementPayload.getSelectedHeader(), true, null))
                 .toList();
@@ -216,8 +217,8 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
 
 
     //TODO debug and merge
-    private Map<String, Object> extractDetailBefore(PaymentInfo paymentInfo, List<String> selectedReports, boolean isDetail) {
-        Map<String, Object> raw = extractRawDetail(paymentInfo);
+    private Map<String, Object> extractDetailBefore(PaymentInfo paymentInfo, List<String> selectedReports, boolean isDetail, String reportDetailId) {
+        Map<String, Object> raw = extractRawDetail(paymentInfo, reportDetailId);
         Map<String, Object> result = new LinkedHashMap<>();
 
         if (isDetail) {
@@ -234,16 +235,17 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
 
 
 
-    private Map<String, Object> extractDetail(PaymentInfo paymentInfo, List<String> selectedReports, boolean isDetail, Map<String, EmployeeDetail> employeeDetailMap) {
-        Map<String, Object> raw = extractRawDetail(paymentInfo);
+    private Map<String, Object> extractDetail(PaymentInfo paymentInfo, List<String> selectedReports, boolean isDetail, Map<String, EmployeeDetail> employeeDetailMap, String reportDetailId) {
+        Map<String, Object> raw = extractRawDetail(paymentInfo, reportDetailId);
         Map<String, Object> result = new LinkedHashMap<>();
 
         if (isDetail) {
-            result.put("EMP ID", employeeDetailMap != null ? employeeDetailMap.get(paymentInfo.getEmployeeID()).getMappedId() : " ");
+            final EmployeeDetail employeeDetail = employeeDetailMap.get(paymentInfo.getEmployeeID());
+            result.put("EMP ID", employeeDetailMap != null ? employeeDetail.getMappedId() : " ");
             result.put("EMPLOYEE NAME", paymentInfo.getFullName());
-            result.put("HIRE DATE", employeeDetailMap != null ? employeeDetailMap.get(paymentInfo.getEmployeeID()).getHireDate() : " ");
-            result.put("EXIT DATE", employeeDetailMap != null ? employeeDetailMap.get(paymentInfo.getEmployeeID()).getExitDate() : " ");
-            result.put("ROLE", employeeDetailMap != null ? employeeDetailMap.get(paymentInfo.getEmployeeID()).getRole() : " ");
+            result.put("HIRE DATE", employeeDetailMap != null ? employeeDetail.getHireDate() : " ");
+            result.put("EXIT DATE", employeeDetailMap != null ? employeeDetail.getExitDate() : " ");
+            result.put("ROLE", employeeDetailMap != null ? employeeDetail.getRole() : " ");
         }
         Map<String, Object> finalResult = new HashMap<>(result);
         selectedReports.forEach(key -> {
@@ -253,9 +255,10 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         return swapKey(finalResult);
     }
 
-    private Map<String, Object> extractRawDetail(PaymentInfo paymentInfo) {
+    private Map<String, Object> extractRawDetail(PaymentInfo paymentInfo, String reportDetailId) {
         Map<String, Object> raw = new HashMap<>();
         raw.put("EmployeeId", paymentInfo.getEmployeeID());
+        raw.put("DetailId", reportDetailId);
         raw.put("EmployeeName", paymentInfo.getFullName());
         raw.put("StartDate", paymentInfo.getStartDate());
         raw.put("EndDate", paymentInfo.getEndDate());

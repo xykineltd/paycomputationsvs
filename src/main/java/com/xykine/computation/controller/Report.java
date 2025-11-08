@@ -19,7 +19,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -87,7 +91,6 @@ public class Report {
     @PostMapping("/details/report")
     public ResponseEntity<?> getDetailsReportByFilter(
             @RequestBody EmployeeFilterRequest employeeFilterRequest) {
-        System.out.println("employeeFilterRequest--->" + employeeFilterRequest.getReportId());
         Map<String, Object> response =  reportPersistenceService.getReportByEmployeeIDList(employeeFilterRequest.getCompanyID(),
                 employeeFilterRequest.getEmployeeIds(), employeeFilterRequest.getReportId(),
                 employeeFilterRequest.getPage(), employeeFilterRequest.getSize());
@@ -142,8 +145,11 @@ public class Report {
     }
 
     @PutMapping("/cancel")
-    public boolean deleteReport(@RequestBody UpdateReportRequest request) {
-        return reportPersistenceService.deleteReport(request);
+    public boolean deleteReport(
+            @RequestBody UpdateReportRequest request,
+            @RequestHeader("Authorization") String token
+    ) {
+        return reportPersistenceService.deleteReport(request, token);
     }
 
     @PostMapping("/complete")
@@ -236,7 +242,19 @@ public class Report {
     public ResponseEntity<byte[]> uploadReport(@RequestBody ReportRequestPayload payload,
                                                @RequestHeader("Authorization") String authorizationHeader
     ) throws IOException {
-        return new ResponseEntity<>(reportGeneratorService.generateReport(payload, authorizationHeader), HttpStatus.OK);
+
+        byte[] excelFile = reportGeneratorService.generateReport(payload, authorizationHeader);
+        //        // 🔹 Store file locally
+        Path folder = Paths.get("./exports");  // relative folder inside Spring Boot run dir
+        if (!Files.exists(folder)) {
+            Files.createDirectories(folder);
+        }
+        Path filePath = folder.resolve("report-detail.xlsx");
+        try (FileOutputStream fos = new FileOutputStream(filePath.toFile())) {
+            fos.write(excelFile);
+        }
+
+        return new ResponseEntity<>(excelFile, HttpStatus.OK);
     }
 
 
