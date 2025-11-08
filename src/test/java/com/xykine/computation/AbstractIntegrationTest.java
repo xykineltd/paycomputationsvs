@@ -202,6 +202,18 @@ public abstract class AbstractIntegrationTest {
                 .getResponseBody();
     }
 
+    protected byte[] downloadReport(String url, ReportRequestPayload request) {
+        return webTestClient.post()
+                .uri(url)
+                .headers(headers -> headers.setBearerAuth(jwt.getTokenValue()))
+                .bodyValue(request)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(new ParameterizedTypeReference<byte[]>() {})
+                .returnResult()
+                .getResponseBody();
+    }
+
     protected Map<String, Object> getReportByFilter(String url, EmployeeFilterRequest employeeFilterRequest) {
         return webTestClient.post()
                 .uri(url)
@@ -371,6 +383,26 @@ public abstract class AbstractIntegrationTest {
                 .queryParam("companyId", TEST_COMPANY_ID)
                 .toUriString();
         return getReportGenericDirect(url);
+    }
+
+    byte[] downloadReport(String companyId) {
+        String URL_PREFIX = "http://localhost:" + port + "/compute/reports/";
+        String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX + "download-report")
+                .toUriString();
+
+        DateRange dateRange = new DateRange();
+        dateRange.setFromDate(LocalDate.parse("2025-06-01"));
+        dateRange.setEndDate(LocalDate.parse("2025-06-30"));
+
+
+        ReportRequestPayload reportRequestPayload = new ReportRequestPayload();
+        reportRequestPayload.setAll(true);
+        reportRequestPayload.setDefaultHeaders(true);
+        reportRequestPayload.setCompanyID(companyId);
+        reportRequestPayload.setEntityType("details");
+        reportRequestPayload.setDateRange(dateRange);
+
+        return downloadReport(url, reportRequestPayload);
     }
 
     Object getPaymentElement(String reportId) {

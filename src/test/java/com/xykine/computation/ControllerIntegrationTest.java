@@ -3,6 +3,7 @@ package com.xykine.computation;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.xykine.computation.config.TestSecurityConfig;
 import com.xykine.computation.domain.JobStatus;
+import com.xykine.computation.dto.EmployeeDetail;
 import com.xykine.computation.entity.Loan;
 import com.xykine.computation.entity.PayrollStatus;
 import com.xykine.computation.entity.YTDReport;
@@ -333,6 +334,20 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
             assertThat(x.get("Voluntary Pension Contribution")).isEqualByComparingTo(BigDecimal.valueOf(0));
             assertThat(x.get("Total Employee Pension")).isEqualByComparingTo(BigDecimal.valueOf(46249.03));
         });
+
+        Map<String, EmployeeDetail> empMap = new HashMap<>();
+
+        EmployeeDetail empDetail = new EmployeeDetail();
+        empDetail.setMappedId("XYK111");
+        empDetail.setRole("Test");
+        empDetail.setName("Test");
+        empDetail.setHireDate("something");
+        empDetail.setExitDate("somthing");
+
+        empMap.put("8654321", empDetail);
+
+        when(adminService.getEmployeesDetail(any(), any())).thenReturn(empMap);
+        byte[] report = downloadReport(companyId);
     }
 
     @Test

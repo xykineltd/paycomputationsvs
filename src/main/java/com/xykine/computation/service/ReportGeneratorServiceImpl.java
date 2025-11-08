@@ -13,6 +13,8 @@ import com.xykine.computation.repo.PayrollReportSummaryRepo;
 import com.xykine.computation.response.ReportResponse;
 import com.xykine.computation.utils.ReportUtils;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
@@ -38,6 +40,8 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
     private final ExcelUploadService excelUploadService;
     private final AdminService adminService;
 
+    protected static final Logger LOGGER = LoggerFactory.getLogger(ReportGeneratorServiceImpl.class);
+
     @Override
     public byte[] generateReport(ReportRequestPayload reportRequestPayload, String token) throws IOException {
 
@@ -55,7 +59,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         Map<String, EmployeeDetail> employeeDetailMap = adminService.getEmployeesDetail(employeeFilterRequest, token);
 
         if (reportRequestPayload.isDefaultHeaders()) {
-        List<String> defaultHeaders = new ArrayList<>();
+        List<String> defaultHeaders = new LinkedList<>();
             defaultHeaders.add("Gross Pay");
             defaultHeaders.add("Housing Allowance");
             defaultHeaders.add("Transport Allowance");
@@ -88,8 +92,6 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         // Decide source based on type + flags
         switch (reportRequestPayload.getEntityType()) {
             case "details" -> {
-
-                List<String> headers = reportRequestPayload.getHeaders();
                 if (reportRequestPayload.isAll()) {
                     source = payrollReportDetailRepo.findByCompanyId(reportRequestPayload.getCompanyID());
                 } else if (!reportRequestPayload.getIds().isEmpty()) {
@@ -223,7 +225,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
             result.put("EXIT DATE", employeeDetailMap != null ? employeeDetailMap.get(paymentInfo.getEmployeeID()).getExitDate() : " ");
             result.put("ROLE", employeeDetailMap != null ? employeeDetailMap.get(paymentInfo.getEmployeeID()).getRole() : " ");
         }
-        Map<String, Object> finalResult = new HashMap<>(result);
+        Map<String, Object> finalResult = new LinkedHashMap<>(result);
         selectedReports.forEach(key -> {
             Object value = raw.getOrDefault(key, " ");
             finalResult.put(key, value);
@@ -306,7 +308,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
     }
 
     private Map<String, Object> swapKey(Map<String, Object> result) {
-        Map<String, Object> renamedPayroll = new HashMap<>();
+        Map<String, Object> renamedPayroll = new LinkedHashMap<>();
         for (Map.Entry<String, Object> entry : result.entrySet()) {
             String key = entry.getKey();
             Object value = entry.getValue();
@@ -314,31 +316,31 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
 
             switch (key) {
                 case "Gross Pay":
-                    newKey = "GROSS PAY.";
+                    newKey = "GROSS PAY";
                     break;
                 case "Basic Salary":
-                    newKey = "BASIC SALARY.";
+                    newKey = "BASIC SALARY";
                     break;
                 case "Housing Allowance":
-                    newKey = "HOUSING,";
+                    newKey = "HOUSING";
                     break;
                 case "Transport Allowance":
-                    newKey = "TRANSPORT,";
+                    newKey = "TRANSPORT";
                     break;
                 case "Utility":
-                    newKey = "UTILITY,";
+                    newKey = "UTILITY";
                     break;
                 case "Entertainment":
                     newKey = "ENTERTAINMENT,";
                     break;
                 case "Medical":
-                    newKey = "MEDICAL,";
+                    newKey = "MEDICAL";
                     break;
                 case "PERSONAL OUTFIT":
                     newKey = "PERSONAL OUTFIT,";
                     break;
                 case "Leave":
-                    newKey = "LEAVE,";
+                    newKey = "LEAVE";
                     break;
                 case "Training":
                     newKey = "TRAINING";
