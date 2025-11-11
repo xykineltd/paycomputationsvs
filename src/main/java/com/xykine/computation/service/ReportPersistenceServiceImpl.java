@@ -79,7 +79,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
             List<PaymentInfo> paymentInfoList = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
             LOGGER.info("PaymentInfoList size: {}", paymentInfoList.size());
-            LOGGER.info("PaymentInfoList : {}", paymentInfoList);
             totalNumberOfPay = paymentInfoList.size();
 
 
@@ -103,11 +102,11 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 startWorkflowRequest.setUserId(AuthUtility.getCurrentUser());
                 startWorkflowRequest.setCompanyId(paymentRequest.getCompanyId());
                 startWorkflowRequest.setPayrollType(payrollReportSummary.isOffCycle() ? "OffCycle" : "Regular");
-                startWorkflowRequest.setNumberOfPays(totalNumberOfPay);
+                startWorkflowRequest.setNumberOfPays(paymentInfoList.size());
                 startWorkflowRequest.setNumberOfEmployees(payrollReportSummary.getTotalNumberOfEmployees());
                 startWorkflowRequest.setNetPay(ReportUtils.transform(payrollReportSummary).getSummary().getSummary().get(MapKeys.TOTAL_NET_PAY));
-                startWorkflowRequest.setNumberOfPays(payrollReportDetailRepo.countBySummaryId(payrollReportSummary.getId().toString()));
                 startWorkflowRequest.setCreatedBy(payrollReportSummary.getCreatedBy());
+
                 workflowService.startWorkflow(startWorkflowRequest, authorizationHeader);
 
                 return;
@@ -134,7 +133,15 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             if (paymentInfoList == null || paymentInfoList.isEmpty()) {
                 throw new PayrollValidationException("No payment information found for request");
             }
+
+            long startTimeC = System.currentTimeMillis();
+
             PaymentComputeResponse computeResponse = computeService.computePayroll(paymentInfoList);
+            long endTimeC = System.currentTimeMillis();
+
+            LOGGER.info("Total computePayroll processing time--------> {} ms", endTimeC - startTimeC);
+
+
             computeResponse = OperationUtils.refineResponse(computeResponse, sessionCalculationObject, paymentRequest);
             ReportResponse reportResponse = serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
             jobStatusStore.updateJob(jobId, "COMPLETED", "Payroll computation complete", reportResponse.getReportId());
