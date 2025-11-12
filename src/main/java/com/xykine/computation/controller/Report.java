@@ -254,8 +254,27 @@ public class Report {
             fos.write(excelFile);
         }
 
-        return new ResponseEntity<>(excelFile, HttpStatus.OK);
-    }
+
+        String fileName = "payroll-report." +
+                (payload.getDocType().equalsIgnoreCase("pdf") ? "pdf" : "xlsx");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(
+                payload.getDocType().equalsIgnoreCase("pdf") ?
+                        MediaType.APPLICATION_PDF :
+                        MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        );
+
+        headers.setContentDisposition(
+                ContentDisposition.attachment()
+                        .filename(fileName)
+                        .build()
+        );
+
+        headers.setCacheControl(CacheControl.noCache().getHeaderValue());
+
+        return new ResponseEntity<>(excelFile, headers, HttpStatus.OK);
+ }
 
 
     @PostMapping("/retrieve-payment-element")

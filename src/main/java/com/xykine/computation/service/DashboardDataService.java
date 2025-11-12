@@ -74,7 +74,7 @@ public class DashboardDataService {
     public DashboardCardResponse retrieveDashboardCardData(String companyId){
         //TODO update the logic to use optionla before get()
         Optional<DashboardCard> optionalDashboardCard =  dashboardCardRepo.findByCompanyId(companyId);
-        if(optionalDashboardCard.isPresent()){
+//        if(optionalDashboardCard.isPresent()){
             return DashboardCardResponse.builder()
                     .totalOffCyclePayroll(optionalDashboardCard.get().getTotalOffCyclePayroll())
                     .totalRegularPayroll(optionalDashboardCard.get().getTotalRegularPayroll())
@@ -82,9 +82,9 @@ public class DashboardDataService {
                     .averageEmployeeCost(optionalDashboardCard.get().getAverageEmployeeCost())
                     .lastUpdatedAt(optionalDashboardCard.get().getLastUpdatedAt().toString())
                     .build();
-        }
-        return DashboardCardResponse.builder()
-                .build();
+//        }
+//        return DashboardCardResponse.builder()
+//                .build();
     }
 
     public Map<String, Object> getDashboardGraph(PaymentFrequencyEnum paymentFrequencyEnum, String companyId, int page, int size) {
