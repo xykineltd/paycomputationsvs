@@ -73,14 +73,18 @@ public class DashboardDataService {
 
     public DashboardCardResponse retrieveDashboardCardData(String companyId){
         //TODO update the logic to use optionla before get()
-        DashboardCard dashboardCard =  dashboardCardRepo.findByCompanyId(companyId).get();
-        return DashboardCardResponse.builder()
-                .totalOffCyclePayroll(dashboardCard.getTotalOffCyclePayroll())
-                .totalRegularPayroll(dashboardCard.getTotalRegularPayroll())
-                .totalPayrollCost(dashboardCard.getTotalPayrollCost())
-                .averageEmployeeCost(dashboardCard.getAverageEmployeeCost())
-                .lastUpdatedAt(dashboardCard.getLastUpdatedAt().toString())
-                .build();
+        Optional<DashboardCard> optionalDashboardCard =  dashboardCardRepo.findByCompanyId(companyId);
+//        if(optionalDashboardCard.isPresent()){
+            return DashboardCardResponse.builder()
+                    .totalOffCyclePayroll(optionalDashboardCard.get().getTotalOffCyclePayroll())
+                    .totalRegularPayroll(optionalDashboardCard.get().getTotalRegularPayroll())
+                    .totalPayrollCost(optionalDashboardCard.get().getTotalPayrollCost())
+                    .averageEmployeeCost(optionalDashboardCard.get().getAverageEmployeeCost())
+                    .lastUpdatedAt(optionalDashboardCard.get().getLastUpdatedAt().toString())
+                    .build();
+//        }
+//        return DashboardCardResponse.builder()
+//                .build();
     }
 
     public Map<String, Object> getDashboardGraph(PaymentFrequencyEnum paymentFrequencyEnum, String companyId, int page, int size) {
@@ -237,7 +241,10 @@ public class DashboardDataService {
                 .dateAdded(LocalDateTime.now())
                 .build();
         dashboardGraphRepo.save(dashboardGraph);
-        updateYTDReport(payrollReportSummary.getId().toString(), payrollReportSummary.getCompanyId());
+        //TODO review this
+        if (!payrollReportSummary.isOffCycle()) {
+            updateYTDReport(payrollReportSummary.getId().toString(), payrollReportSummary.getCompanyId());
+        }
     }
 
     private BigDecimal extractNetPayFromReport(PayrollReportSummary payrollReportSummary){

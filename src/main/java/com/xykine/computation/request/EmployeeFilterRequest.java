@@ -1,9 +1,10 @@
 package com.xykine.computation.request;
 
 import jakarta.validation.constraints.NotNull;
-
 import lombok.Data;
 import org.xykine.payroll.model.UserRole;
+
+import java.util.List;
 import java.util.Set;
 
 @Data
@@ -18,9 +19,11 @@ public class EmployeeFilterRequest {
     private String active;
     private Set<UserRole> roles;
     private String email;
-    private String phoneNumber;
-    private String reportId;
     private String header;
+    private List<String> employeeIds;
+    private String phoneNumber;
+    @NotNull(message = "Report Id is required")
+    private String reportId;
     private int page = 0;
     private int size = 10;
 }

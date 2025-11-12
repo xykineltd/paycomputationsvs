@@ -46,6 +46,8 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 paymentInfo.getPaymentSettings() != null
                         ? paymentInfo.getPaymentSettings()
                         : new HashSet<>();
+
+        // TODO we need to throw proper error if the payment settings is not present for both custom or the company metatdata payment distribution
         originalSettingsList.addAll(paymentSettingsFromPaymentDistributionList);
         paymentInfo.setPaymentSettings(originalSettingsList);
         return paymentInfo;
@@ -120,6 +122,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
             }
         }
         else if (description.contains("OFF CYCLE")) {
+            //TODO fix bug here
             long customMultiplier = getMultiplier(setting.getSalaryFrequency());
             setting.setValue(ComputationUtils.harmoniseToAnnual(customMultiplier, setting.getValue()));
             setting.setType(PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT);
@@ -445,6 +448,9 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     }
 
     private long getMultiplier(PaymentFrequencyEnum paymentFrequencyEnum) {
+        //TODO temp fix to set default to 1 , remove after fix
+        if (paymentFrequencyEnum == null)
+            return 1L;
         return switch (paymentFrequencyEnum) {
             case YEARLY -> 1L;
             case MONTHLY -> 12L;

@@ -24,6 +24,8 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import org.xykine.payroll.model.PaymentInfo;
 import reactor.core.publisher.Mono;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -40,6 +42,7 @@ public class AdminService {
     private static final Logger LOGGER = LoggerFactory.getLogger(AdminService.class);
 
     public List getPaymentInfoList(PaymentInfoRequest paymentComputeRequest, String token) {
+        LOGGER.info("Getting payment info for company: {}", paymentComputeRequest.getCompanyId());
         return webClient
                 .post()
                 .uri("admin/paymentinfo/compute")
@@ -54,8 +57,9 @@ public class AdminService {
                         return response.bodyToMono(ApiException.class)
                                 .flatMap(errorBody -> {
                                     LOGGER.error("Non-successful response: {}", response.statusCode());
-                                    LOGGER.info("Error Message: {}", errorBody.getErrorMessage());
-                                    LOGGER.info("Error Code: {}", errorBody.getErrorCode());
+                                    LOGGER.error("Error Message: {}", errorBody.getErrorMessage());
+                                    LOGGER.error("Error Code: {}", errorBody.getErrorCode());
+                                    LOGGER.error("Error Code: {}", errorBody.getErrorCode());
 
                                     // Throw custom exception with the error message
                                     return Mono.error(new PayrollValidationException(errorBody.getMessage()));
@@ -102,64 +106,54 @@ public class AdminService {
     }
 
     public Map<String, List<String>> getCostCenterDetails(EmployeeFilterRequest employeeFilterRequest, String token) {
-        return webClient
-                .post()
-                .uri("admin/employee/cost-centers")
-                .header(HttpHeaders.AUTHORIZATION, token)
-                .bodyValue(employeeFilterRequest)
-                .exchangeToMono(response ->{
-                    if (response.statusCode().is2xxSuccessful()) {
-                        // Extract the body as a List if the response is successful
-                        return response.bodyToMono(Map.class);
-                    } else {
-                        // Extract error message from the response body and throw custom exception
-                        return response.bodyToMono(ApiException.class)
-                                .flatMap(errorBody -> {
-                                    LOGGER.error("Non-successful response: {}", response.statusCode());
-                                    LOGGER.info("Error Message: {}", errorBody.getErrorMessage());
-                                    LOGGER.info("Error Code: {}", errorBody.getErrorCode());
-
-                                    // Throw custom exception with the error message
-                                    return Mono.error(new EmployeeFilterException(errorBody.getMessage()));
-                                });
-                    }
-                })
-                .onErrorResume(WebClientResponseException.class, ex -> {
-                    // Handle WebClient exceptions, if needed
-                    LOGGER.error("WebClient call failed: {}", ex.getMessage());
-                    return Mono.error(new EmployeeFilterException(ex.getMessage()));
-                })
-                .block(); // Block to wait for the response
+        List<String> emplloyeeList = new ArrayList<>();
+        Map<String, List<String>> costCenterDetails = new HashMap<>();
+        costCenterDetails.put("", emplloyeeList);
+        return costCenterDetails;
+//        return webClient
+//                .post()
+//                .uri("admin/employee/cost-centers")
+//                .header(HttpHeaders.AUTHORIZATION, token)
+//                .bodyValue(employeeFilterRequest)
+//                .exchangeToMono(response ->{
+//                    if (response.statusCode().is2xxSuccessful()) {
+//                        // Extract the body as a List if the response is successful
+//                        return response.bodyToMono(Map.class);
+//                    } else {
+//                        // Extract error message from the response body and throw custom exception
+//                        return response.bodyToMono(ApiException.class)
+//                                .flatMap(errorBody -> {
+//                                    LOGGER.error("Non-successful response: {}", response.statusCode());
+//                                    LOGGER.info("Error Message: {}", errorBody.getErrorMessage());
+//                                    LOGGER.info("Error Code: {}", errorBody.getErrorCode());
+//
+//                                    // Throw custom exception with the error message
+//                                    return Mono.error(new EmployeeFilterException(errorBody.getMessage()));
+//                                });
+//                    }
+//                })
+//                .onErrorResume(WebClientResponseException.class, ex -> {
+//                    // Handle WebClient exceptions, if needed
+//                    LOGGER.error("WebClient call failed: {}", ex.getMessage());
+//                    return Mono.error(new EmployeeFilterException(ex.getMessage()));
+//                })
+//                .block(); // Block to wait for the response
     }
 
     public Map<String, EmployeeDetail> getEmployeesDetail(EmployeeFilterRequest employeeFilterRequest, String token) {
         return webClient
                 .post()
-                .uri("admin/employee/employee-details")
-                .header(HttpHeaders.AUTHORIZATION, token)
+                .uri("/admin/employee/employee-details") // note leading slash if baseUrl is set
+                .header(HttpHeaders.AUTHORIZATION, token) // include "Bearer " + token if needed
                 .bodyValue(employeeFilterRequest)
-                .exchangeToMono(response ->{
-                    if (response.statusCode().is2xxSuccessful()) {
-                        // Extract the body as a List if the response is successful
-                        return response.bodyToMono(Map.class);
-                    } else {
-                        // Extract error message from the response body and throw custom exception
-                        return response.bodyToMono(ApiException.class)
-                                .flatMap(errorBody -> {
-                                    LOGGER.error("Non-successful response: {}", response.statusCode());
-                                    LOGGER.info("Error Message: {}", errorBody.getErrorMessage());
-                                    LOGGER.info("Error Code: {}", errorBody.getErrorCode());
-
-                                    // Throw custom exception with the error message
-                                    return Mono.error(new EmployeeFilterException(errorBody.getMessage()));
-                                });
-                    }
-                })
-                .onErrorResume(WebClientResponseException.class, ex -> {
-                    // Handle WebClient exceptions, if needed
-                    LOGGER.error("WebClient call failed: {}", ex.getMessage());
-                    return Mono.error(new EmployeeFilterException(ex.getMessage()));
-                })
-                .block(); // Block to wait for the response
+                .retrieve()
+                .onStatus(
+                        status -> !status.is2xxSuccessful(),
+                        resp -> resp.bodyToMono(ApiException.class).flatMap(err ->
+                                Mono.error(new EmployeeFilterException(err.getMessage()))
+                        )
+                )
+                .bodyToMono(new ParameterizedTypeReference<Map<String, EmployeeDetail>>() {})
+                .block(); // keep blocking since method returns Map; consider returning Mono instead
     }
 }

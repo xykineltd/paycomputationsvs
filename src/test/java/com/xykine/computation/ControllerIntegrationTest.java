@@ -66,7 +66,6 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         when(adminService.getPaymentInfoList(any(), anyString())).thenReturn(TestDataFactory.getPaymentSettings("standard"));
         ReportResponse reportResponse = getReportSummary();
         String reportId = reportResponse.getReportId();
-        System.out.println(" first report id : " + reportId);
     }
 
     @AfterEach
@@ -91,7 +90,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         });
         PaymentInfo paymentInfo = reportResponses.get(0).getDetail().getReport();
         assertThat(paymentInfo).isNotNull().satisfies((x) -> {
-                 assertThat(x.getNetPay()).isEqualByComparingTo(BigDecimal.valueOf(633334.0));
+            assertThat(x.getNetPay()).isEqualByComparingTo(BigDecimal.valueOf(633334.0));
         });
         Map<String, BigDecimal> grossPay = paymentInfo.getGrossPay();
         assertThat(grossPay).isNotNull().satisfies((x) -> {
@@ -541,7 +540,6 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         String reportId = "";
         if ("COMPLETED".equalsIgnoreCase(jobStatus.getStatus())) {
             reportId = jobStatus.getReportId();
-            System.out.println(" the first " + reportId);
         }
 
         ReportResponse response = getReportById(reportId);
@@ -564,7 +562,6 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
          jobStatus = getStatus(jobId);
         if ("COMPLETED".equalsIgnoreCase(jobStatus.getStatus())) {
             reportId = jobStatus.getReportId();
-            System.out.println(" the second " + reportId);
         }
 
         updateReportRequest = new UpdateReportRequest();

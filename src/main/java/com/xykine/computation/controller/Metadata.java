@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/metadata")
+@RequestMapping("/compute/metadata")
 @RequiredArgsConstructor
 public class Metadata {
 
@@ -64,12 +64,19 @@ public class Metadata {
         return ResponseEntity.ok(employeeMetadataService.save(employee));
     }
 
+    @PostMapping("/employee/bulk")
+    public ResponseEntity<List<EmployeeMetadata>> createEmployee(@RequestBody List<EmployeeMetadata> employee) {
+        return ResponseEntity.ok(employeeMetadataService.saveAll(employee));
+    }
+
     @GetMapping("/employee/{employeeId}")
     public ResponseEntity<EmployeeMetadata> getEmployeeByEmployeeId(@PathVariable String employeeId) {
+        //TODO let include companyID here to be completely sure we are pulling employee for a particular company
         return employeeMetadataService.getByEmployeeId(employeeId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
+
 
     @GetMapping("/employees/company/{companyId}")
     public ResponseEntity<List<EmployeeMetadata>> getEmployeesByCompanyId(@PathVariable String companyId) {
@@ -86,6 +93,10 @@ public class Metadata {
             @PathVariable String employeeId,
             @RequestBody EmployeeMetadata updatedEmployee
     ) {
+
+//        System.out.println("updatedEmployee--->" + updatedEmployee);
+//        System.out.println("employeeId--->" + employeeId);
+        //TODO let include companyID here to be completely sure we are pulling employee for a particular company
         return employeeMetadataService.updateByEmployeeId(employeeId, updatedEmployee)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

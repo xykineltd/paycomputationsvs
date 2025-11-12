@@ -6,6 +6,7 @@ public enum PayrollStatus {
     APPROVED,
     REJECTED,
     COMPLETED,
+    DISBURSED,
     SUBMITTED,
     IN_PROGRESS,
     INITIATED

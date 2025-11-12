@@ -21,7 +21,7 @@
 
 	<properties>
 		<java.version>17</java.version>
-		<paymentsetting.version>1.0.3</paymentsetting.version>
+		<paymentsetting.version>1.0.6</paymentsetting.version>
 	</properties>
 
 	<dependencyManagement>
@@ -100,6 +100,7 @@
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
+			<version>1.18.38</version>
 			<optional>true</optional>
 		</dependency>
 
@@ -197,12 +198,18 @@
 		</plugins>
 	</build>
 
-	<distributionManagement>
+<!--	<distributionManagement>-->
+<!--		<repository>-->
+<!--			<id>github</id>-->
+<!--			<name>GitHub Packages</name>-->
+<!--			<url>https://maven.pkg.github.com/xykineltd/payment-settings-model</url>-->
+<!--		</repository>-->
+<!--	</distributionManagement>-->
+
+	<repositories>
 		<repository>
 			<id>github</id>
-			<name>GitHub Packages</name>
 			<url>https://maven.pkg.github.com/xykineltd/payment-settings-model</url>
 		</repository>
-	</distributionManagement>
-
+	</repositories>
 </project>

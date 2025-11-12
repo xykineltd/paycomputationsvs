@@ -165,11 +165,11 @@ public class ComputeService {
         CompanyMetadata companyMetadata = companyMetaDataRepo.findByCompanyId(companyId).orElseThrow(() -> new IncompleteEntitySetupException("Please create company metadata for this entity before running payment"));
 
         if (companyMetadata.getPaymentEntryMode() == null) {
-           new IncompleteEntitySetupException("Please configure payment entry mode for this entity before running payment");
+            throw new IncompleteEntitySetupException("Please configure payment entry mode for this entity before running payment");
         }
 
         PayrollReportSummary payroll = payrollReportSummaryRepo
-                .findPayrollReportSummaryByStartDateAndCompanyId(startDate, companyId);
+                .findPayrollReportSummaryByStartDateAndCompanyIdAndOffCycle(startDate, companyId, false);
         if (payroll != null && (payroll.getPayrollStatus().compareTo(PayrollStatus.APPROVED) == 0 || payroll.getPayrollStatus().compareTo(PayrollStatus.COMPLETED)  == 0)) {
             throw new PayrollUnmodifiableException(startDate);
         }

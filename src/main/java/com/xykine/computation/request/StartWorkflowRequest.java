@@ -13,6 +13,8 @@ public class StartWorkflowRequest {
     @NotBlank private String companyId;
     @NotBlank private String userId;
     private String payrollId;
+    private String payrollType;
+    private String payPeriod;
     private Instant firstDueDate;
     private Instant secondDueDate;
     private long numberOfEmployees;

@@ -6,6 +6,7 @@ import com.xykine.computation.entity.*;
 import com.xykine.computation.repo.*;
 import lombok.AllArgsConstructor;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.xykine.payroll.model.PaymentFrequencyEnum;
@@ -14,8 +15,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Component
-//@Profile({"QA"})
+//@Component
+//@Profile({"dev"})
 @AllArgsConstructor
 public class LoadComputationConfig {
 
@@ -61,6 +62,8 @@ public class LoadComputationConfig {
                 .active(false)
                 .build();
 
+        taxRepo.deleteAll();
+
         taxRepo.save(nigeriaOldTaxRule);
         taxRepo.save(nigeriaNewTaxRule);
 
@@ -100,6 +103,10 @@ public class LoadComputationConfig {
                 .value(BigDecimal.valueOf(0.05))
                 .build();
 
+        //Delete everything so that we dont keep adding duplicate data every time we restart
+        computationConstantsRepo.deleteAll();
+
+        //Recreate
         computationConstantsRepo.save(pensionFundPercent);
         computationConstantsRepo.save(nationalHousingFund);
         computationConstantsRepo.save(craFraction);
@@ -133,6 +140,8 @@ public class LoadComputationConfig {
         EmployeeMetadata regularStaffWithNHF = EmployeeMetadata.builder()
                 .employeeId("682cf69592b07e60fa10991b")
                 .companyId("682cf69492b07e60fa109911")
+                .isNHFSubscribed(false)
+
                 .employeeType(EmployeeType.FULL_TIME)
                 .isNHFSubscribed(false)
                 .customTaxReliefApplicable(BigDecimal.ZERO)
@@ -149,6 +158,8 @@ public class LoadComputationConfig {
                 .voluntaryPensionContribution(BigDecimal.ZERO)
                 .isPensioned(true)
                 .build();
+
+        employeeMetaDataRepo.deleteAll();
 
         EmployeeMetadata regularStaffWithCustomTaxReleif = EmployeeMetadata.builder()
                 .employeeId("8654321")
@@ -207,7 +218,15 @@ public class LoadComputationConfig {
                 .salaryFrequency(PaymentFrequencyEnum.MONTHLY)
                 .companyName("xykine inc")
                 .build();
-        companyMetadataRepo.save(xykineCompanyMetadata);
+
+
+        CompanyMetadata xykineCompanyMetadata2 = CompanyMetadata.builder()
+                .companyId("68dd326d1baabe7296f9624a")
+                .paymentEntryMode(PaymentFrequencyEnum.YEARLY)
+                .salaryFrequency(PaymentFrequencyEnum.MONTHLY)
+                .paymentDistribution(morufoye_international_payment_distribution)
+                .companyName("xykine")
+                .build();
 
         CompanyMetadata morufoyeCompanyMetadata = CompanyMetadata.builder()
                 .companyId("1234567")
@@ -216,7 +235,20 @@ public class LoadComputationConfig {
                 .companyName("morufoye international")
                 .paymentDistribution(morufoye_international_payment_distribution)
                 .build();
+
+        CompanyMetadata moniepointMfbCompanyMetadata = CompanyMetadata.builder()
+                .companyId("68e6121925592b68310c91cc")
+                .paymentEntryMode(PaymentFrequencyEnum.YEARLY)
+                .salaryFrequency(PaymentFrequencyEnum.MONTHLY)
+                .paymentDistribution(morufoye_international_payment_distribution)
+                .companyName("MonieWorld")
+                .build();
+
+        companyMetadataRepo.deleteAll();
+        companyMetadataRepo.save(xykineCompanyMetadata);
+        companyMetadataRepo.save(xykineCompanyMetadata2);
         companyMetadataRepo.save(morufoyeCompanyMetadata);
+        companyMetadataRepo.save(moniepointMfbCompanyMetadata);
 
         Loan loan = Loan.builder()
                 .companyId("1234567")
@@ -230,5 +262,5 @@ public class LoadComputationConfig {
                 .build();
         loanRepo.save(loan);
     }
-
 }
+
