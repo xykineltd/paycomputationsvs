@@ -321,7 +321,6 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
     }
 
     private Map<String, Object> extractRawDetail(PaymentInfo paymentInfo, String reportDetailId) {
-        System.out.println("paymentInfo---->" + paymentInfo);
         Map<String, Object> raw = new HashMap<>();
         raw.put("EmployeeId", paymentInfo.getEmployeeID());
         raw.put("DetailId", reportDetailId);
@@ -518,8 +517,6 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
             String key = entry.getKey();
             Object value = entry.getValue();
             String newKey;
-
-            System.out.println("key: " + key + ", value: " + value);
 
             switch (key) {
                 case "Gross Pay": newKey = "GROSS PAY"; break;

@@ -244,19 +244,25 @@ public class Report {
     ) throws IOException {
 
         byte[] excelFile = reportGeneratorService.generateReport(payload, authorizationHeader);
-        //        // 🔹 Store file locally
-        Path folder = Paths.get("./exports");  // relative folder inside Spring Boot run dir
-        if (!Files.exists(folder)) {
-            Files.createDirectories(folder);
-        }
-        Path filePath = folder.resolve("report-detail.xlsx");
-        try (FileOutputStream fos = new FileOutputStream(filePath.toFile())) {
-            fos.write(excelFile);
-        }
+               // 🔹 Store file locally
+//        Path folder = Paths.get("./exports");  // relative folder inside Spring Boot run dir
+//        if (!Files.exists(folder)) {
+//            Files.createDirectories(folder);
+//        }
+//        Path filePath = folder.resolve("report-detail.xlsx");
+//        try (FileOutputStream fos = new FileOutputStream(filePath.toFile())) {
+//            fos.write(excelFile);
+//        }
 
+        String fileName;
 
-        String fileName = "payroll-report." +
-                (payload.getDocType().equalsIgnoreCase("pdf") ? "pdf" : "xlsx");
+        if(payload.getDateRange() == null) {
+            fileName = "payroll-report." +
+                    (payload.getDocType().equalsIgnoreCase("pdf") ? "pdf" : "xlsx");
+        } else {
+            fileName = "payroll-report" + payload.getDateRange().getFromDate() + "." +
+                    (payload.getDocType().equalsIgnoreCase("pdf") ? "pdf" : "xlsx");
+        }
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(
