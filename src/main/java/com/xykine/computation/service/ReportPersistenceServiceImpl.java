@@ -499,8 +499,10 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         }
 
         PayrollReportSummary existingSummaryReport = payrollReportSummaryRepo.findPayrollReportSummaryByIdAndCompanyId(request.getReportId(), request.getCompanyId()).orElseThrow();
+        PayrollStatus currentStatus = existingSummaryReport.getPayrollStatus();
         existingSummaryReport.setPayrollStatus(request.getStatus());
-        PayrollReportSummary reportResponse = payrollReportSummaryRepo.save(existingSummaryReport);
+
+        payrollReportSummaryRepo.save(existingSummaryReport);
         if (request.getStatus().equals(PayrollStatus.APPROVED)) {
             if (existingSummaryReport.isOffCycle()) {
                 updateDashboardData(AppConstants.payrollCountOffCycle, existingSummaryReport, false);
@@ -508,12 +510,19 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 updateDashboardData(AppConstants.payrollCountRegular, existingSummaryReport, false);
             }
         }
-        if (request.getStatus().equals(PayrollStatus.ROLLED_BACK)) {
+        if (request.getStatus().equals(PayrollStatus.ROLLED_BACK) && (currentStatus == PayrollStatus.APPROVED)) {
             if (existingSummaryReport.isOffCycle()) {
                 updateDashboardData(AppConstants.payrollCountOffCycle, existingSummaryReport, true);
             } else {
                 updateDashboardData(AppConstants.payrollCountRegular, existingSummaryReport, true);
             }
+        }
+    }
+
+    private void updateDashboardData(String updateType, PayrollReportSummary payrollReportSummary, boolean isRollback) {
+        switch (updateType) {
+            case(AppConstants.payrollCountOffCycle) : dashboardDataService.updatePayrollCountTypeOffCycle(payrollReportSummary, isRollback); break;
+            case(AppConstants.payrollCountRegular) : dashboardDataService.updatePayrollCountTypeRegular(payrollReportSummary, isRollback); break;
         }
     }
 
@@ -646,13 +655,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                     newReport.setTaxableIncome(BigDecimal.ZERO);
                     return newReport;
                 });
-    }
-
-    private void updateDashboardData(String updateType, PayrollReportSummary payrollReportSummary, boolean isRollback) {
-        switch (updateType) {
-            case(AppConstants.payrollCountOffCycle) : dashboardDataService.updatePayrollCountTypeOffCycle(payrollReportSummary, isRollback); break;
-            case(AppConstants.payrollCountRegular) : dashboardDataService.updatePayrollCountTypeRegular(payrollReportSummary, isRollback); break;
-        }
     }
 
     private String getStartDateRange(String dateStringStart, String dateStringEnd) {

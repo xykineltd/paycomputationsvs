@@ -52,9 +52,8 @@ public class DashboardDataService {
     private final Executor executor = Executors.newFixedThreadPool(10);
 
     public void updatePayrollCountTypeOffCycle(PayrollReportSummary payrollReportSummary, boolean isRollback ) {
-        DashboardCard dashboardCard;
         Optional<DashboardCard> dashboardCardOptional = dashboardCardRepo.findByCompanyId(payrollReportSummary.getCompanyId());
-        dashboardCard = dashboardCardOptional.orElseGet(() -> saveFreshDashboardCard(payrollReportSummary.getCompanyId()));
+        DashboardCard dashboardCard = dashboardCardOptional.orElseGet(() -> saveFreshDashboardCard(payrollReportSummary.getCompanyId()));
 
         long currentCount = dashboardCard.getTotalOffCyclePayroll();
         dashboardCard.setTotalOffCyclePayroll(++currentCount);
@@ -62,9 +61,8 @@ public class DashboardDataService {
     }
 
     public void updatePayrollCountTypeRegular(PayrollReportSummary payrollReportSummary, boolean isRollBack) {
-        DashboardCard dashboardCard;
         Optional<DashboardCard> dashboardCardOptional = dashboardCardRepo.findByCompanyId(payrollReportSummary.getCompanyId());
-        dashboardCard = dashboardCardOptional.orElseGet(() -> saveFreshDashboardCard(payrollReportSummary.getCompanyId()));
+        DashboardCard dashboardCard = dashboardCardOptional.orElseGet(() -> saveFreshDashboardCard(payrollReportSummary.getCompanyId()));
         long currentCount = dashboardCard.getTotalRegularPayroll();
         if (!isRollBack) {
             dashboardCard.setTotalRegularPayroll(++currentCount);
