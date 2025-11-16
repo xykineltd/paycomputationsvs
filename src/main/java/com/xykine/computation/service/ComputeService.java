@@ -168,11 +168,19 @@ public class ComputeService {
             throw new IncompleteEntitySetupException("Please configure payment entry mode for this entity before running payment");
         }
 
-        PayrollReportSummary payroll = payrollReportSummaryRepo
-                .findPayrollReportSummaryByStartDateAndCompanyIdAndOffCycle(startDate, companyId, false);
-        if (payroll != null && (payroll.getPayrollStatus().compareTo(PayrollStatus.APPROVED) == 0 || payroll.getPayrollStatus().compareTo(PayrollStatus.COMPLETED)  == 0)) {
-            throw new PayrollUnmodifiableException(startDate);
-        }
+//        PayrollReportSummary payroll = payrollReportSummaryRepo
+//                .findPayrollReportSummaryByStartDateAndCompanyIdAndOffCycle(startDate, companyId, false);
+
+        List<PayrollReportSummary> payroll = payrollReportSummaryRepo
+                .findAllyByStartDateAndCompanyIdAndOffCycle(startDate, companyId, false);
+
+        payroll.forEach(p -> {
+                    if (p != null && (p.getPayrollStatus().compareTo(PayrollStatus.DISBURSED) == 0)) {
+                        throw new PayrollUnmodifiableException(startDate);
+                    }
+                }
+        );
+
     }
 
     private PaymentInfo copyPaymentInfo(PaymentInfo original) {

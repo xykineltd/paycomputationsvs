@@ -55,6 +55,7 @@ public class Compute extends TextWebSocketHandler {
             @RequestHeader("Authorization") String authorizationHeader,
             @RequestBody PaymentInfoRequest paymentRequest) {
 
+        //TODO only validate that we cannot rollback disbursed
         if (!paymentRequest.isPayrollSimulation() || !paymentRequest.isOffCycle()) {
             computeService.validatePayrollIsNotApprovedOrCompleted(
                     String.valueOf(paymentRequest.getStart()),
@@ -95,43 +96,43 @@ public class Compute extends TextWebSocketHandler {
         return Mono.just(ResponseEntity.ok(status));
     }
 
-    @PostMapping("/payroll")
-    public Mono<ReportResponse> computePayroll(
-            @RequestHeader("Authorization") String authorizationHeader,
-            @RequestBody PaymentInfoRequest paymentRequest) throws IOException, ClassNotFoundException {
-
-        EmployeeFilterRequest employeeFilterRequest = new EmployeeFilterRequest();
-        employeeFilterRequest.setCompanyID(paymentRequest.getCompanyId());
-        Map<String, List<String>> costCenters = adminService.getCostCenterDetails(employeeFilterRequest,authorizationHeader);
-
-        sessionCalculationObject.setCostCenters(costCenters);
-
-        sessionCalculationObject = OperationUtils.doPreflight(
-                    sessionCalculationObject,
-                    computationConstantsRepo,
-                    employeeMetadataService,
-                    paymentRequest
-            );
-
-            if (!paymentRequest.isPayrollSimulation() || !paymentRequest.isOffCycle()) {
-                computeService.validatePayrollIsNotApprovedOrCompleted(String.valueOf(paymentRequest.getStart()), paymentRequest.getCompanyId());
-            }
-
-        return AuthUtil.getUserName()
-                .doOnNext(username -> LOGGER.info("User: {}", username))
-                        .then(Mono.fromCallable(() -> {
-                    // your blocking logic inside
-                    List<PaymentInfo> paymentInfoList = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
-                    if (paymentInfoList == null || paymentInfoList.isEmpty()) {
-                        throw new PayrollValidationException("No payment information found for request");
-                    }
-
-                    PaymentComputeResponse computeResponse = computeService.computePayroll(paymentInfoList);
-                    computeResponse = OperationUtils.refineResponse(computeResponse, sessionCalculationObject, paymentRequest);
-
-                    return reportPersistenceService.serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
-                })
-                // run the blocking part on a thread pool for blocking tasks
-                .subscribeOn(Schedulers.boundedElastic()));
-    }
+//    @PostMapping("/payroll")
+//    public Mono<ReportResponse> computePayroll(
+//            @RequestHeader("Authorization") String authorizationHeader,
+//            @RequestBody PaymentInfoRequest paymentRequest) throws IOException, ClassNotFoundException {
+//
+//        EmployeeFilterRequest employeeFilterRequest = new EmployeeFilterRequest();
+//        employeeFilterRequest.setCompanyID(paymentRequest.getCompanyId());
+//        Map<String, List<String>> costCenters = adminService.getCostCenterDetails(employeeFilterRequest,authorizationHeader);
+//
+//        sessionCalculationObject.setCostCenters(costCenters);
+//
+//        sessionCalculationObject = OperationUtils.doPreflight(
+//                    sessionCalculationObject,
+//                    computationConstantsRepo,
+//                    employeeMetadataService,
+//                    paymentRequest
+//            );
+//
+//            if (!paymentRequest.isPayrollSimulation() || !paymentRequest.isOffCycle()) {
+//                computeService.validatePayrollIsNotApprovedOrCompleted(String.valueOf(paymentRequest.getStart()), paymentRequest.getCompanyId());
+//            }
+//
+//        return AuthUtil.getUserName()
+//                .doOnNext(username -> LOGGER.info("User: {}", username))
+//                        .then(Mono.fromCallable(() -> {
+//                    // your blocking logic inside
+//                    List<PaymentInfo> paymentInfoList = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
+//                    if (paymentInfoList == null || paymentInfoList.isEmpty()) {
+//                        throw new PayrollValidationException("No payment information found for request");
+//                    }
+//
+//                    PaymentComputeResponse computeResponse = computeService.computePayroll(paymentInfoList);
+//                    computeResponse = OperationUtils.refineResponse(computeResponse, sessionCalculationObject, paymentRequest);
+//
+//                    return reportPersistenceService.serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
+//                })
+//                // run the blocking part on a thread pool for blocking tasks
+//                .subscribeOn(Schedulers.boundedElastic()));
+//    }
 }

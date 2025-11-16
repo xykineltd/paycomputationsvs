@@ -36,6 +36,7 @@ public interface PayrollReportSummaryRepo extends MongoRepository<PayrollReportS
     PayrollReportSummary findPayrollReportSummaryByStartDateAndCompanyId(String startDate, String companyID);
 
     PayrollReportSummary findPayrollReportSummaryByStartDateAndCompanyIdAndOffCycle(String startDate, String companyID, Boolean offCycle);
+    List<PayrollReportSummary> findAllyByStartDateAndCompanyIdAndOffCycle(String startDate, String companyID, Boolean offCycle);
     Optional<PayrollReportSummary> findTopByCompanyIdAndPayrollStatusAndOffCycleFalseOrderByEndDateDesc(String companyId, PayrollStatus payrollStatus);
     Optional<PayrollReportSummary> findPayrollReportSummaryByIdAndCompanyId(UUID id, String companyId);
     PayrollReportSummary findPayrollReportSummaryByIdAndCompanyIdAndPayrollSimulation(UUID id, String companyId, boolean simulation);

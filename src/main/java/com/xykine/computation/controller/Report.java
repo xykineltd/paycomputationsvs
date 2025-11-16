@@ -128,11 +128,11 @@ public class Report {
         return reportPersistenceService.getPayRollReportDetailByType(request, page, size);
     }
 
-    @PutMapping("/approve")
-    public boolean approveReport(@RequestBody UpdateReportRequest request) {
-        PayrollReportSummary payrollReport = reportPersistenceService.approveReport(request);
-        return true;
-    }
+//    @PutMapping("/approve")
+//    public boolean approveReport(@RequestBody UpdateReportRequest request) {
+//        PayrollReportSummary payrollReport = reportPersistenceService.approveReport(request);
+//        return true;
+//    }
 
     @PutMapping("/update-report-status")
     public void updateStatus(@RequestBody UpdatePayrollStatusRequest request) {
@@ -144,18 +144,18 @@ public class Report {
         }
     }
 
-    @PutMapping("/cancel")
-    public boolean deleteReport(
-            @RequestBody UpdateReportRequest request,
-            @RequestHeader("Authorization") String token
-    ) {
-        return reportPersistenceService.deleteReport(request, token);
-    }
+//    @PutMapping("/cancel")
+//    public boolean deleteReport(
+//            @RequestBody UpdateReportRequest request,
+//            @RequestHeader("Authorization") String token
+//    ) {
+//        return reportPersistenceService.deleteReport(request, token);
+//    }
 
-    @PostMapping("/complete")
-    public CompletePayrollResponse completeReport(@RequestBody CompletePayrollRequest request) {
-        return reportPersistenceService.completeReport(request);
-    }
+//    @PostMapping("/complete")
+//    public CompletePayrollResponse completeReport(@RequestBody CompletePayrollRequest request) {
+//        return reportPersistenceService.completeReport(request);
+//    }
 
     @GetMapping("/paymentDetails")
     public ResponseEntity<?> getPaymentDetails(

@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.List;
 
 @RestController
@@ -27,12 +28,20 @@ public class Metadata {
         return ResponseEntity.ok(companyMetadataService.save(company));
     }
 
+//    @GetMapping("/company/{companyId}")
+//    public ResponseEntity<?> getCompanyByCompanyId(@PathVariable String companyId) {
+//        return companyMetadataService.getByCompanyId(companyId)
+//                .map(ResponseEntity::ok)
+//                .orElse(ResponseEntity.ok(Collections.emptyMap());
+//    }
+
     @GetMapping("/company/{companyId}")
-    public ResponseEntity<CompanyMetadata> getCompanyByCompanyId(@PathVariable String companyId) {
+    public ResponseEntity<?> getCompanyByCompanyId(@PathVariable String companyId) {
         return companyMetadataService.getByCompanyId(companyId)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
+                .orElse(ResponseEntity.ok(Collections.emptyMap()));
     }
+
 
     @GetMapping("/companies")
     public ResponseEntity<List<CompanyMetadata>> getAllCompanies() {

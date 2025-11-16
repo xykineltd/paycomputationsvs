@@ -150,11 +150,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             long endTime = System.currentTimeMillis();
             LOGGER.info("Total computation processing time {} ms", endTime - startTime);
 
-            /*
-             payrollReportDetailRepo.countBySummaryId(x.getId().toString()),
-             ReportUtils.transform(x).getSummary().getSummary().get(MapKeys.TOTAL_NET_PAY)
-            * */
-
         } catch (Exception e) {
             e.printStackTrace();
             LOGGER.error("Exception occurred while computing payroll for companyId: {}", paymentRequest.getCompanyId(), e);
@@ -343,18 +338,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
         if (previousPayrollReportSummary == null) {
             return summaryDetailsVariance;
-            // Previous null → variance = current values
-//            currentSummaryDetails.forEach((key, currentDetails) -> {
-//                Set<SummaryDetail> varianceDetails = Collections.newSetFromMap(new ConcurrentHashMap<>());
-//                currentDetails.forEach(d -> {
-//                    if (d.getValue().compareTo(BigDecimal.ZERO) != 0) {
-//                        varianceDetails.add(d);
-//                    }
-//                });
-//                if (!varianceDetails.isEmpty()) {
-//                    summaryDetailsVariance.put(key, varianceDetails);
-//                }
-//            });
         } else {
             Map<String, Set<SummaryDetail>> previousSummaryDetails =
                     ReportUtils.transform(previousPayrollReportSummary).getSummary().getSummaryDetails();
@@ -427,28 +410,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         return map;
     }
 
-    private ConcurrentHashMap<String, Set<SummaryDetail>> processSummaryDetailsVarianceSimulate(
-            ConcurrentHashMap<String, Set<SummaryDetail>> currentSummaryDetails) {
-
-        ConcurrentHashMap<String, Set<SummaryDetail>> summaryDetailsVariance = new ConcurrentHashMap<>();
-
-        currentSummaryDetails.forEach((key, detailsList) -> {
-            Set<SummaryDetail> zeroValueDetails = Collections.synchronizedSet(new HashSet<>(
-                    detailsList.stream()
-                            .map(detail -> new SummaryDetail(
-                                    detail.getEmployeeId(),
-                                    detail.getEmployeeName(),
-                                    detail.getDepartmentName(),
-                                    detail.getValue(),
-                                    BigDecimal.ZERO))
-                            .toList()
-            ));
-            summaryDetailsVariance.put(key, zeroValueDetails);
-        });
-
-        return summaryDetailsVariance;
-    }
-
 
     private Map<String, BigDecimal> processSummaryVariance(Map<String, BigDecimal> currentSummary, PayrollReportSummary previousPayrollReportSummary) {
         Map<String, BigDecimal> summaryVariance = new HashMap<>();
@@ -477,14 +438,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 // Add the difference to the differences map
                 summaryVariance.put(key, difference);
             }
-        }
-        return summaryVariance;
-    }
-
-    private Map<String, BigDecimal> processSummaryVarianceSimulate(Map<String, BigDecimal> currentSummary) {
-        Map<String, BigDecimal> summaryVariance = new HashMap<>();
-        for (Map.Entry<String, BigDecimal> entry : currentSummary.entrySet()) {
-            summaryVariance.put(entry.getKey(), BigDecimal.ZERO);
         }
         return summaryVariance;
     }
@@ -651,114 +604,120 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         return response;
     }
 
-    @Transactional
-    public PayrollReportSummary approveReport(UpdateReportRequest request) {
-        PayrollReportSummary existingSummaryReport;
-        if (request.isOffCycle()) {
-            existingSummaryReport = payrollReportSummaryRepo
-                    .findPayrollReportSummaryByCompanyIdAndOffCycleId(request.getCompanyId(), request.getOffCycleId());
-            updateDashboardData(AppConstants.payrollCountOffCycle, existingSummaryReport);
-        } else {
-            LOGGER.info("Updating payroll report for company id : {}", request.getCompanyId());
-            existingSummaryReport = payrollReportSummaryRepo
-                    .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(request.getStartDate(), request.getCompanyId(), false);
-            updateDashboardData(AppConstants.payrollCountRegular, existingSummaryReport);
-        }
-        existingSummaryReport.setPayrollStatus(request.getPayrollStatus());
-        PayrollReportSummary reportResponse = payrollReportSummaryRepo.save(existingSummaryReport);
-
-        logApproveReportEvent(request.getCompanyId(), reportResponse);
-//        if (request.getPayrollStatus().equals(PayrollStatus.APPROVED)) {
-//            payrollAsyncService.updateEmployeeLoanAsync(existingSummaryReport.getId().toString(), request.getCompanyId());
-//            payrollAsyncService.updateDetailStatusAsync(existingSummaryReport.getId().toString());
+//    @Transactional
+//    public void updateReportStatus(UpdatePayrollStatusRequest request) {
+//        if (request.getStatus().equals(PayrollStatus.REJECTED)) {
+//            request.setStatus(PayrollStatus.SIMULATED);
 //        }
-        return existingSummaryReport;
-    }
+//
+//        PayrollReportSummary existingSummaryReport = payrollReportSummaryRepo.findPayrollReportSummaryByIdAndCompanyId(request.getReportId(), request.getCompanyId()).orElseThrow();
+//        existingSummaryReport.setPayrollStatus(request.getStatus());
+//        PayrollReportSummary reportResponse = payrollReportSummaryRepo.save(existingSummaryReport);
+//
+//        //TODO make async
+////        updateDetailReportsAndDashboard(request, existingSummaryReport);
+//    }
+
+
 
     @Transactional
     public void updateReportStatus(UpdatePayrollStatusRequest request) {
+
         if (request.getStatus().equals(PayrollStatus.REJECTED)) {
             request.setStatus(PayrollStatus.SIMULATED);
         }
 
         PayrollReportSummary existingSummaryReport = payrollReportSummaryRepo.findPayrollReportSummaryByIdAndCompanyId(request.getReportId(), request.getCompanyId()).orElseThrow();
+        PayrollStatus currentStatus = existingSummaryReport.getPayrollStatus();
         existingSummaryReport.setPayrollStatus(request.getStatus());
-        PayrollReportSummary reportResponse = payrollReportSummaryRepo.save(existingSummaryReport);
 
-        //TODO make async
-//        updateDetailReportsAndDashboard(request, existingSummaryReport);
-    }
-
-    @Async
-    protected void updateDetailReportsAndDashboard(UpdatePayrollStatusRequest request, PayrollReportSummary existingSummaryReport) {
+        payrollReportSummaryRepo.save(existingSummaryReport);
         if (request.getStatus().equals(PayrollStatus.APPROVED)) {
             if (existingSummaryReport.isOffCycle()) {
-                updateDashboardData(AppConstants.payrollCountOffCycle, existingSummaryReport);
+                updateDashboardData(AppConstants.payrollCountOffCycle, existingSummaryReport, false);
             } else {
-                updateDashboardData(AppConstants.payrollCountRegular, existingSummaryReport);
+                updateDashboardData(AppConstants.payrollCountRegular, existingSummaryReport, false);
             }
-//            payrollAsyncService.updateEmployeeLoanAsync(existingSummaryReport.getId().toString(), reportResponse.getCompanyId());
-            payrollAsyncService.updateDetailStatusAsync(existingSummaryReport.getId().toString());
+        }
+        if (request.getStatus().equals(PayrollStatus.ROLLED_BACK) && (currentStatus == PayrollStatus.APPROVED)) {
+            if (existingSummaryReport.isOffCycle()) {
+                updateDashboardData(AppConstants.payrollCountOffCycle, existingSummaryReport, true);
+            } else {
+                updateDashboardData(AppConstants.payrollCountRegular, existingSummaryReport, true);
+            }
         }
     }
 
-    @Override
-    public boolean deleteReport(UpdateReportRequest request, String token) {
-        auditTrailService.logEvent(AuditTrailEvents.DELETE_REPORT, "Deleted report with start date : " + request.getStartDate() + " company id : " + request.getCompanyId(), request.getCompanyId());
-        var res = deleteReportByDate(request);
-        // Delete the corresponding workflow
-        workflowService.deleteWorkflowByReportId(DeleteStageInstanceRequest.builder()
-                .companyId(request.getCompanyId())
-                .reportId(request.getReportId())
-                .build(), token);
-        return res;
-    }
-
-    @Override
-    public CompletePayrollResponse completeReport(CompletePayrollRequest request) {
-        PayrollReportSummary existingSummaryReport =
-                payrollReportSummaryRepo.findPayrollReportSummaryByIdAndCompanyIdAndPayrollSimulation(
-                        request.getReportId(),
-                        request.getCompanyId(),
-                        false
-                );
-
-//        if (request.isOffCycle()) {
-//            existingSummaryReport = payrollReportSummaryRepo.findPayrollReportSummaryByStartDateAndCompanyIdAndOffCycleIdAndPayrollSimulation(
-//                    request.getStartDate(),
-//                    request.getCompanyId(),
-//                    request.getOffCycleId(),
-//                    false);
-//        } else {
-//            existingSummaryReport = payrollReportSummaryRepo
-//                    .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(request.getStartDate(), request.getCompanyId(), false);
+//    @Async
+//    protected void updateDetailReportsAndDashboard(UpdatePayrollStatusRequest request, PayrollReportSummary existingSummaryReport) {
+//        if (request.getStatus().equals(PayrollStatus.APPROVED)) {
+//            if (existingSummaryReport.isOffCycle()) {
+//                updateDashboardData(AppConstants.payrollCountOffCycle, existingSummaryReport);
+//            } else {
+//                updateDashboardData(AppConstants.payrollCountRegular, existingSummaryReport);
+//            }
+////            payrollAsyncService.updateEmployeeLoanAsync(existingSummaryReport.getId().toString(), reportResponse.getCompanyId());
+//            payrollAsyncService.updateDetailStatusAsync(existingSummaryReport.getId().toString());
 //        }
+//    }
 
+//    @Override
+//    public boolean deleteReport(UpdateReportRequest request, String token) {
+//        auditTrailService.logEvent(AuditTrailEvents.DELETE_REPORT, "Deleted report with start date : " + request.getStartDate() + " company id : " + request.getCompanyId(), request.getCompanyId());
+//        var res = deleteReportByDate(request);
+//        // Delete the corresponding workflow
+//        workflowService.deleteWorkflowByReportId(DeleteStageInstanceRequest.builder()
+//                .companyId(request.getCompanyId())
+//                .reportId(request.getReportId())
+//                .build(), token);
+//        return res;
+//    }
 
-
-        if (existingSummaryReport == null) {
-            throw new RuntimeException("Unable to pull payroll report");
-        }
-
-        existingSummaryReport.setPayrollStatus(PayrollStatus.COMPLETED);
-        var payrollReportSummary = payrollReportSummaryRepo.save(existingSummaryReport);
-        logPostReportToFinanceEvent(request.getCompanyId(), payrollReportSummary);
-
-        var response = ReportUtils.transform(payrollReportSummary);
-
-        return CompletePayrollResponse.builder()
-                .companyId(response.getCompanyId())
-                .reportId(response.getReportId())
-                .completedDate(response.getCreatedDate())
-                .payrollStatus(response.getPayrollStatus())
-                .summary(response.getSummary().getSummary())
-                .startDate(response.getStartDate())
-                .endDate(response.getEndDate())
-                .code(response.getCode())
-                .offCycle(response.isOffCycle())
-                .build();
-
-    }
+//    @Override
+//    public CompletePayrollResponse completeReport(CompletePayrollRequest request) {
+//        PayrollReportSummary existingSummaryReport =
+//                payrollReportSummaryRepo.findPayrollReportSummaryByIdAndCompanyIdAndPayrollSimulation(
+//                        request.getReportId(),
+//                        request.getCompanyId(),
+//                        false
+//                );
+//
+////        if (request.isOffCycle()) {
+////            existingSummaryReport = payrollReportSummaryRepo.findPayrollReportSummaryByStartDateAndCompanyIdAndOffCycleIdAndPayrollSimulation(
+////                    request.getStartDate(),
+////                    request.getCompanyId(),
+////                    request.getOffCycleId(),
+////                    false);
+////        } else {
+////            existingSummaryReport = payrollReportSummaryRepo
+////                    .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(request.getStartDate(), request.getCompanyId(), false);
+////        }
+//
+//
+//
+//        if (existingSummaryReport == null) {
+//            throw new RuntimeException("Unable to pull payroll report");
+//        }
+//
+//        existingSummaryReport.setPayrollStatus(PayrollStatus.COMPLETED);
+//        var payrollReportSummary = payrollReportSummaryRepo.save(existingSummaryReport);
+//        logPostReportToFinanceEvent(request.getCompanyId(), payrollReportSummary);
+//
+//        var response = ReportUtils.transform(payrollReportSummary);
+//
+//        return CompletePayrollResponse.builder()
+//                .companyId(response.getCompanyId())
+//                .reportId(response.getReportId())
+//                .completedDate(response.getCreatedDate())
+//                .payrollStatus(response.getPayrollStatus())
+//                .summary(response.getSummary().getSummary())
+//                .startDate(response.getStartDate())
+//                .endDate(response.getEndDate())
+//                .code(response.getCode())
+//                .offCycle(response.isOffCycle())
+//                .build();
+//
+//    }
 
     //TODO we should remove all other resources that link to the report, when a report is deleted
     private boolean deleteReportByDate(UpdateReportRequest request) {
@@ -1164,12 +1123,19 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         return merged;
     }
 
-    private void updateDashboardData(String updateType, PayrollReportSummary payrollReportSummary) {
-        LOGGER.info("Updating payroll report updateType : {}", updateType);
+//    private void updateDashboardData(String updateType, PayrollReportSummary payrollReportSummary) {
+//        LOGGER.info("Updating payroll report updateType : {}", updateType);
+//
+//        switch (updateType) {
+//            case(AppConstants.payrollCountOffCycle) : dashboardDataService.updatePayrollCountTypeOffCycle(payrollReportSummary); break;
+//            case(AppConstants.payrollCountRegular) : dashboardDataService.updatePayrollCountTypeRegular(payrollReportSummary); break;
+//        }
+//    }
 
+    private void updateDashboardData(String updateType, PayrollReportSummary payrollReportSummary, boolean isRollback) {
         switch (updateType) {
-            case(AppConstants.payrollCountOffCycle) : dashboardDataService.updatePayrollCountTypeOffCycle(payrollReportSummary); break;
-            case(AppConstants.payrollCountRegular) : dashboardDataService.updatePayrollCountTypeRegular(payrollReportSummary); break;
+            case(AppConstants.payrollCountOffCycle) : dashboardDataService.updatePayrollCountTypeOffCycle(payrollReportSummary, isRollback); break;
+            case(AppConstants.payrollCountRegular) : dashboardDataService.updatePayrollCountTypeRegular(payrollReportSummary, isRollback); break;
         }
     }
 
