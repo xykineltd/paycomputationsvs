@@ -55,9 +55,10 @@ public class Compute extends TextWebSocketHandler {
             @RequestHeader("Authorization") String authorizationHeader,
             @RequestBody PaymentInfoRequest paymentRequest) {
 
-        //TODO only validate that we cannot rollback disbursed
+        computeService.ensurePayrollConfiguration(paymentRequest.getCompanyId());
+
         if (!paymentRequest.isPayrollSimulation() || !paymentRequest.isOffCycle()) {
-            computeService.validatePayrollIsNotApprovedOrCompleted(
+            computeService.validatePayrollIsNotCompleted(
                     String.valueOf(paymentRequest.getStart()),
                     paymentRequest.getCompanyId()
             );

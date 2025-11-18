@@ -160,27 +160,27 @@ public class ComputeService {
         return result;
     }
 
-    public void validatePayrollIsNotApprovedOrCompleted (String startDate, String companyId) {
-
-        CompanyMetadata companyMetadata = companyMetaDataRepo.findByCompanyId(companyId).orElseThrow(() -> new IncompleteEntitySetupException("Please create company metadata for this entity before running payment"));
-
-        if (companyMetadata.getPaymentEntryMode() == null) {
-            throw new IncompleteEntitySetupException("Please configure payment entry mode for this entity before running payment");
-        }
-
-//        PayrollReportSummary payroll = payrollReportSummaryRepo
-//                .findPayrollReportSummaryByStartDateAndCompanyIdAndOffCycle(startDate, companyId, false);
+    public void validatePayrollIsNotCompleted (String startDate, String companyId) {
 
         List<PayrollReportSummary> payroll = payrollReportSummaryRepo
                 .findAllyByStartDateAndCompanyIdAndOffCycle(startDate, companyId, false);
 
         payroll.forEach(p -> {
-                    if (p != null && (p.getPayrollStatus().compareTo(PayrollStatus.DISBURSED) == 0)) {
+                    if (p != null && (p.getPayrollStatus().compareTo(PayrollStatus.COMPLETED) == 0)) {
                         throw new PayrollUnmodifiableException(startDate);
                     }
                 }
         );
 
+    }
+
+    public void ensurePayrollConfiguration(String companyId) {
+        CompanyMetadata companyMetadata = companyMetaDataRepo.findByCompanyId(companyId).orElseThrow(() ->
+                new IncompleteEntitySetupException("Please update your payroll configuration in the Payroll Configuration page to continue."));
+
+        if (companyMetadata.getPaymentEntryMode() == null) {
+            throw new IncompleteEntitySetupException("Your payroll configuration is missing the Payment Entry Mode (YEARLY or MONTHLY)");
+        }
     }
 
     private PaymentInfo copyPaymentInfo(PaymentInfo original) {

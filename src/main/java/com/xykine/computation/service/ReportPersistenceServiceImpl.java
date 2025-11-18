@@ -623,12 +623,16 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     @Transactional
     public void updateReportStatus(UpdatePayrollStatusRequest request) {
 
-        if (request.getStatus().equals(PayrollStatus.REJECTED)) {
+        PayrollReportSummary existingSummaryReport = payrollReportSummaryRepo.findPayrollReportSummaryByIdAndCompanyId(request.getReportId(), request.getCompanyId()).orElseThrow();
+        PayrollStatus currentStatus = existingSummaryReport.getPayrollStatus();
+
+        //if we have not approved the payroll, we can go back to simulate which will show as draft from the UI
+        // we don't have to roll back the data from the dashboard
+        if ((request.getStatus().equals(PayrollStatus.ROLLED_BACK) || request.getStatus().equals(PayrollStatus.REJECTED))
+                && (currentStatus != PayrollStatus.APPROVED)) {
             request.setStatus(PayrollStatus.SIMULATED);
         }
 
-        PayrollReportSummary existingSummaryReport = payrollReportSummaryRepo.findPayrollReportSummaryByIdAndCompanyId(request.getReportId(), request.getCompanyId()).orElseThrow();
-        PayrollStatus currentStatus = existingSummaryReport.getPayrollStatus();
         existingSummaryReport.setPayrollStatus(request.getStatus());
 
         payrollReportSummaryRepo.save(existingSummaryReport);
@@ -639,7 +643,9 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 updateDashboardData(AppConstants.payrollCountRegular, existingSummaryReport, false);
             }
         }
-        if (request.getStatus().equals(PayrollStatus.ROLLED_BACK) && (currentStatus == PayrollStatus.APPROVED)) {
+
+        if ((request.getStatus().equals(PayrollStatus.ROLLED_BACK) || request.getStatus().equals(PayrollStatus.REJECTED))
+                && (currentStatus == PayrollStatus.APPROVED)) {
             if (existingSummaryReport.isOffCycle()) {
                 updateDashboardData(AppConstants.payrollCountOffCycle, existingSummaryReport, true);
             } else {
@@ -745,8 +751,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         //canceling regular payroll
 //        payrollReportSummaryRepo.deletePayrollReportSummaryByStartDateAndCompanyId(startDate, companyId);
 //        payrollReportDetailRepo.deleteAllByStartDateAndCompanyId(LocalDate.parse(startDate), companyId);
-        System.out.printf("reportId---->" + request.getReportId());
-        System.out.printf("companyId---->" + request.getCompanyId());
         payrollReportSummaryRepo.deletePayrollReportSummaryByIdAndCompanyId(UUID.fromString(request.getReportId()), request.getCompanyId());
         payrollReportDetailRepo.deleteAllBySummaryIdAndCompanyId(request.getReportId(), request.getCompanyId());
         return true;

@@ -28,7 +28,7 @@ public interface ReportPersistenceService {
     Map<String, Object> getReportByEmployeeID(String companyId, String employeeID, int page, int size);
     Map<String, Object> getReportByEmployeeIDList(String companyId, List<String> employeeIDList, String summaryId, int page, int size);
 //    PayrollReportSummary approveReport(UpdateReportRequest updateReportRequest);
-    public void updateReportStatus(UpdatePayrollStatusRequest request);
+    void updateReportStatus(UpdatePayrollStatusRequest request);
 //    boolean deleteReport(UpdateReportRequest updateReportRequest, String token);
 //    CompletePayrollResponse completeReport(CompletePayrollRequest updateReportRequest);
     Map<String, Object> getPaymentDetails(String id, String companyId, String fullName, int page, int size);
