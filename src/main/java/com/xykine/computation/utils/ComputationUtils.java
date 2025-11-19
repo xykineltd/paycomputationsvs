@@ -16,6 +16,9 @@ import org.xykine.payroll.model.PaymentSettingsResponse;
 import org.xykine.payroll.model.enums.CurrencyEnum;
 import org.xykine.payroll.model.enums.PaymentTypeEnum;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.YearMonth;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
@@ -26,7 +29,7 @@ public class ComputationUtils {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PaymentCalculatorImpl.class);
 
-    public static BigDecimal prorate(BigDecimal rawValue, int numberOfUnPaiAbsence, PaymentFrequencyEnum salaryFrequency){
+    public static BigDecimal prorate(BigDecimal rawValue, int numberOfUnPaiAbsence, PaymentFrequencyEnum salaryFrequency, String payrollRunStartDate){
 
         if (rawValue == null)
             return BigDecimal.ZERO;
@@ -46,7 +49,9 @@ public class ComputationUtils {
         if (numberOfUnPaiAbsence == 0)
             return rawValue;
 //      if numberOfDaysOfUnpaidAbsence is not 0, remove the daily wage equivalent multiplied by the number of unpaid absences
-        BigDecimal dailyEquivalent = rawValue.divide(BigDecimal.valueOf(21), 2,  RoundingMode.CEILING); // To do ==> verify number of working days in the month
+        // Use actual working days in the current month (Mon–Fri)
+        int workingDaysInMonth = getWorkingDaysForPeriod(payrollRunStartDate);
+        BigDecimal dailyEquivalent = rawValue.divide(BigDecimal.valueOf(workingDaysInMonth), 2,  RoundingMode.CEILING); // To do ==> verify number of working days in the month
         return roundToTwoDecimalPlaces(rawValue.subtract(dailyEquivalent.multiply(BigDecimal.valueOf(numberOfUnPaiAbsence))));
     }
 
@@ -260,4 +265,41 @@ public class ComputationUtils {
         });
         return result;
     }
+
+    public static int getWorkingDaysInCurrentMonth() {
+        LocalDate now = LocalDate.now();
+        YearMonth ym = YearMonth.of(now.getYear(), now.getMonth());
+
+        int workDays = 0;
+        for (LocalDate date = ym.atDay(1); !date.isAfter(ym.atEndOfMonth()); date = date.plusDays(1)) {
+            DayOfWeek dow = date.getDayOfWeek();
+            if (dow != DayOfWeek.SATURDAY && dow != DayOfWeek.SUNDAY) {
+                workDays++;
+            }
+        }
+        return workDays;
+    }
+
+    public static int getWorkingDaysForPeriod(String payrollRunStartDate) {
+        LocalDate payrollRunDate = LocalDate.parse(payrollRunStartDate);
+
+        int year = payrollRunDate.getYear();
+        int month = payrollRunDate.getMonthValue();
+
+        YearMonth ym = YearMonth.of(year, month);
+
+        int workDays = 0;
+
+        for (LocalDate date = ym.atDay(1); !date.isAfter(ym.atEndOfMonth()); date = date.plusDays(1)) {
+            DayOfWeek dow = date.getDayOfWeek();
+
+            if (dow != DayOfWeek.SATURDAY && dow != DayOfWeek.SUNDAY) {
+                workDays++;
+            }
+        }
+
+        return workDays;
+    }
+
+
 }

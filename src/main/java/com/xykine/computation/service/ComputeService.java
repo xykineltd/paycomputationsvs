@@ -143,7 +143,7 @@ public class ComputeService {
                 .map(setting -> {
                     if (setting.getName().equalsIgnoreCase("Monthly Performance Bonus")) {
                         BigDecimal performanceBonus = ComputationUtils.prorate(mainCopy.getBasicSalary().multiply(setting.getValue().divide(BigDecimal.valueOf(100))),
-                                mainCopy.getNumberOfDaysOfUnpaidAbsence(), PaymentFrequencyEnum.MONTHLY);
+                                mainCopy.getNumberOfDaysOfUnpaidAbsence(), PaymentFrequencyEnum.MONTHLY, paymentInfo.getStartDate());
                         setting.setValue(performanceBonus);
                     }
                     PaymentInfo offCycleCopy = copyPaymentInfo(paymentInfo);
