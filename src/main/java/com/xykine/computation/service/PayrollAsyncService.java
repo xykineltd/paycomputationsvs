@@ -206,6 +206,7 @@ public class PayrollAsyncService {
                     ytdReport.setTaxableIncome(ytdReport.getTaxableIncome().add(y.get("Taxable Income")));
                     ytdReport.setWht(ytdReport.getWht().add(y.get("WHT")));
                 } else {
+                    //TODO why is YTD null?
                     ytdReport.setBasicSalary(ytdReport.getBasicSalary().subtract(y.get(MapKeys.BASIC_SALARY)));
                     ytdReport.setGrossPay(ytdReport.getGrossPay().subtract(y.get(MapKeys.GROSS_PAY)));
                     ytdReport.setNetPay(ytdReport.getNetPay().subtract(y.get(MapKeys.NET_PAY)));

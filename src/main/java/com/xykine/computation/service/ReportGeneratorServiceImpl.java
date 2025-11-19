@@ -47,6 +47,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
             "EXIT DATE",
             "ROLE",
             "GROSS PAY",
+            "GROSS SALARY",
             "BASIC SALARY",
             "HOUSING",
             "TRANSPORT",
@@ -146,6 +147,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
             default -> throw new RuntimeException("Invalid report type: " + reportRequestPayload.getEntityType());
         }
         AtomicBoolean isDetail = new AtomicBoolean(false);
+        int i = 0;
         // Transform, filter, and map into data rows
         List<Map<String, Object>> dataRows = source.stream()
                 .filter(Objects::nonNull)
@@ -301,15 +303,18 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
     private Map<String, Object> extractDetail(PaymentInfo paymentInfo, List<String> selectedReports, boolean isDetail, Map<String, EmployeeDetail> employeeDetailMap, String reportDetailId) {
         Map<String, Object> raw = extractRawDetail(paymentInfo, reportDetailId);
         Map<String, Object> result = new LinkedHashMap<>();
+        String employeeId = paymentInfo.getEmployeeID();
 
-        if (isDetail) {
-            String employeeId = paymentInfo.getEmployeeID();
-            final EmployeeDetail employeeDetail = (employeeDetailMap != null) ? employeeDetailMap.get(employeeId) : null;
-            result.put("EMP ID", employeeDetail != null ? employeeDetail.getMappedId() : " ");
-            result.put("EMPLOYEE NAME", paymentInfo.getFullName() != null ? paymentInfo.getFullName() : " ");
-            result.put("HIRE DATE", employeeDetail != null ? employeeDetail.getHireDate() : " ");
-            result.put("EXIT DATE", employeeDetail != null ? employeeDetail.getExitDate() : " ");
-            result.put("ROLE", employeeDetail != null ? employeeDetail.getRole() : " ");
+        final EmployeeDetail employeeDetail = (employeeDetailMap != null) ? employeeDetailMap.get(employeeId) : null;
+
+        if (isDetail && employeeDetail != null) {
+            String exitDate = employeeDetail.getExitDate().equals(employeeDetail.getHireDate()) ? "N/A" : employeeDetail.getExitDate();
+
+            result.put("EMP ID", employeeDetail.getMappedId());
+            result.put("EMPLOYEE NAME", paymentInfo.getFullName());
+            result.put("HIRE DATE", employeeDetail.getHireDate());
+            result.put("EXIT DATE", exitDate);
+            result.put("ROLE", employeeDetail.getRole());
         }
 
         Map<String, Object> finalResult = new HashMap<>(result);
@@ -317,7 +322,28 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
             Object value = raw.getOrDefault(key, " ");
             finalResult.put(key, value);
         });
+        finalResult.put("GROSS SALARY", deriveGrossSalary(paymentInfo.getGrossPay()));
+
+        //add grossSalary
+
         return swapKey(finalResult);
+    }
+
+    //Gross Salary is the summation of gross pay
+    private BigDecimal deriveGrossSalary(Map<String, BigDecimal> grossPay) {
+        if (grossPay == null || grossPay.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+
+        return grossPay.entrySet().stream()
+                //TODO let use enum for all out keys
+                //rework this
+                .filter(e ->
+                        !"Gross Pay".equalsIgnoreCase(e.getKey()) &&
+                        !"Monthly Performance Bonus".equalsIgnoreCase(e.getKey()))   // exclude Gross Pay
+                .map(Map.Entry::getValue)
+                .filter(Objects::nonNull)                                   // avoid null values
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private Map<String, Object> extractRawDetail(PaymentInfo paymentInfo, String reportDetailId) {
@@ -331,7 +357,6 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         raw.put(MapKeys.NET_PAY, paymentInfo.getNetPay());
 
         List<Map<String, BigDecimal>> components = Arrays.asList(
-
                 paymentInfo.getDeduction(),
                 paymentInfo.getTaxRelief(),
                 paymentInfo.getGrossPay(),
@@ -521,6 +546,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
             switch (key) {
                 case "Gross Pay": newKey = "GROSS PAY"; break;
                 case "Basic Salary": newKey = "BASIC SALARY"; break;
+                case "GROSS SALARY": newKey = "GROSS SALARY"; break;
                 case "Housing": newKey = "HOUSING"; break;
                 case "Transport": newKey = "TRANSPORT"; break;
                 case "Utility": newKey = "UTILITY"; break;
