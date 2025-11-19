@@ -308,7 +308,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         final EmployeeDetail employeeDetail = (employeeDetailMap != null) ? employeeDetailMap.get(employeeId) : null;
 
         if (isDetail && employeeDetail != null) {
-            String exitDate = employeeDetail.getExitDate().equals(employeeDetail.getHireDate()) ? "N/A" : employeeDetail.getExitDate();
+            String exitDate = employeeDetail.getExitDate().equals(employeeDetail.getHireDate()) ? "" : employeeDetail.getExitDate();
 
             result.put("EMP ID", employeeDetail.getMappedId());
             result.put("EMPLOYEE NAME", paymentInfo.getFullName());

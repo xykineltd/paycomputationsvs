@@ -256,7 +256,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     public ReportResponse serializeAndSaveReport(PaymentComputeResponse paymentComputeResponse, String companyId)
             throws IOException {
         long startTime = System.currentTimeMillis();
-        ReportResponse reportResponse = null;
+        ReportResponse reportResponse;
         try {
             deleteReportByDate(
 //                    paymentComputeResponse.getStart(),
