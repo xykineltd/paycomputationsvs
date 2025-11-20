@@ -30,6 +30,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -73,6 +74,34 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
             "NETPAY"
     );
 
+    // ✅ New: columns that should be formatted as currency (₦#,##0.00)
+    private static final Set<String> CURRENCY_COLUMNS = Set.of(
+            "GROSS PAY",
+            "GROSS SALARY",
+            "BASIC SALARY",
+            "HOUSING",
+            "TRANSPORT",
+            "UTILITY",
+            "ENTERTAINMENT",
+            "MEDICAL",
+            "PERSONAL OUTFIT",
+            "LEAVE",
+            "TRAINING",
+            "PERFORMANCE BONUS",
+            "OVERTIME",
+            "OTHER VARIABLE",
+            "OTHER ALLOWANCE",
+            "OTHER WAGE TYPES",
+            "TAXABLE INCOME",
+            "OTHER DEDUCTION",
+            "LOAN DEDUCTION",
+            "PAYE",
+            "NHF",
+            "EMPLOYEE PENSION",
+            "VOLUNTARY PENSION CONTRIBUTION",
+            "EMPLOYER PENSION",
+            "NETPAY"
+    );
 
     @Override
     public byte[] generateReport(ReportRequestPayload reportRequestPayload, String token) throws IOException {
@@ -126,11 +155,17 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         switch (reportRequestPayload.getEntityType()) {
             case "details" -> {
 
-                List<String> headers = reportRequestPayload.getHeaders();
                 if (reportRequestPayload.isAll()) {
-                    source = payrollReportDetailRepo.findByCompanyId(reportRequestPayload.getCompanyID());
+                    source = payrollReportDetailRepo.findPayrollReportDetailByCompanyIdAndSummaryId(
+                            reportRequestPayload.getCompanyID(),
+                            reportRequestPayload.getReportId());
+
                 } else if (!reportRequestPayload.getIds().isEmpty()) {
-                    source = payrollReportDetailRepo.findPayrollReportDetailByEmployeeIdInAndCompanyId(reportRequestPayload.getIds(), reportRequestPayload.getCompanyID());
+                    source = payrollReportDetailRepo.findPayrollReportDetailByEmployeeIdInAndCompanyIdAndSummaryId(
+                            reportRequestPayload.getIds(),
+                            reportRequestPayload.getCompanyID(),
+                            reportRequestPayload.getReportId()
+                    );
                 } else {
                     source = List.of();
                 }
@@ -170,15 +205,6 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                         detail.getReportId()
                 ))
                 .toList();
-//
-//        if (dataRows.isEmpty()) {
-//            throw new RuntimeException("No data found for selected employees/reports");
-//        }
-//
-//        List<String> headers = new ArrayList<>(dataRows.get(0).keySet());
-//        String fileName = reportRequestPayload.getCompanyID() +"_" + reportRequestPayload.getEntityType() + "_" + reportRequestPayload.getDateRange().getFromDate() + "_" + reportRequestPayload.getDateRange().getEndDate() + ".xlsx";
-//
-//        return generateExcel(headers, dataRows, fileName);
 
         // After dataRows is built:
         if (dataRows.isEmpty()) {
@@ -229,8 +255,6 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                 .filter(Objects::nonNull)
                 .map(ReportUtils::transform)
                 .map(detail -> extractDetailBefore(detail.getDetail().getReport(), retrievePaymentElementPayload.getSelectedHeader(), true, detail.getReportId()))
-                    //TODO fix later
-//                .map(detail -> extractDetail(detail.getDetail().getReport(), retrievePaymentElementPayload.getSelectedHeader(), true, null))
                 .toList();
     }
 
@@ -280,7 +304,6 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                 && !startDateInstance.isAfter(dateRange.getEndDate());
     }
 
-
     //TODO debug and merge
     private Map<String, Object> extractDetailBefore(PaymentInfo paymentInfo, List<String> selectedReports, boolean isDetail, String reportDetailId) {
         Map<String, Object> raw = extractRawDetail(paymentInfo, reportDetailId);
@@ -298,8 +321,6 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         return result;
     }
 
-
-
     private Map<String, Object> extractDetail(PaymentInfo paymentInfo, List<String> selectedReports, boolean isDetail, Map<String, EmployeeDetail> employeeDetailMap, String reportDetailId) {
         Map<String, Object> raw = extractRawDetail(paymentInfo, reportDetailId);
         Map<String, Object> result = new LinkedHashMap<>();
@@ -315,6 +336,8 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
             result.put("HIRE DATE", employeeDetail.getHireDate());
             result.put("EXIT DATE", exitDate);
             result.put("ROLE", employeeDetail.getRole());
+        } else if (isDetail) {
+            System.out.println("Employee detail is null for employeeId: " + employeeId);
         }
 
         Map<String, Object> finalResult = new HashMap<>(result);
@@ -323,8 +346,6 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
             finalResult.put(key, value);
         });
         finalResult.put("GROSS SALARY", deriveGrossSalary(paymentInfo.getGrossPay()));
-
-        //add grossSalary
 
         return swapKey(finalResult);
     }
@@ -336,13 +357,11 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         }
 
         return grossPay.entrySet().stream()
-                //TODO let use enum for all out keys
-                //rework this
                 .filter(e ->
                         !"Gross Pay".equalsIgnoreCase(e.getKey()) &&
-                        !"Monthly Performance Bonus".equalsIgnoreCase(e.getKey()))   // exclude Gross Pay
+                                !"Monthly Performance Bonus".equalsIgnoreCase(e.getKey()))
                 .map(Map.Entry::getValue)
-                .filter(Objects::nonNull)                                   // avoid null values
+                .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
@@ -366,12 +385,135 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         );
 
         components.stream()
-                .filter(Objects::nonNull) // Ensure the component is not null
+                .filter(Objects::nonNull)
                 .forEach(raw::putAll);
 
         return raw;
     }
 
+//    private byte[] generateExcel(List<String> headers, List<Map<String, Object>> dataRows, String fileName) throws IOException {
+//        try (XSSFWorkbook workbook = new XSSFWorkbook();
+//             ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+//
+//            XSSFSheet sheet = workbook.createSheet("Report");
+//
+//            // === Colors (ARGB). Swap to your exact template codes if you want a perfect match ===
+//            final String HEADER_BLUE  = "FF1F4E79";  // dark blue; white text recommended
+//            final String BANNER_CYAN  = "FF00D7EF";  // cyan/aqua for the "GROSS SALARY" band
+//
+//            // --- Styles ---
+//            // Header (blue) style
+//            XSSFCellStyle headerStyle = workbook.createCellStyle();
+//            XSSFFont headerFont = workbook.createFont();
+//            headerFont.setBold(true);
+//            headerFont.setColor(IndexedColors.WHITE.getIndex());
+//            headerStyle.setFont(headerFont);
+//            headerStyle.setAlignment(HorizontalAlignment.CENTER);
+//            headerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+//            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+//            headerStyle.setFillForegroundColor(argb(workbook, HEADER_BLUE));
+//            headerStyle.setBorderBottom(BorderStyle.THIN);
+//            headerStyle.setBorderTop(BorderStyle.THIN);
+//            headerStyle.setBorderLeft(BorderStyle.THIN);
+//            headerStyle.setBorderRight(BorderStyle.THIN);
+//
+//            // Banner (cyan) style
+//            XSSFCellStyle bannerStyle = workbook.createCellStyle();
+//            XSSFFont bannerFont = workbook.createFont();
+//            bannerFont.setBold(true);
+//            bannerFont.setColor(IndexedColors.BLACK.getIndex());
+//            bannerStyle.setFont(bannerFont);
+//            bannerStyle.setAlignment(HorizontalAlignment.CENTER);
+//            bannerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+//            bannerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+//            bannerStyle.setFillForegroundColor(argb(workbook, BANNER_CYAN));
+//            bannerStyle.setBorderBottom(BorderStyle.THIN);
+//            bannerStyle.setBorderTop(BorderStyle.THIN);
+//            bannerStyle.setBorderLeft(BorderStyle.THIN);
+//            bannerStyle.setBorderRight(BorderStyle.THIN);
+//
+//            // --- Row 0: empty row
+//            sheet.createRow(0);
+//
+//            // --- Row 1: GROSS SALARY band over G..O (GROSS PAY .. TRAINING) ---
+//            int startGross = headers.indexOf("GROSS PAY");
+//            int endGross   = headers.indexOf("TRAINING");
+//            if (startGross >= 0 && endGross >= startGross) {
+//                Row bandRow = sheet.createRow(1);
+//                for (int j = startGross; j <= endGross; j++) {
+//                    Cell c = bandRow.createCell(j);
+//                    c.setCellStyle(bannerStyle);
+//                }
+//                CellRangeAddress region = new CellRangeAddress(1, 1, startGross, endGross);
+//                sheet.addMergedRegion(region);
+//                Cell first = bandRow.getCell(startGross);
+//                first.setCellValue("GROSS SALARY");
+//                first.setCellStyle(bannerStyle);
+//
+//                RegionUtil.setBorderBottom(BorderStyle.THIN, region, sheet);
+//                RegionUtil.setBorderTop(BorderStyle.THIN, region, sheet);
+//                RegionUtil.setBorderLeft(BorderStyle.THIN, region, sheet);
+//                RegionUtil.setBorderRight(BorderStyle.THIN, region, sheet);
+//            }
+//
+//            // --- Row 2: Headers (all blue) ---
+//            Row headerRow = sheet.createRow(2);
+//            for (int i = 0; i < headers.size(); i++) {
+//                Cell c = headerRow.createCell(i);
+//                c.setCellValue(headers.get(i));
+//                c.setCellStyle(headerStyle);
+//            }
+//
+//            XSSFCellStyle numberStyle = workbook.createCellStyle();
+//            XSSFDataFormat format = workbook.createDataFormat();
+//            numberStyle.setDataFormat(format.getFormat("#,##0.00"));
+//
+//            XSSFCellStyle currencyStyle = workbook.createCellStyle();
+//            currencyStyle.cloneStyleFrom(numberStyle);
+//            currencyStyle.setDataFormat(format.getFormat("₦#,##0.00"));
+//
+//            // --- Rows 3+: Data ---
+//            for (int i = 0; i < dataRows.size(); i++) {
+//                Row row = sheet.createRow(i + 3);
+//                Map<String, Object> rowData = dataRows.get(i);
+//
+//                for (int j = 0; j < headers.size(); j++) {
+//                    String headerName = headers.get(j);
+//                    Object value = rowData.get(headerName);
+//                    Cell cell = row.createCell(j);
+//
+//                    if (value instanceof Number number) {
+//                        cell.setCellValue(number.doubleValue());
+//
+//                        // ✅ Use ₦ format for configured payroll currency columns
+//                        if (CURRENCY_COLUMNS.contains(headerName)) {
+//                            cell.setCellStyle(currencyStyle);
+//                        } else {
+//                            cell.setCellStyle(numberStyle);
+//                        }
+//                    } else if (value != null) {
+//                        cell.setCellValue(value.toString());
+//                    } else {
+//                        cell.setBlank();
+//                    }
+//                }
+//            }
+//
+//            // Autosize + minimum width
+//            for (int i = 0; i < headers.size(); i++) {
+//                sheet.autoSizeColumn(i);
+//                int currentWidth = sheet.getColumnWidth(i);
+//                int minWidth = 22 * 256; // ~22 chars
+//                if (currentWidth < minWidth) sheet.setColumnWidth(i, minWidth);
+//            }
+//
+//            // Freeze top 3 rows
+//            sheet.createFreezePane(0, 3);
+//
+//            workbook.write(outputStream);
+//            return outputStream.toByteArray();
+//        }
+//    }
 
     private byte[] generateExcel(List<String> headers, List<Map<String, Object>> dataRows, String fileName) throws IOException {
         try (XSSFWorkbook workbook = new XSSFWorkbook();
@@ -379,9 +521,8 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
 
             XSSFSheet sheet = workbook.createSheet("Report");
 
-            // === Colors (ARGB). Swap to your exact template codes if you want a perfect match ===
+            // === Colors (ARGB). ===
             final String HEADER_BLUE  = "FF1F4E79";  // dark blue; white text recommended
-            final String BANNER_CYAN  = "FF00D7EF";  // cyan/aqua for the "GROSS SALARY" band
 
             // --- Styles ---
             // Header (blue) style
@@ -399,71 +540,48 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
             headerStyle.setBorderLeft(BorderStyle.THIN);
             headerStyle.setBorderRight(BorderStyle.THIN);
 
-            // Banner (cyan) style
-            XSSFCellStyle bannerStyle = workbook.createCellStyle();
-            XSSFFont bannerFont = workbook.createFont();
-            bannerFont.setBold(true);
-            bannerFont.setColor(IndexedColors.BLACK.getIndex());
-            bannerStyle.setFont(bannerFont);
-            bannerStyle.setAlignment(HorizontalAlignment.CENTER);
-            bannerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
-            bannerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-            bannerStyle.setFillForegroundColor(argb(workbook, BANNER_CYAN));
-            bannerStyle.setBorderBottom(BorderStyle.THIN);
-            bannerStyle.setBorderTop(BorderStyle.THIN);
-            bannerStyle.setBorderLeft(BorderStyle.THIN);
-            bannerStyle.setBorderRight(BorderStyle.THIN);
-
-            // --- Row 0: (we’ll leave empty so the cyan band sits visually at row 1) ---
+            // --- Row 0 left empty ---
             sheet.createRow(0);
 
-            // --- Row 1: GROSS SALARY band over G..O (GROSS PAY .. TRAINING) ---
-            int startGross = headers.indexOf("GROSS PAY");
-            int endGross   = headers.indexOf("TRAINING"); // per your screenshot & template
-            if (startGross >= 0 && endGross >= startGross) {
-                Row bandRow = sheet.createRow(1);
-                for (int j = startGross; j <= endGross; j++) {
-                    Cell c = bandRow.createCell(j);
-                    c.setCellStyle(bannerStyle);
-                }
-                // Merge the region and set the text in the first cell
-                CellRangeAddress region = new CellRangeAddress(1, 1, startGross, endGross);
-                sheet.addMergedRegion(region);
-                Cell first = bandRow.getCell(startGross);
-                first.setCellValue("GROSS SALARY");
-                first.setCellStyle(bannerStyle);
+            // ❌❌❌ REMOVED GROSS SALARY BANNER COMPLETELY ❌❌❌
 
-                // Draw borders around the merged region
-                RegionUtil.setBorderBottom(BorderStyle.THIN, region, sheet);
-                RegionUtil.setBorderTop(BorderStyle.THIN, region, sheet);
-                RegionUtil.setBorderLeft(BorderStyle.THIN, region, sheet);
-                RegionUtil.setBorderRight(BorderStyle.THIN, region, sheet);
-            }
 
-            // --- Row 2: Headers (all blue) ---
-            Row headerRow = sheet.createRow(2);
+            // --- Row 1: Headers (all blue) ---
+            Row headerRow = sheet.createRow(1);
             for (int i = 0; i < headers.size(); i++) {
                 Cell c = headerRow.createCell(i);
                 c.setCellValue(headers.get(i));
                 c.setCellStyle(headerStyle);
             }
 
+            // Number style
             XSSFCellStyle numberStyle = workbook.createCellStyle();
             XSSFDataFormat format = workbook.createDataFormat();
             numberStyle.setDataFormat(format.getFormat("#,##0.00"));
 
-            // --- Rows 3+: Data ---
+            // Currency style ₦
+            XSSFCellStyle currencyStyle = workbook.createCellStyle();
+            currencyStyle.cloneStyleFrom(numberStyle);
+            currencyStyle.setDataFormat(format.getFormat("₦#,##0.00"));
+
+            // --- Rows 2+: Data ---
             for (int i = 0; i < dataRows.size(); i++) {
-                Row row = sheet.createRow(i + 3); // adjust if header rows differ
+                Row row = sheet.createRow(i + 2); // shifted up by 1
                 Map<String, Object> rowData = dataRows.get(i);
 
                 for (int j = 0; j < headers.size(); j++) {
-                    Object value = rowData.get(headers.get(j));
+                    String headerName = headers.get(j);
+                    Object value = rowData.get(headerName);
                     Cell cell = row.createCell(j);
 
-                    if (value instanceof Number) {
-                        cell.setCellValue(((Number) value).doubleValue());
-                        cell.setCellStyle(numberStyle); // ✅ Apply comma format
+                    if (value instanceof Number number) {
+                        cell.setCellValue(number.doubleValue());
+
+                        if (CURRENCY_COLUMNS.contains(headerName)) {
+                            cell.setCellStyle(currencyStyle);
+                        } else {
+                            cell.setCellStyle(numberStyle);
+                        }
                     } else if (value != null) {
                         cell.setCellValue(value.toString());
                     } else {
@@ -471,7 +589,6 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                     }
                 }
             }
-
 
             // Autosize + minimum width
             for (int i = 0; i < headers.size(); i++) {
@@ -481,60 +598,14 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                 if (currentWidth < minWidth) sheet.setColumnWidth(i, minWidth);
             }
 
-            // Freeze top 3 rows (empty row 0, cyan band row 1, and blue header row 2)
-            sheet.createFreezePane(0, 3);
+            // Freeze top 2 rows (empty row 0 + header row 1)
+            sheet.createFreezePane(0, 2);
 
             workbook.write(outputStream);
             return outputStream.toByteArray();
         }
     }
-//    private byte[] generateExcel(List<String> headers, List<Map<String, Object>> dataRows, String fileName) throws IOException {
-//        try (Workbook workbook = new XSSFWorkbook();
-//             ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-//
-//            Sheet sheet = workbook.createSheet("Report");
-//
-//            // Header row
-//            Row headerRow = sheet.createRow(0);
-//            for (int i = 0; i < headers.size(); i++) {
-//                headerRow.createCell(i).setCellValue(headers.get(i));
-//            }
-//
-//            // Data rows
-//            for (int i = 0; i < dataRows.size(); i++) {
-//                Row row = sheet.createRow(i + 1);
-//                Map<String, Object> rowData = dataRows.get(i);
-//                for (int j = 0; j < headers.size(); j++) {
-//                    Object value = rowData.get(headers.get(j));
-//                    Cell cell = row.createCell(j);
-//                    if (value instanceof Number) {
-//                        cell.setCellValue(((Number) value).doubleValue());
-//                    } else if (value != null) {
-//                        cell.setCellValue(value.toString());
-//                    } else {
-//                        cell.setBlank();
-//                    }
-//                }
-//            }
-//
-//            // 🔹 Auto-size all columns, but enforce a minimum width (15 chars)
-//            int totalCols = 2 + (dataRows.size() * 2);
-//            for (int i = 0; i < totalCols; i++) {
-//                sheet.autoSizeColumn(i);
-//                int currentWidth = sheet.getColumnWidth(i);
-//                int minWidth = 25 * 256; // 15 characters
-//                if (currentWidth < minWidth) {
-//                    sheet.setColumnWidth(i, minWidth);
-//                }
-//            }
-//
-//            // 🔹 Freeze header row
-//            sheet.createFreezePane(0, 1);
-//
-//            workbook.write(outputStream);
-//            return outputStream.toByteArray();
-//        }
-//    }
+
 
     private Map<String, Object> swapKey(Map<String, Object> result) {
         Map<String, Object> renamed = new HashMap<>();
@@ -561,16 +632,16 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                 case "other allowance": newKey = "OTHER ALLOWANCE"; break;
                 case "other wage types": newKey = "OTHER WAGE TYPES"; break;
                 case "CHARGEABLE INCOME": newKey = "TAXABLE INCOME"; break;
-                case "other deduction": newKey = "OTHER DEDUCTION"; break;
-                case "Loan": // added (no dot)
+                case "Loan":
                 case "Loan.": newKey = "LOAN DEDUCTION"; break;
+                case "other deduction": newKey = "OTHER DEDUCTION"; break;
                 case "Monthly Paye": newKey = "PAYE"; break;
                 case "National Housing Fund": newKey = "NHF"; break;
                 case "Employee Pension Contribution": newKey = "EMPLOYEE PENSION"; break;
                 case "Voluntary Pension Contribution": newKey = "VOLUNTARY PENSION CONTRIBUTION"; break;
                 case "Employer Pension Contribution": newKey = "EMPLOYER PENSION"; break;
                 case "Net Pay": newKey = "NETPAY"; break;
-                default: newKey = key; // pass-through (includes EMP ID, EMPLOYEE NAME, etc.)
+                default: newKey = key;
             }
             renamed.put(newKey, value);
         }
@@ -578,7 +649,6 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
     }
 
     private static XSSFColor argb(XSSFWorkbook wb, String argbHex) {
-        // argbHex like "FF0B5394" (AARRGGBB)
         String s = argbHex.startsWith("#") ? argbHex.substring(1) : argbHex;
         byte[] bytes = new byte[] {
                 (byte) Integer.parseInt(s.substring(0, 2), 16),
@@ -588,92 +658,4 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         };
         return new XSSFColor(bytes, null);
     }
-
-//    private Map<String, Object> swapKey(Map<String, Object> result) {
-//        Map<String, Object> renamedPayroll = new HashMap<>();
-//        for (Map.Entry<String, Object> entry : result.entrySet()) {
-//            String key = entry.getKey();
-//            Object value = entry.getValue();
-//            String newKey;
-//
-//            switch (key) {
-//                case "Gross Pay":
-//                    newKey = "GROSS PAY.";
-//                    break;
-//                case "Basic Salary":
-//                    newKey = "BASIC SALARY.";
-//                    break;
-//                case "Housing Allowance":
-//                    newKey = "HOUSING,";
-//                    break;
-//                case "Transport Allowance":
-//                    newKey = "TRANSPORT,";
-//                    break;
-//                case "Utility":
-//                    newKey = "UTILITY,";
-//                    break;
-//                case "Entertainment":
-//                    newKey = "ENTERTAINMENT,";
-//                    break;
-//                case "Medical":
-//                    newKey = "MEDICAL,";
-//                    break;
-//                case "PERSONAL OUTFIT":
-//                    newKey = "PERSONAL OUTFIT,";
-//                    break;
-//                case "Leave":
-//                    newKey = "LEAVE,";
-//                    break;
-//                case "Training":
-//                    newKey = "TRAINING";
-//                    break;
-//                case "Monthly Performance Bonus":
-//                    newKey = "PERFORMANCE BONUS";
-//                    break;
-//                case "overtime":
-//                    newKey = "OVERTIME";
-//                    break;
-//                case "other variable":
-//                    newKey = "OTHER VARIABLE";
-//                    break;
-//                case "other allowance":
-//                    newKey = "OTHER ALLOWANCE";
-//                    break;
-//                case "other wage types":
-//                    newKey = "OTHER WAGE TYPES";
-//                    break;
-//                case "CHARGEABLE INCOME":
-//                    newKey = "TAXABLE INCOME";
-//                    break;
-//                case "other deduction":
-//                    newKey = "OTHER DEDUCTION";
-//                    break;
-//                case "Loan.":
-//                    newKey = "LOAN DEDUCTION";
-//                    break;
-//                case "Monthly Paye":
-//                    newKey = "PAYE";
-//                    break;
-//                case "National Housing Fund":
-//                    newKey = "NHF";
-//                    break;
-//                case "Employee Pension Contribution":
-//                    newKey = "EMPLOYEE PENSION";
-//                    break;
-//                case "Voluntary Pension Contribution":
-//                    newKey = "VOLUNTARY PENSION CONTRIBUTION";
-//                    break;
-//                case "Employer Pension Contribution":
-//                    newKey = "EMPLOYER PENSION";
-//                    break;
-//                case "Net Pay":
-//                    newKey = "NETPAY";
-//                    break;
-//                default:
-//                    newKey = key;
-//            }
-//            renamedPayroll.put(newKey, value);
-//        }
-//        return renamedPayroll;
-//    }
 }

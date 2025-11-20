@@ -10,6 +10,7 @@ public class ReportRequestPayload {
     private List<String> ids;
     private List<String> headers;
     private String companyID;
+    private String reportId;
     private String entityType;
     private DateRange dateRange;
     private String docType;

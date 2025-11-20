@@ -61,6 +61,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     private final ComputeService computeService;
     private final PayrollVarianceDetailsRepo payrollVarianceDetailsRepo;
     private final WorkflowService workflowService;
+    private final PayrollReportDetailStatusService payrollReportDetailStatusService;
 
     @Autowired
     private SessionCalculationObject sessionCalculationObject;
@@ -634,8 +635,12 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         }
 
         existingSummaryReport.setPayrollStatus(request.getStatus());
-
         payrollReportSummaryRepo.save(existingSummaryReport);
+
+        //Also update the details status, beacuse we use the status to pull the report, since we now keep multiple details,
+        //we only want to allow download of only the approved or completed detail reports
+        payrollReportDetailStatusService.updateByCompanyAndReport(request);
+
         if (request.getStatus().equals(PayrollStatus.APPROVED)) {
             if (existingSummaryReport.isOffCycle()) {
                 updateDashboardData(AppConstants.payrollCountOffCycle, existingSummaryReport, false);

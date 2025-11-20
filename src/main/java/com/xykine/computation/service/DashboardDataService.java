@@ -75,14 +75,19 @@ public class DashboardDataService {
     }
 
     public DashboardCardResponse retrieveDashboardCardData(String companyId){
-        //TODO update the logic to use optionla before get()
-        DashboardCard dashboardCard =  dashboardCardRepo.findByCompanyId(companyId).get();
+        Optional<DashboardCard> dashboardCardOptional =  dashboardCardRepo.findByCompanyId(companyId);
+        if(dashboardCardOptional.isPresent()){
+            DashboardCard dashboardCard =  dashboardCardOptional.get();
+
+            return DashboardCardResponse.builder()
+                    .totalOffCyclePayroll(dashboardCard.getTotalOffCyclePayroll())
+                    .totalRegularPayroll(dashboardCard.getTotalRegularPayroll())
+                    .totalPayrollCost(dashboardCard.getTotalPayrollCost())
+                    .averageEmployeeCost(dashboardCard.getAverageEmployeeCost())
+                    .lastUpdatedAt(dashboardCard.getLastUpdatedAt().toString())
+                    .build();
+        }
         return DashboardCardResponse.builder()
-                .totalOffCyclePayroll(dashboardCard.getTotalOffCyclePayroll())
-                .totalRegularPayroll(dashboardCard.getTotalRegularPayroll())
-                .totalPayrollCost(dashboardCard.getTotalPayrollCost())
-                .averageEmployeeCost(dashboardCard.getAverageEmployeeCost())
-                .lastUpdatedAt(dashboardCard.getLastUpdatedAt().toString())
                 .build();
     }
 

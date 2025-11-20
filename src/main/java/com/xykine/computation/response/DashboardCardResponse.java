@@ -12,9 +12,9 @@ import java.math.BigDecimal;
 @Builder
 @Data
 public class DashboardCardResponse {
-    private long totalOffCyclePayroll;
-    private long totalRegularPayroll;
-    private BigDecimal totalPayrollCost;
-    private BigDecimal averageEmployeeCost;
+    private long totalOffCyclePayroll = 0L;
+    private long totalRegularPayroll = 0L;
+    private BigDecimal totalPayrollCost = BigDecimal.ZERO;
+    private BigDecimal averageEmployeeCost= BigDecimal.ZERO;
     private String lastUpdatedAt;
 }
