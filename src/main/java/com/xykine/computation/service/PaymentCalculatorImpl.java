@@ -3,6 +3,7 @@ package com.xykine.computation.service;
 import com.xykine.computation.domain.LoanStatus;
 import com.xykine.computation.dto.LoanFilter;
 import com.xykine.computation.entity.*;
+import com.xykine.computation.repo.PaymentSettingMetadataRepo;
 import com.xykine.computation.repo.TaxRepo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +33,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     private final CompanyMetadataService companyMetadataService;
     private final TaxRepo taxRepo;
     private final LoanService loanService;
+    private final PaymentSettingMetadataRepo paymentSettingMetadataRepo;
 
     protected static final Logger LOGGER = LoggerFactory.getLogger(PaymentCalculatorImpl.class);
 
@@ -307,9 +309,24 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     @Override
     public PaymentInfo computePayeeTax(PaymentInfo paymentInfo) {
+
         if (isContract(paymentInfo)) {
             return paymentInfo;
         }
+
+        List<PaymentSettingMetaData> settingsMetadata = paymentSettingMetadataRepo.findByEmployeeId(paymentInfo.getEmployeeID());
+
+        if (paymentInfo.isOffCycle()
+                && paymentInfo.getPaymentSettings() != null
+                && paymentInfo.getPaymentSettings().size() == 1) {
+
+            PaymentSettingsResponse setting = paymentInfo.getPaymentSettings().iterator().next();
+
+            if (isTaxable(setting, settingsMetadata)) {
+                return paymentInfo;
+            }
+        }
+
         String jsonTaxRule = taxRepo.findTaxRuleByCountry("NIGERIA");
         Map<String, BigDecimal> payeeTax = new HashMap<>();
         PaymentFrequencyEnum salaryFrequency = getSalaryFrequency(paymentInfo);

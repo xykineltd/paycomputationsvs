@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xykine.computation.entity.Loan;
 import com.xykine.computation.entity.PaymentDistribution;
+import com.xykine.computation.entity.PaymentSettingMetaData;
 import com.xykine.computation.entity.TaxRule;
 import com.xykine.computation.response.SummaryDetail;
 import com.xykine.computation.service.PaymentCalculatorImpl;
@@ -18,6 +19,7 @@ import org.xykine.payroll.model.enums.PaymentTypeEnum;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -259,5 +261,31 @@ public class ComputationUtils {
             result.add(loan);
         });
         return result;
+    }
+
+    public static boolean isValid(PaymentSettingsResponse response, List<PaymentSettingMetaData> settingsMetadata) {
+        LocalDate today = LocalDate.now();
+        return settingsMetadata
+                .stream()
+                .filter(x -> x.getPaymentName().equalsIgnoreCase(response.getName()))
+                .anyMatch(x -> !x.getStartDate().isAfter(today) && !x.getEndDate().isBefore(today));
+    }
+
+    public static boolean isProrated(PaymentSettingsResponse response, List<PaymentSettingMetaData> settingsMetadata) {
+        return settingsMetadata
+                .stream()
+                .filter(x -> x.getPaymentName().equalsIgnoreCase(response.getName()) &&  x.getProrated())
+                .findAny()
+                .isEmpty();
+
+    }
+
+    public static boolean isTaxable(PaymentSettingsResponse response, List<PaymentSettingMetaData> settingsMetadata) {
+        return settingsMetadata
+                .stream()
+                .filter(x -> x.getPaymentName().equalsIgnoreCase(response.getName()) &&  x.getTaxable())
+                .findAny()
+                .isEmpty();
+
     }
 }

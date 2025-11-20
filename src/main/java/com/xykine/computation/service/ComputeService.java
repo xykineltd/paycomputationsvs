@@ -3,11 +3,13 @@ package com.xykine.computation.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xykine.computation.entity.CompanyMetadata;
+import com.xykine.computation.entity.PaymentSettingMetaData;
 import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.entity.PayrollStatus;
 import com.xykine.computation.exceptions.IncompleteEntitySetupException;
 import com.xykine.computation.exceptions.PayrollUnmodifiableException;
 import com.xykine.computation.repo.CompanyMetaDataRepo;
+import com.xykine.computation.repo.PaymentSettingMetadataRepo;
 import com.xykine.computation.repo.PayrollReportSummaryRepo;
 import com.xykine.computation.utils.ComputationUtils;
 import org.slf4j.Logger;
@@ -31,6 +33,9 @@ import java.util.Set;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
+import static com.xykine.computation.utils.ComputationUtils.isProrated;
+import static com.xykine.computation.utils.ComputationUtils.isValid;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -39,6 +44,7 @@ public class ComputeService {
     private final PaymentCalculator paymentCalculator;
     private final PayrollReportSummaryRepo payrollReportSummaryRepo;
     private final CompanyMetaDataRepo companyMetaDataRepo;
+    private final PaymentSettingMetadataRepo paymentSettingMetadataRepo;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ComputeService.class);
 
@@ -114,6 +120,8 @@ public class ComputeService {
 
     public List<PaymentInfo> splitOffCyclePayments(PaymentInfo paymentInfo) {
 
+        List<PaymentSettingMetaData> settingsMetadata = paymentSettingMetadataRepo.findByEmployeeId(paymentInfo.getEmployeeID());
+
         if (paymentInfo.isOffCycle() || paymentInfo.getPaymentSettings() == null) {
             return List.of(paymentInfo);
         }
@@ -131,6 +139,7 @@ public class ComputeService {
         // Extract regular settings
         Set<PaymentSettingsResponse> regularSettings = paymentInfo.getPaymentSettings().stream()
                 .filter(setting -> setting.getType() != PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT)
+                .filter(setting -> isValid(setting, settingsMetadata))
                 .collect(Collectors.toSet());
 
         // --- Original copy with off-cycle removed ---
@@ -149,6 +158,11 @@ public class ComputeService {
                     PaymentInfo offCycleCopy = copyPaymentInfo(paymentInfo);
                     offCycleCopy.setPaymentSettings(Set.of(setting));
                     offCycleCopy.setOffCycle(true);
+
+                    if (isProrated(setting, settingsMetadata)) {
+                        offCycleCopy.setNumberOfDaysOfUnpaidAbsence(0);
+                    }
+
                     return offCycleCopy;
                 })
                 .toList();
