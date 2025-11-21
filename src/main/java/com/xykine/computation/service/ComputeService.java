@@ -27,6 +27,7 @@ import org.xykine.payroll.model.PaymentSettingsResponse;
 import org.xykine.payroll.model.enums.PaymentTypeEnum;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -129,6 +130,7 @@ public class ComputeService {
         // Extract off-cycle settings
         Set<PaymentSettingsResponse> offCycleSettings = paymentInfo.getPaymentSettings().stream()
                 .filter(setting -> setting.getType() == PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT)
+                .filter(setting -> isValid(setting, settingsMetadata, LocalDate.parse(paymentInfo.getStartDate())))
                 .collect(Collectors.toSet());
 
         // ✅ If no off-cycle payments, just return the original as-is
@@ -139,7 +141,6 @@ public class ComputeService {
         // Extract regular settings
         Set<PaymentSettingsResponse> regularSettings = paymentInfo.getPaymentSettings().stream()
                 .filter(setting -> setting.getType() != PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT)
-                .filter(setting -> isValid(setting, settingsMetadata))
                 .collect(Collectors.toSet());
 
         // --- Original copy with off-cycle removed ---
@@ -150,18 +151,23 @@ public class ComputeService {
         // --- New PaymentInfos for each off-cycle entry ---
         List<PaymentInfo> offCycleCopies = offCycleSettings.stream()
                 .map(setting -> {
+
+                    int numberOfUnpaidAbsence = mainCopy.getNumberOfDaysOfUnpaidAbsence();
+
+                    if (!isProrated(setting, settingsMetadata)) {
+                        numberOfUnpaidAbsence = 0;
+                    }
+
                     if (setting.getName().equalsIgnoreCase("Monthly Performance Bonus")) {
                         BigDecimal performanceBonus = ComputationUtils.prorate(mainCopy.getBasicSalary().multiply(setting.getValue().divide(BigDecimal.valueOf(100))),
-                                mainCopy.getNumberOfDaysOfUnpaidAbsence(), PaymentFrequencyEnum.MONTHLY);
+                                numberOfUnpaidAbsence, PaymentFrequencyEnum.MONTHLY);
                         setting.setValue(performanceBonus);
+                    } else {
+                        setting.setValue(ComputationUtils.prorate(setting.getValue(), numberOfUnpaidAbsence, PaymentFrequencyEnum.YEARLY));
                     }
                     PaymentInfo offCycleCopy = copyPaymentInfo(paymentInfo);
                     offCycleCopy.setPaymentSettings(Set.of(setting));
                     offCycleCopy.setOffCycle(true);
-
-                    if (isProrated(setting, settingsMetadata)) {
-                        offCycleCopy.setNumberOfDaysOfUnpaidAbsence(0);
-                    }
 
                     return offCycleCopy;
                 })

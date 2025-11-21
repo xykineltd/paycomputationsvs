@@ -22,6 +22,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 
 public class ComputationUtils {
@@ -263,16 +264,22 @@ public class ComputationUtils {
         return result;
     }
 
-    public static boolean isValid(PaymentSettingsResponse response, List<PaymentSettingMetaData> settingsMetadata) {
-        LocalDate today = LocalDate.now();
+    public static boolean isValid(PaymentSettingsResponse response, List<PaymentSettingMetaData> settingsMetadata, LocalDate startDate) {
+        if (doPrecheck(response, settingsMetadata)) {
+           return true;
+        }
         return settingsMetadata
                 .stream()
                 .filter(x -> x.getPaymentName().equalsIgnoreCase(response.getName()))
-                .anyMatch(x -> !x.getStartDate().isAfter(today) && !x.getEndDate().isBefore(today));
+                .anyMatch(x -> !x.getStartDate().isAfter(startDate) && !x.getEndDate().isBefore(startDate));
     }
 
     public static boolean isProrated(PaymentSettingsResponse response, List<PaymentSettingMetaData> settingsMetadata) {
-        return settingsMetadata
+        if (doPrecheck(response, settingsMetadata)) {
+            return true;
+        }
+
+        return !settingsMetadata
                 .stream()
                 .filter(x -> x.getPaymentName().equalsIgnoreCase(response.getName()) &&  x.getProrated())
                 .findAny()
@@ -281,11 +288,18 @@ public class ComputationUtils {
     }
 
     public static boolean isTaxable(PaymentSettingsResponse response, List<PaymentSettingMetaData> settingsMetadata) {
-        return settingsMetadata
+        if (doPrecheck(response, settingsMetadata)) {
+            return true;
+        }
+        return !settingsMetadata
                 .stream()
                 .filter(x -> x.getPaymentName().equalsIgnoreCase(response.getName()) &&  x.getTaxable())
                 .findAny()
                 .isEmpty();
 
+    }
+
+    private static boolean doPrecheck(PaymentSettingsResponse response, List<PaymentSettingMetaData> settingsMetadata){
+        return settingsMetadata.stream().filter(x -> x.getPaymentName().equalsIgnoreCase(response.getName())).collect(Collectors.toSet()).isEmpty();
     }
 }

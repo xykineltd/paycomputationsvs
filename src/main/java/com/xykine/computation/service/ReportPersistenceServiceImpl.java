@@ -128,7 +128,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             progressCallback.accept(jobStatusStore);
 
         } catch (Exception e) {
-            jobStatusStore.updateJob(jobId, "FAILED", e.getMessage(), "");
+
+            jobStatusStore.updateJob(jobId, "FAILED", e.getMessage(), e.toString());
             progressCallback.accept(jobStatusStore);
         }
     }

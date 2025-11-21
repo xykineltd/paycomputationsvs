@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import org.xykine.payroll.model.PaymentFrequencyEnum;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -26,6 +27,7 @@ public class LoadComputationConfig {
     private final EmployeeMetadataRepo employeeMetaDataRepo;
     private final CompanyMetaDataRepo companyMetadataRepo;
     private final LoanRepo loanRepo;
+    private final PaymentSettingMetadataRepo paymentSettingMetadataRepo;
 
     @EventListener(ApplicationReadyEvent.class)
     public void loadLegalEntityTestData() {
@@ -229,6 +231,17 @@ public class LoadComputationConfig {
                 .active(true)
                 .build();
         loanRepo.save(loan);
-    }
 
+        PaymentSettingMetaData paymentSettingMetaData = PaymentSettingMetaData.builder()
+                .companyId("1234567")
+                .employeeId("7654321")
+                .paymentType("ALLOWANCE")
+                .paymentName("OVERTIME GROSS")
+                .startDate(LocalDate.parse("2025-01-01"))
+                .endDate(LocalDate.parse("2025-07-31"))
+                .prorated(false)
+                .taxable(true)
+                .build();
+        paymentSettingMetadataRepo.save(paymentSettingMetaData);
+    }
 }

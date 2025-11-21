@@ -315,20 +315,22 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         }
 
         List<PaymentSettingMetaData> settingsMetadata = paymentSettingMetadataRepo.findByEmployeeId(paymentInfo.getEmployeeID());
-
+        Map<String, BigDecimal> payeeTax = new HashMap<>();
         if (paymentInfo.isOffCycle()
                 && paymentInfo.getPaymentSettings() != null
                 && paymentInfo.getPaymentSettings().size() == 1) {
 
             PaymentSettingsResponse setting = paymentInfo.getPaymentSettings().iterator().next();
 
-            if (isTaxable(setting, settingsMetadata)) {
+            if (!isTaxable(setting, settingsMetadata)) {
+                payeeTax.put(!paymentInfo.isOffCycle() ?  "Monthly Paye" : "Paye Tax on " + getOffCyclePaymentDetails(paymentInfo).getName(), BigDecimal.ZERO);
+                paymentInfo.setPayeeTax(payeeTax);
                 return paymentInfo;
             }
         }
 
         String jsonTaxRule = taxRepo.findTaxRuleByCountry("NIGERIA");
-        Map<String, BigDecimal> payeeTax = new HashMap<>();
+
         PaymentFrequencyEnum salaryFrequency = getSalaryFrequency(paymentInfo);
         BigDecimal chargeableIncome = paymentInfo.getTaxRelief().get("CHARGEABLE INCOME");
         payeeTax.put(MapKeys.TAXABLE_INCOME, chargeableIncome);
