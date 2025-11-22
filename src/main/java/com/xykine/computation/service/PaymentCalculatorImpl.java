@@ -358,6 +358,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
             if (paymentInfo.isOffCycle()) {
                 payee_tax_key = "Paye Tax on " + getOffCyclePaymentDetails(paymentInfo).getName();
                 deductionMap.put(payee_tax_key, paymentInfo.getPayeeTax().get(payee_tax_key));
+                deductionMap.put("Total Monthly Paye", paymentInfo.getPayeeTax().get(payee_tax_key));
                 deductionMap.put(MapKeys.TOTAL_DEDUCTION, paymentInfo.getPayeeTax().get(payee_tax_key));
                 updateReportSummary(paymentInfo, sessionCalculationObject, MapKeys.TOTAL_PERSONAL_DEDUCTION, paymentInfo.getPayeeTax().get(payee_tax_key));
                 paymentInfo.setDeduction(deductionMap);
@@ -365,6 +366,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
             }
         payee_tax_key = "Monthly Paye";
         deductionMap.put(payee_tax_key, paymentInfo.getPayeeTax().get(payee_tax_key));
+        deductionMap.put("Total Monthly Paye", paymentInfo.getPayeeTax().get(payee_tax_key));
         deductionMap.put(MapKeys.PENSION_FUND, paymentInfo.getPension().get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION));
         deductionMap.put(MapKeys.NATIONAL_HOUSING_FUND, paymentInfo.getNhf().get(MapKeys.NATIONAL_HOUSING_FUND));
         var deductions = getDeductionsForEmployee(paymentInfo);
@@ -436,8 +438,12 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         return paymentInfo;
     }
 
-    private BigDecimal getTotal(Map<String, BigDecimal> input){
-        BigDecimal total = input.values().stream().filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
+    private BigDecimal getTotal(Map<String, BigDecimal> input) {
+        BigDecimal total = input.entrySet().stream()
+                .filter(e -> !"Total Monthly Paye".equalsIgnoreCase(e.getKey()))
+                .map(Map.Entry::getValue)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
         return roundToTwoDecimalPlaces(total);
     }
 
