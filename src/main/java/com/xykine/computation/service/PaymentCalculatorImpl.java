@@ -417,7 +417,11 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
             BigDecimal exchangeRate = exchangeInfo.getExchangeRate();
             BigDecimal voluntaryPensionContribution =  !paymentInfo.isOffCycle() ? getEmployeeMetaData(paymentInfo).getVoluntaryPensionContribution() : BigDecimal.ZERO;
             BigDecimal netPay = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(paymentInfo.getDeduction().get(MapKeys.TOTAL_DEDUCTION)).subtract(voluntaryPensionContribution);
-            paymentInfo.setNetPay(roundToTwoDecimalPlaces(netPay.divide(exchangeRate, 0, RoundingMode.CEILING)));
+            paymentInfo.setNetPay(
+                    roundToTwoDecimalPlaces(
+                            netPay.divide(exchangeRate, 2, RoundingMode.CEILING)
+                    )
+            );
             //Add net pay to summary
             updateReportSummary(paymentInfo, sessionCalculationObject, MapKeys.TOTAL_NET_PAY, netPay);
             //Add gross pay to summary
