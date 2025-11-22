@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -76,7 +77,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         loanFilter.setCompanyId(paymentInfo.getCompanyID());
         loanFilter.setEmployeeId(paymentInfo.getEmployeeID());
         loanFilter.setStatus(LoanStatus.APPROVED);
-        Page<Loan> employeeLoansPage = loanService.getLoans(loanFilter, Pageable.unpaged());
+        Page<Loan> employeeLoansPage = loanService.getLoans(loanFilter, LocalDate.parse(paymentInfo.getStartDate()), Pageable.unpaged());
         List<Loan> employeeLoansList = employeeLoansPage.getContent();
         Set<PaymentSettingsResponse> employeePersonalDeductionSet = ComputationUtils.getEmployeeDeductions(employeeLoansList);
         Set<PaymentSettingsResponse> originalSettingsList = paymentInfo.getPaymentSettings() != null ? paymentInfo.getPaymentSettings() : new HashSet<>();

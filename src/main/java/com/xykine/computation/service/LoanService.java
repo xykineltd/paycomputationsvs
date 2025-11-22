@@ -13,9 +13,11 @@ import com.xykine.computation.request.CreateLoanRequest;
 import com.xykine.computation.request.AdjustLoanRequest;
 import com.xykine.computation.request.RepaymentRequest;
 
+import java.time.LocalDate;
+
 public interface LoanService {
     Loan createLoan(CreateLoanRequest req);
-    Page<Loan> getLoans(LoanFilter filter, Pageable pageable);
+    Page<Loan> getLoans(LoanFilter filter, LocalDate startDate, Pageable pageable);
     Page<Repayment> getEmployeeRepayments(String companyId, String employeeId, Pageable pageable);
     Page<Repayment> getLoanRepayments(String loanId, Pageable pageable);
     Loan updateLoan(String loanId, UpdateLoanRequest req);

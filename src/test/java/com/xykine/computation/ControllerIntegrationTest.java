@@ -509,8 +509,6 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         jobStatus = getStatus(jobId);
         ReportResponse reportResponse = null;
 
-        LOGGER.info(" ===> the current status {} ", jobStatus.getStatus());
-
         if ("COMPLETED".equalsIgnoreCase(jobStatus.getStatus())) {
             reportResponse = getReportById(jobStatus.getReportId());
         }
@@ -522,7 +520,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
 
         Map<String, BigDecimal> grossPay = paymentInfo.getGrossPay();
 
-        LOGGER.info(" ==> Gross {} ", grossPay);
+        LOGGER.info(" ===> za gross {} ", grossPay);
 
         assertThat(grossPay).isNotNull().satisfies((x) -> {
 
@@ -541,10 +539,8 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         });
 
         assertThat(paymentInfo).isNotNull().satisfies((x) -> {
-            assertThat(x.getNetPay()).isEqualByComparingTo(BigDecimal.valueOf(777826.0));
+           assertThat(x.getNetPay()).isEqualByComparingTo(BigDecimal.valueOf(777826.0));
         });
-
-
 
         Map<String, BigDecimal> taxRelief = paymentInfo.getTaxRelief();
         assertThat(taxRelief).isNotNull().satisfies((x) -> {
@@ -560,6 +556,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         });
 
         Map<String, BigDecimal> deduction = paymentInfo.getDeduction();
+
         assertThat(deduction).isNotNull().satisfies((x) -> {
             assertThat(x.get("Monthly Paye")).isEqualByComparingTo(BigDecimal.valueOf(126606.94));
             assertThat(x.get("Voluntary Pension Contribution")).isEqualByComparingTo(BigDecimal.ZERO);

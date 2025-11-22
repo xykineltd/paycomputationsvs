@@ -278,7 +278,6 @@ public class ComputationUtils {
         if (doPrecheck(response, settingsMetadata)) {
             return true;
         }
-
         return !settingsMetadata
                 .stream()
                 .filter(x -> x.getPaymentName().equalsIgnoreCase(response.getName()) &&  x.getProrated())

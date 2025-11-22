@@ -229,6 +229,8 @@ public class LoadComputationConfig {
                 .scheduledRepaymentAmount(BigDecimal.valueOf(10000))
                 .description("Company Car Loan")
                 .active(true)
+                .startDate(LocalDate.parse("2024-01-01"))
+                .endDate(LocalDate.parse("2024-07-31"))
                 .build();
         loanRepo.save(loan);
 
@@ -236,7 +238,7 @@ public class LoadComputationConfig {
                 .companyId("1234567")
                 .employeeId("7654321")
                 .paymentType("ALLOWANCE")
-                .paymentName("OVERTIME GROSS")
+                .paymentName("Call Allowance")
                 .startDate(LocalDate.parse("2025-01-01"))
                 .endDate(LocalDate.parse("2025-07-31"))
                 .prorated(false)

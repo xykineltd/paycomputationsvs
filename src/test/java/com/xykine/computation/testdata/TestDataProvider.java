@@ -580,6 +580,23 @@ public class TestDataProvider {
                                      "createdBy": null,
                                      "lastModifiedBy": null,
                                      "version": 0
+                                   },
+                                   {
+                                     "paymentSettingID": null,
+                                     "employeeID": "682cf69592b07e60fa10991b",
+                                     "type": "OFF_CYCLE_PAYMENT_AMOUNT",
+                                     "name": "Call Allowance",
+                                     "value":  10000.00,
+                                     "currency": "NGN",
+                                     "salaryFrequency": "MONTHLY",
+                                     "active": false,
+                                     "pensionable": false,
+                                     "prorated": false,
+                                     "createdDate": null,
+                                     "lastModifiedDate": null,
+                                     "createdBy": null,
+                                     "lastModifiedBy": null,
+                                     "version": 0
                                    }
                                  ],
                                  "basicSalary": 10351833.82,
