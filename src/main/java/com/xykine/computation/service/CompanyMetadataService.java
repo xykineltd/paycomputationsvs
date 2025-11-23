@@ -20,7 +20,11 @@ public class CompanyMetadataService {
     @Cacheable(value = "companyMetadata", key = "#companyId")
     public Optional<CompanyMetadata> getByCompanyId(String companyId) {
         return companyMetadataRepo.findByCompanyId(companyId);
+    }
 
+    @Cacheable(value = "companyMetadata", key = "#companyId")
+    public CompanyMetadata geCompanyMetadataById(String companyId) {
+        return companyMetadataRepo.findByCompanyId(companyId).orElseThrow(() -> new RuntimeException("companyMetadata"));
     }
 
     public List<CompanyMetadata> findAll() {

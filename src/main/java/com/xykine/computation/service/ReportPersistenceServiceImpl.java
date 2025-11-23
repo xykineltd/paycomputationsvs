@@ -80,7 +80,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
             List<PaymentInfo> paymentInfoList = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
             LOGGER.info("PaymentInfoList size: {}", paymentInfoList.size());
-            totalNumberOfPay = paymentInfoList.size();
 
 
             PayrollReportSummary simulatedSummary = payrollReportSummaryRepo
@@ -130,7 +129,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                     paymentRequest
             );
 
-            LOGGER.info("calling  paymentInfoList---->{}", paymentRequest);
             if (paymentInfoList == null || paymentInfoList.isEmpty()) {
                 throw new PayrollValidationException("No payment information found for request");
             }

@@ -3,11 +3,13 @@ package com.xykine.computation.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xykine.computation.entity.CompanyMetadata;
+import com.xykine.computation.entity.PaymentSettingMetaData;
 import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.entity.PayrollStatus;
 import com.xykine.computation.exceptions.IncompleteEntitySetupException;
 import com.xykine.computation.exceptions.PayrollUnmodifiableException;
 import com.xykine.computation.repo.CompanyMetaDataRepo;
+import com.xykine.computation.repo.PaymentSettingMetadataRepo;
 import com.xykine.computation.repo.PayrollReportSummaryRepo;
 import com.xykine.computation.utils.ComputationUtils;
 import org.slf4j.Logger;
@@ -25,11 +27,15 @@ import org.xykine.payroll.model.PaymentSettingsResponse;
 import org.xykine.payroll.model.enums.PaymentTypeEnum;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
+
+import static com.xykine.computation.utils.ComputationUtils.*;
 
 @Slf4j
 @Service
@@ -39,6 +45,7 @@ public class ComputeService {
     private final PaymentCalculator paymentCalculator;
     private final PayrollReportSummaryRepo payrollReportSummaryRepo;
     private final CompanyMetaDataRepo companyMetaDataRepo;
+    private final PaymentSettingMetadataRepo paymentSettingMetadataRepo;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ComputeService.class);
 
@@ -73,7 +80,7 @@ public class ComputeService {
 
         futures.addAll(
                 chunks.stream()
-                        .map(chunk -> splitOutOffCycles(chunk))
+                        .map(this::splitOutOffCycles)
                         .map(finalChunk -> CompletableFuture.supplyAsync(() -> processReport(finalChunk)))
                         .toList()
         );
@@ -114,6 +121,8 @@ public class ComputeService {
 
     public List<PaymentInfo> splitOffCyclePayments(PaymentInfo paymentInfo) {
 
+        List<PaymentSettingMetaData> settingsMetadata = paymentSettingMetadataRepo.findByEmployeeId(paymentInfo.getEmployeeID());
+
         if (paymentInfo.isOffCycle() || paymentInfo.getPaymentSettings() == null) {
             return List.of(paymentInfo);
         }
@@ -121,10 +130,11 @@ public class ComputeService {
         // Extract off-cycle settings
         Set<PaymentSettingsResponse> offCycleSettings = paymentInfo.getPaymentSettings().stream()
                 .filter(setting -> setting.getType() == PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT)
+                .filter(setting -> isValid(setting, settingsMetadata, LocalDate.parse(paymentInfo.getStartDate())))
                 .collect(Collectors.toSet());
 
         // ✅ If no off-cycle payments, just return the original as-is
-        if (offCycleSettings.isEmpty()) {
+        if (offCycleSettings.isEmpty() || settingsMetadata.isEmpty()) {
             return List.of(paymentInfo);
         }
 
@@ -132,6 +142,7 @@ public class ComputeService {
         Set<PaymentSettingsResponse> regularSettings = paymentInfo.getPaymentSettings().stream()
                 .filter(setting -> setting.getType() != PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT)
                 .collect(Collectors.toSet());
+
 
         // --- Original copy with off-cycle removed ---
         PaymentInfo mainCopy = copyPaymentInfo(paymentInfo);
@@ -141,14 +152,24 @@ public class ComputeService {
         // --- New PaymentInfos for each off-cycle entry ---
         List<PaymentInfo> offCycleCopies = offCycleSettings.stream()
                 .map(setting -> {
+
+                    int numberOfUnpaidAbsence = mainCopy.getNumberOfDaysOfUnpaidAbsence();
+
+                    if (!isProrated(setting, settingsMetadata)) {
+                        numberOfUnpaidAbsence = 0;
+                    }
+
                     if (setting.getName().equalsIgnoreCase("Monthly Performance Bonus")) {
                         BigDecimal performanceBonus = ComputationUtils.prorate(mainCopy.getBasicSalary().multiply(setting.getValue().divide(BigDecimal.valueOf(100))),
-                                mainCopy.getNumberOfDaysOfUnpaidAbsence(), PaymentFrequencyEnum.MONTHLY, paymentInfo.getStartDate());
+                                numberOfUnpaidAbsence, PaymentFrequencyEnum.MONTHLY, paymentInfo.getStartDate());
                         setting.setValue(performanceBonus);
+                    } else {
+                        setting.setValue(ComputationUtils.prorate(setting.getValue(), numberOfUnpaidAbsence, PaymentFrequencyEnum.YEARLY, paymentInfo.getStartDate()));
                     }
                     PaymentInfo offCycleCopy = copyPaymentInfo(paymentInfo);
                     offCycleCopy.setPaymentSettings(Set.of(setting));
                     offCycleCopy.setOffCycle(true);
+
                     return offCycleCopy;
                 })
                 .toList();

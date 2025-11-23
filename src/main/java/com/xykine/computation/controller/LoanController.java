@@ -52,7 +52,7 @@ public class LoanController {
         f.setEmployeeId(employeeId);
         f.setCreatedFrom(createdFrom);
         f.setCreatedTo(createdTo);
-        return loanService.getLoans(f, pageable);
+        return loanService.getLoans(f, null, pageable);
     }
 
     // employeeLoanDetail: show ALL loan repayments for an employee (Paginated across loans)

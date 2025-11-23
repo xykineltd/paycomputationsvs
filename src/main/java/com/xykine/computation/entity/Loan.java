@@ -13,6 +13,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 
 @Document("loans")
 @Data
@@ -35,6 +36,8 @@ public class Loan {
 
     private String approvedBy;
     private Instant approvedAt;
+    private LocalDate startDate;
+    private LocalDate endDate;
 
     @CreatedDate private Instant createdAt;
     @LastModifiedDate private Instant updatedAt;

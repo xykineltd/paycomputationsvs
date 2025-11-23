@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.xykine.payroll.model.PaymentFrequencyEnum;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -258,6 +259,8 @@ public class LoadComputationConfig {
                 .outstandingAmount(BigDecimal.valueOf(1000000))
                 .scheduledRepaymentAmount(BigDecimal.valueOf(10000))
                 .description("Company Car Loan")
+                .startDate(LocalDate.parse("2024-01-01"))
+                .endDate(LocalDate.parse("2024-07-31"))
                 .active(true)
                 .build();
         loanRepo.save(loan);

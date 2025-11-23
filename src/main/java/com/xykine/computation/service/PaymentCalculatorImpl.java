@@ -3,6 +3,7 @@ package com.xykine.computation.service;
 import com.xykine.computation.domain.LoanStatus;
 import com.xykine.computation.dto.LoanFilter;
 import com.xykine.computation.entity.*;
+import com.xykine.computation.repo.PaymentSettingMetadataRepo;
 import com.xykine.computation.repo.TaxRepo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -32,6 +34,8 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     private final CompanyMetadataService companyMetadataService;
     private final TaxRepo taxRepo;
     private final LoanService loanService;
+    private final PaymentSettingMetadataRepo paymentSettingMetadataRepo;
+
 
     protected static final Logger LOGGER = LoggerFactory.getLogger(PaymentCalculatorImpl.class);
 
@@ -47,7 +51,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                         ? paymentInfo.getPaymentSettings()
                         : new HashSet<>();
 
-        // TODO we need to throw proper error if the payment settings is not present for both custom or the company metatdata payment distribution
+        // TODO we need to throw proper error if the payment settings is not present for both custom or the company metadata payment distribution
         originalSettingsList.addAll(paymentSettingsFromPaymentDistributionList);
         paymentInfo.setPaymentSettings(originalSettingsList);
         return paymentInfo;
@@ -76,7 +80,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         loanFilter.setCompanyId(paymentInfo.getCompanyID());
         loanFilter.setEmployeeId(paymentInfo.getEmployeeID());
         loanFilter.setStatus(LoanStatus.APPROVED);
-        Page<Loan> employeeLoansPage = loanService.getLoans(loanFilter, Pageable.unpaged());
+        Page<Loan> employeeLoansPage = loanService.getLoans(loanFilter, LocalDate.parse(paymentInfo.getStartDate()), Pageable.unpaged());
         List<Loan> employeeLoansList = employeeLoansPage.getContent();
         Set<PaymentSettingsResponse> employeePersonalDeductionSet = ComputationUtils.getEmployeeDeductions(employeeLoansList);
         Set<PaymentSettingsResponse> originalSettingsList = paymentInfo.getPaymentSettings() != null ? paymentInfo.getPaymentSettings() : new HashSet<>();
@@ -313,8 +317,23 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         if (isContract(paymentInfo)) {
             return paymentInfo;
         }
-        String jsonTaxRule = taxRepo.findTaxRuleByCountry("NIGERIA");
+
+        List<PaymentSettingMetaData> settingsMetadata = paymentSettingMetadataRepo.findByEmployeeId(paymentInfo.getEmployeeID());
         Map<String, BigDecimal> payeeTax = new HashMap<>();
+        if (paymentInfo.isOffCycle()
+                && paymentInfo.getPaymentSettings() != null
+                && paymentInfo.getPaymentSettings().size() == 1) {
+
+            PaymentSettingsResponse setting = paymentInfo.getPaymentSettings().iterator().next();
+
+            if (!isTaxable(setting, settingsMetadata)) {
+                payeeTax.put(!paymentInfo.isOffCycle() ?  "Monthly Paye" : "Paye Tax on " + getOffCyclePaymentDetails(paymentInfo).getName(), BigDecimal.ZERO);
+                paymentInfo.setPayeeTax(payeeTax);
+                return paymentInfo;
+            }
+        }
+
+        String jsonTaxRule = taxRepo.findTaxRuleByCountry("NIGERIA");
         PaymentFrequencyEnum salaryFrequency = getSalaryFrequency(paymentInfo);
         BigDecimal chargeableIncome = paymentInfo.getTaxRelief().get("CHARGEABLE INCOME");
         payeeTax.put(MapKeys.TAXABLE_INCOME, chargeableIncome);
@@ -336,18 +355,21 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     @Override
     public PaymentInfo computeTotalDeduction(PaymentInfo paymentInfo) {
         Map<String, BigDecimal> deductionMap = new HashMap<>();
-        String payee_tax_key = "";
+        String payee_tax_key;
         if (!isContract(paymentInfo)) {
             if (paymentInfo.isOffCycle()) {
                 payee_tax_key = "Paye Tax on " + getOffCyclePaymentDetails(paymentInfo).getName();
                 deductionMap.put(payee_tax_key, paymentInfo.getPayeeTax().get(payee_tax_key));
+                deductionMap.put("Total Monthly Paye", paymentInfo.getPayeeTax().get(payee_tax_key));
                 deductionMap.put(MapKeys.TOTAL_DEDUCTION, paymentInfo.getPayeeTax().get(payee_tax_key));
                 updateReportSummary(paymentInfo, sessionCalculationObject, MapKeys.TOTAL_PERSONAL_DEDUCTION, paymentInfo.getPayeeTax().get(payee_tax_key));
                 paymentInfo.setDeduction(deductionMap);
                 return paymentInfo;
             }
         payee_tax_key = "Monthly Paye";
+
         deductionMap.put(payee_tax_key, paymentInfo.getPayeeTax().get(payee_tax_key));
+        deductionMap.put("Total Monthly Paye", paymentInfo.getPayeeTax().get(payee_tax_key));
         deductionMap.put(MapKeys.PENSION_FUND, paymentInfo.getPension().get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION));
         deductionMap.put(MapKeys.NATIONAL_HOUSING_FUND, paymentInfo.getNhf().get(MapKeys.NATIONAL_HOUSING_FUND));
         var deductions = getDeductionsForEmployee(paymentInfo);
@@ -398,7 +420,11 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
             BigDecimal exchangeRate = exchangeInfo.getExchangeRate();
             BigDecimal voluntaryPensionContribution =  !paymentInfo.isOffCycle() ? getEmployeeMetaData(paymentInfo).getVoluntaryPensionContribution() : BigDecimal.ZERO;
             BigDecimal netPay = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(paymentInfo.getDeduction().get(MapKeys.TOTAL_DEDUCTION)).subtract(voluntaryPensionContribution);
-            paymentInfo.setNetPay(roundToTwoDecimalPlaces(netPay.divide(exchangeRate, 0, RoundingMode.CEILING)));
+            paymentInfo.setNetPay(
+                    roundToTwoDecimalPlaces(
+                            netPay.divide(exchangeRate, 2, RoundingMode.CEILING)
+                    )
+            );
             //Add net pay to summary
             updateReportSummary(paymentInfo, sessionCalculationObject, MapKeys.TOTAL_NET_PAY, netPay);
             //Add gross pay to summary
@@ -419,8 +445,12 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         return paymentInfo;
     }
 
-    private BigDecimal getTotal(Map<String, BigDecimal> input){
-        BigDecimal total = input.values().stream().filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
+    private BigDecimal getTotal(Map<String, BigDecimal> input) {
+        BigDecimal total = input.entrySet().stream()
+                .filter(e -> !"Total Monthly Paye".equalsIgnoreCase(e.getKey()))
+                .map(Map.Entry::getValue)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
         return roundToTwoDecimalPlaces(total);
     }
 

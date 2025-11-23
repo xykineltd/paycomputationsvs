@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -57,7 +58,7 @@ public class LoanServiceImpl implements LoanService {
     }
 
     @Override
-    public Page<Loan> getLoans(LoanFilter filter, Pageable pageable) {
+    public Page<Loan> getLoans(LoanFilter filter, LocalDate startDate, Pageable pageable) {
         if (filter.getCompanyId() == null) {
             throw new IllegalArgumentException("CompanyId must be set");
         }
@@ -72,12 +73,14 @@ public class LoanServiceImpl implements LoanService {
             criteria.and("status").is(filter.getStatus());
         }
 
+        if (startDate != null) {
+            criteria = criteria.and("startDate").lte(startDate).and("endDate").gte(startDate);
+        }
+
         Query query = new Query(criteria).with(pageable);
 
         List<Loan> loans = mongoTemplate.find(query, Loan.class);
         long total = mongoTemplate.count(Query.of(query).limit(-1).skip(-1), Loan.class);
-
-        LOGGER.debug(" ====> getLoans {} ", loans);
 
         return new PageImpl<>(loans, pageable, total);
     }

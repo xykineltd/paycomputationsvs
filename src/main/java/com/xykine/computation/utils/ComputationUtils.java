@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xykine.computation.entity.Loan;
 import com.xykine.computation.entity.PaymentDistribution;
+import com.xykine.computation.entity.PaymentSettingMetaData;
 import com.xykine.computation.entity.TaxRule;
 import com.xykine.computation.response.SummaryDetail;
 import com.xykine.computation.service.PaymentCalculatorImpl;
@@ -23,6 +24,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 
 public class ComputationUtils {
@@ -266,20 +268,6 @@ public class ComputationUtils {
         return result;
     }
 
-    public static int getWorkingDaysInCurrentMonth() {
-        LocalDate now = LocalDate.now();
-        YearMonth ym = YearMonth.of(now.getYear(), now.getMonth());
-
-        int workDays = 0;
-        for (LocalDate date = ym.atDay(1); !date.isAfter(ym.atEndOfMonth()); date = date.plusDays(1)) {
-            DayOfWeek dow = date.getDayOfWeek();
-            if (dow != DayOfWeek.SATURDAY && dow != DayOfWeek.SUNDAY) {
-                workDays++;
-            }
-        }
-        return workDays;
-    }
-
     public static int getWorkingDaysForPeriod(String payrollRunStartDate) {
         LocalDate payrollRunDate = LocalDate.parse(payrollRunStartDate);
 
@@ -301,5 +289,42 @@ public class ComputationUtils {
         return workDays;
     }
 
+    public static boolean isValid(PaymentSettingsResponse response, List<PaymentSettingMetaData> settingsMetadata, LocalDate startDate) {
+        if (doPrecheck(response, settingsMetadata)) {
+            return true;
+        }
+        return settingsMetadata
+                .stream()
+                .filter(x -> x.getPaymentName().equalsIgnoreCase(response.getName()))
+                .anyMatch(x -> !x.getStartDate().isAfter(startDate) && !x.getEndDate().isBefore(startDate));
+    }
 
+    public static boolean isProrated(PaymentSettingsResponse response, List<PaymentSettingMetaData> settingsMetadata) {
+        if (doPrecheck(response, settingsMetadata)) {
+            return true;
+        }
+
+        return !settingsMetadata
+                .stream()
+                .filter(x -> x.getPaymentName().equalsIgnoreCase(response.getName()) &&  x.getProrated())
+                .findAny()
+                .isEmpty();
+
+    }
+
+    public static boolean isTaxable(PaymentSettingsResponse response, List<PaymentSettingMetaData> settingsMetadata) {
+        if (doPrecheck(response, settingsMetadata)) {
+            return true;
+        }
+        return !settingsMetadata
+                .stream()
+                .filter(x -> x.getPaymentName().equalsIgnoreCase(response.getName()) &&  x.getTaxable())
+                .findAny()
+                .isEmpty();
+
+    }
+
+    private static boolean doPrecheck(PaymentSettingsResponse response, List<PaymentSettingMetaData> settingsMetadata){
+        return settingsMetadata.stream().filter(x -> x.getPaymentName().equalsIgnoreCase(response.getName())).collect(Collectors.toSet()).isEmpty();
+    }
 }
