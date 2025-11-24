@@ -80,7 +80,7 @@ public class ComputeService {
 
         futures.addAll(
                 chunks.stream()
-                        .map(this::splitOutOffCycles)
+                        .map(chunk -> splitOutOffCycles(chunk))
                         .map(finalChunk -> CompletableFuture.supplyAsync(() -> processReport(finalChunk)))
                         .toList()
         );
@@ -134,7 +134,7 @@ public class ComputeService {
                 .collect(Collectors.toSet());
 
         // ✅ If no off-cycle payments, just return the original as-is
-        if (offCycleSettings.isEmpty() || settingsMetadata.isEmpty()) {
+        if (offCycleSettings.isEmpty()) {
             return List.of(paymentInfo);
         }
 
@@ -160,8 +160,13 @@ public class ComputeService {
                     }
 
                     if (setting.getName().equalsIgnoreCase("Monthly Performance Bonus")) {
+                        LOGGER.info("Monthly Performance Bonus {} ", setting.getValue());
                         BigDecimal performanceBonus = ComputationUtils.prorate(mainCopy.getBasicSalary().multiply(setting.getValue().divide(BigDecimal.valueOf(100))),
                                 numberOfUnpaidAbsence, PaymentFrequencyEnum.MONTHLY, paymentInfo.getStartDate());
+
+                        LOGGER.info("performanceBonus ====> {} ", performanceBonus);
+                        LOGGER.info("numberOfUnpaidAbsence ====> {} ", numberOfUnpaidAbsence);
+
                         setting.setValue(performanceBonus);
                     } else {
                         setting.setValue(ComputationUtils.prorate(setting.getValue(), numberOfUnpaidAbsence, PaymentFrequencyEnum.YEARLY, paymentInfo.getStartDate()));

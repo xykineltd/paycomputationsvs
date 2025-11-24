@@ -143,6 +143,13 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         insertRecurrentPaymentMap(grossPayMap, paymentInfo);
         BigDecimal total = getTotal(grossPayMap);
         grossPayMap.put(MapKeys.GROSS_PAY, total);
+
+        if (!paymentInfo.isOffCycle()) {
+            grossPayMap.put("Gross Salary", total);
+        } else {
+            grossPayMap.put("Gross Salary", BigDecimal.ZERO);
+        }
+
         paymentInfo.setGrossPay(grossPayMap);
         return paymentInfo;
     }
@@ -319,6 +326,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         }
 
         List<PaymentSettingMetaData> settingsMetadata = paymentSettingMetadataRepo.findByEmployeeId(paymentInfo.getEmployeeID());
+
         Map<String, BigDecimal> payeeTax = new HashMap<>();
         if (paymentInfo.isOffCycle()
                 && paymentInfo.getPaymentSettings() != null
@@ -448,6 +456,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     private BigDecimal getTotal(Map<String, BigDecimal> input) {
         BigDecimal total = input.entrySet().stream()
                 .filter(e -> !"Total Monthly Paye".equalsIgnoreCase(e.getKey()))
+                .filter(e -> !"Gross Salary".equalsIgnoreCase(e.getKey()))
                 .map(Map.Entry::getValue)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);

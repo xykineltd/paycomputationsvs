@@ -77,7 +77,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
             List<PaymentInfo> paymentInfoList = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
             LOGGER.info("PaymentInfoList size: {}", paymentInfoList.size());
-
+            LOGGER.info("PaymentInfoList size 1: {}", paymentInfoList.get(0));
+//            paymentInfoList.stream().filter(e -> e.getEmployeeID().equalsIgnoreCase("691e9b1dbab63576430b5e98")).forEach(e -> LOGGER.info("payment info {}", e));
 
             PayrollReportSummary simulatedSummary = payrollReportSummaryRepo
                     .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(String.valueOf(paymentRequest.getStart()), paymentRequest.getCompanyId(), true);
