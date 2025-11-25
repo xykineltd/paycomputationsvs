@@ -77,7 +77,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
             List<PaymentInfo> paymentInfoList = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
             LOGGER.info("PaymentInfoList size: {}", paymentInfoList.size());
-            LOGGER.info("PaymentInfoList size 1: {}", paymentInfoList.get(0));
 //            paymentInfoList.stream().filter(e -> e.getEmployeeID().equalsIgnoreCase("691e9b1dbab63576430b5e98")).forEach(e -> LOGGER.info("payment info {}", e));
 
             PayrollReportSummary simulatedSummary = payrollReportSummaryRepo
@@ -407,7 +406,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         return map;
     }
 
-
     private Map<String, BigDecimal> processSummaryVariance(Map<String, BigDecimal> currentSummary, PayrollReportSummary previousPayrollReportSummary) {
         Map<String, BigDecimal> summaryVariance = new HashMap<>();
 
@@ -579,6 +577,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         List<PayrollReportDetail> payrollDetails;
         payrollDetails = payrollReportDetailPage.getContent();
         List<ReportResponse> reportResponses = ReportUtils.transform(payrollDetails);
+
+        LOGGER.info("payrollDetails report Response: {}", reportResponses.get(0));
 
         Map<String, Object> response = new HashMap<>();
         response.put("payrollDetails", reportResponses);

@@ -164,37 +164,37 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
 
 
     // ✅ New: columns that should be formatted as currency (₦#,##0.00)
-    private static final Set<String> BASE_CURRENCY_COLUMNS = Set.of(
-            "GROSS PAY",
-            "GROSS SALARY",
-            "BASIC SALARY",
-            "HOUSING",
-            "TRANSPORT",
-            "UTILITY",
-            "ENTERTAINMENT",
-            "MEDICAL",
-            "PERSONAL OUTFIT",
-            "LEAVE",
-            "TRAINING",
-            "TAXABLE INCOME",
-//            "OTHER DEDUCTION",
-//            "LOAN DEDUCTION",
-            "PAYE",
-            "NHF",
-            "EMPLOYEE PENSION",
-            "VOLUNTARY PENSION CONTRIBUTION",
-            "EMPLOYER PENSION",
-            "NETPAY"
-    );
-
-    // Columns that should never be formatted as currency
-    private static final Set<String> TEXT_COLUMNS = Set.of(
-            "EMP ID",
-            "EMPLOYEE NAME",
-            "HIRE DATE",
-            "EXIT DATE",
-            "ROLE"
-    );
+//    private static final Set<String> BASE_CURRENCY_COLUMNS = Set.of(
+//            "GROSS PAY",
+//            "GROSS SALARY",
+//            "BASIC SALARY",
+//            "HOUSING",
+//            "TRANSPORT",
+//            "UTILITY",
+//            "ENTERTAINMENT",
+//            "MEDICAL",
+//            "PERSONAL OUTFIT",
+//            "LEAVE",
+//            "TRAINING",
+//            "TAXABLE INCOME",
+////            "OTHER DEDUCTION",
+////            "LOAN DEDUCTION",
+//            "PAYE",
+//            "NHF",
+//            "EMPLOYEE PENSION",
+//            "VOLUNTARY PENSION CONTRIBUTION",
+//            "EMPLOYER PENSION",
+//            "NETPAY"
+//    );
+//
+//    // Columns that should never be formatted as currency
+//    private static final Set<String> TEXT_COLUMNS = Set.of(
+//            "EMP ID",
+//            "EMPLOYEE NAME",
+//            "HIRE DATE",
+//            "EXIT DATE",
+//            "ROLE"
+//    );
 
     @Override
     public byte[] generateReport(ReportRequestPayload reportRequestPayload, String token) throws IOException {
@@ -492,15 +492,11 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         final Map<String, BigDecimal> otherComponents = getOtherComponents(paymentInfo.getGrossPay(), grossSalaryComponent);
         final Map<String, BigDecimal> otherDeductions = getRemainingDeductions(paymentInfo.getDeduction(), deductionComponent);
 
-        LOGGER.info("Other dedcuction: {}", otherDeductions);
         //  Add each otherComponent into the row so they can become columns
         finalResult.putAll(otherComponents);
         finalResult.putAll(otherDeductions);
 
-        LOGGER.info("Other components: {}", otherComponents);
-
         return swapKey(finalResult);
-
     }
 
     private List<String> getMetadata (String companyId) {
@@ -619,130 +615,6 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         return raw;
     }
 
-//    private byte[] generateExcel(List<String> headers, List<Map<String, Object>> dataRows, String fileName) throws IOException {
-//        try (XSSFWorkbook workbook = new XSSFWorkbook();
-//             ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-//
-//            XSSFSheet sheet = workbook.createSheet("Report");
-//
-//            // === Colors (ARGB). Swap to your exact template codes if you want a perfect match ===
-//            final String HEADER_BLUE  = "FF1F4E79";  // dark blue; white text recommended
-//            final String BANNER_CYAN  = "FF00D7EF";  // cyan/aqua for the "GROSS SALARY" band
-//
-//            // --- Styles ---
-//            // Header (blue) style
-//            XSSFCellStyle headerStyle = workbook.createCellStyle();
-//            XSSFFont headerFont = workbook.createFont();
-//            headerFont.setBold(true);
-//            headerFont.setColor(IndexedColors.WHITE.getIndex());
-//            headerStyle.setFont(headerFont);
-//            headerStyle.setAlignment(HorizontalAlignment.CENTER);
-//            headerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
-//            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-//            headerStyle.setFillForegroundColor(argb(workbook, HEADER_BLUE));
-//            headerStyle.setBorderBottom(BorderStyle.THIN);
-//            headerStyle.setBorderTop(BorderStyle.THIN);
-//            headerStyle.setBorderLeft(BorderStyle.THIN);
-//            headerStyle.setBorderRight(BorderStyle.THIN);
-//
-//            // Banner (cyan) style
-//            XSSFCellStyle bannerStyle = workbook.createCellStyle();
-//            XSSFFont bannerFont = workbook.createFont();
-//            bannerFont.setBold(true);
-//            bannerFont.setColor(IndexedColors.BLACK.getIndex());
-//            bannerStyle.setFont(bannerFont);
-//            bannerStyle.setAlignment(HorizontalAlignment.CENTER);
-//            bannerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
-//            bannerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-//            bannerStyle.setFillForegroundColor(argb(workbook, BANNER_CYAN));
-//            bannerStyle.setBorderBottom(BorderStyle.THIN);
-//            bannerStyle.setBorderTop(BorderStyle.THIN);
-//            bannerStyle.setBorderLeft(BorderStyle.THIN);
-//            bannerStyle.setBorderRight(BorderStyle.THIN);
-//
-//            // --- Row 0: empty row
-//            sheet.createRow(0);
-//
-//            // --- Row 1: GROSS SALARY band over G..O (GROSS PAY .. TRAINING) ---
-//            int startGross = headers.indexOf("GROSS PAY");
-//            int endGross   = headers.indexOf("TRAINING");
-//            if (startGross >= 0 && endGross >= startGross) {
-//                Row bandRow = sheet.createRow(1);
-//                for (int j = startGross; j <= endGross; j++) {
-//                    Cell c = bandRow.createCell(j);
-//                    c.setCellStyle(bannerStyle);
-//                }
-//                CellRangeAddress region = new CellRangeAddress(1, 1, startGross, endGross);
-//                sheet.addMergedRegion(region);
-//                Cell first = bandRow.getCell(startGross);
-//                first.setCellValue("GROSS SALARY");
-//                first.setCellStyle(bannerStyle);
-//
-//                RegionUtil.setBorderBottom(BorderStyle.THIN, region, sheet);
-//                RegionUtil.setBorderTop(BorderStyle.THIN, region, sheet);
-//                RegionUtil.setBorderLeft(BorderStyle.THIN, region, sheet);
-//                RegionUtil.setBorderRight(BorderStyle.THIN, region, sheet);
-//            }
-//
-//            // --- Row 2: Headers (all blue) ---
-//            Row headerRow = sheet.createRow(2);
-//            for (int i = 0; i < headers.size(); i++) {
-//                Cell c = headerRow.createCell(i);
-//                c.setCellValue(headers.get(i));
-//                c.setCellStyle(headerStyle);
-//            }
-//
-//            XSSFCellStyle numberStyle = workbook.createCellStyle();
-//            XSSFDataFormat format = workbook.createDataFormat();
-//            numberStyle.setDataFormat(format.getFormat("#,##0.00"));
-//
-//            XSSFCellStyle currencyStyle = workbook.createCellStyle();
-//            currencyStyle.cloneStyleFrom(numberStyle);
-//            currencyStyle.setDataFormat(format.getFormat("₦#,##0.00"));
-//
-//            // --- Rows 3+: Data ---
-//            for (int i = 0; i < dataRows.size(); i++) {
-//                Row row = sheet.createRow(i + 3);
-//                Map<String, Object> rowData = dataRows.get(i);
-//
-//                for (int j = 0; j < headers.size(); j++) {
-//                    String headerName = headers.get(j);
-//                    Object value = rowData.get(headerName);
-//                    Cell cell = row.createCell(j);
-//
-//                    if (value instanceof Number number) {
-//                        cell.setCellValue(number.doubleValue());
-//
-//                        // ✅ Use ₦ format for configured payroll currency columns
-//                        if (CURRENCY_COLUMNS.contains(headerName)) {
-//                            cell.setCellStyle(currencyStyle);
-//                        } else {
-//                            cell.setCellStyle(numberStyle);
-//                        }
-//                    } else if (value != null) {
-//                        cell.setCellValue(value.toString());
-//                    } else {
-//                        cell.setBlank();
-//                    }
-//                }
-//            }
-//
-//            // Autosize + minimum width
-//            for (int i = 0; i < headers.size(); i++) {
-//                sheet.autoSizeColumn(i);
-//                int currentWidth = sheet.getColumnWidth(i);
-//                int minWidth = 22 * 256; // ~22 chars
-//                if (currentWidth < minWidth) sheet.setColumnWidth(i, minWidth);
-//            }
-//
-//            // Freeze top 3 rows
-//            sheet.createFreezePane(0, 3);
-//
-//            workbook.write(outputStream);
-//            return outputStream.toByteArray();
-//        }
-//    }
-
     private byte[] generateExcel(List<String> headers, List<Map<String, Object>> dataRows, String fileName) throws IOException {
         try (XSSFWorkbook workbook = new XSSFWorkbook();
              ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
@@ -752,8 +624,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
             // === Colors (ARGB). ===
             final String HEADER_BLUE  = "FF1F4E79";  // dark blue; white text recommended
 
-            // --- Styles ---
-            // Header (blue) style
+            // --- Header style ---
             XSSFCellStyle headerStyle = workbook.createCellStyle();
             XSSFFont headerFont = workbook.createFont();
             headerFont.setBold(true);
@@ -779,30 +650,14 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                 c.setCellStyle(headerStyle);
             }
 
-            // Number style
+            // 🔢 Number style (no currency symbol)
             XSSFCellStyle numberStyle = workbook.createCellStyle();
             XSSFDataFormat format = workbook.createDataFormat();
             numberStyle.setDataFormat(format.getFormat("#,##0.00"));
 
-            // Currency style ₦
-            XSSFCellStyle currencyStyle = workbook.createCellStyle();
-            currencyStyle.cloneStyleFrom(numberStyle);
-            currencyStyle.setDataFormat(format.getFormat("₦#,##0.00"));
-
-            // 🔹 Build runtime currency set = base + dynamic headers
-            Set<String> currencyColumns = new HashSet<>(BASE_CURRENCY_COLUMNS);
-
-            // Any header that is not a pure text column and is not already in base,
-            // we treat as currency (this will include all dynamic components like PHONE ALLOWANCE)
-            for (String h : headers) {
-                if (!TEXT_COLUMNS.contains(h)) {
-                    currencyColumns.add(h);
-                }
-            }
-
             // --- Rows 2+: Data ---
             for (int i = 0; i < dataRows.size(); i++) {
-                Row row = sheet.createRow(i + 2); // shifted up by 1
+                Row row = sheet.createRow(i + 2); // shifted by 2 (empty + header)
                 Map<String, Object> rowData = dataRows.get(i);
 
                 for (int j = 0; j < headers.size(); j++) {
@@ -812,13 +667,8 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
 
                     if (value instanceof Number number) {
                         cell.setCellValue(number.doubleValue());
-
-                        // Use dynamic currencyColumns instead of static set
-                        if (currencyColumns.contains(headerName)) {
-                            cell.setCellStyle(currencyStyle);
-                        } else {
-                            cell.setCellStyle(numberStyle);
-                        }
+                        // always use plain number style (no ₦)
+                        cell.setCellStyle(numberStyle);
                     } else if (value != null) {
                         cell.setCellValue(value.toString());
                     } else {
@@ -842,6 +692,106 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
             return outputStream.toByteArray();
         }
     }
+
+//    private byte[] generateExcel(List<String> headers, List<Map<String, Object>> dataRows, String fileName) throws IOException {
+//        try (XSSFWorkbook workbook = new XSSFWorkbook();
+//             ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+//
+//            XSSFSheet sheet = workbook.createSheet("Report");
+//
+//            // === Colors (ARGB). ===
+//            final String HEADER_BLUE  = "FF1F4E79";  // dark blue; white text recommended
+//
+//            // --- Styles ---
+//            // Header (blue) style
+//            XSSFCellStyle headerStyle = workbook.createCellStyle();
+//            XSSFFont headerFont = workbook.createFont();
+//            headerFont.setBold(true);
+//            headerFont.setColor(IndexedColors.WHITE.getIndex());
+//            headerStyle.setFont(headerFont);
+//            headerStyle.setAlignment(HorizontalAlignment.CENTER);
+//            headerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+//            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+//            headerStyle.setFillForegroundColor(argb(workbook, HEADER_BLUE));
+//            headerStyle.setBorderBottom(BorderStyle.THIN);
+//            headerStyle.setBorderTop(BorderStyle.THIN);
+//            headerStyle.setBorderLeft(BorderStyle.THIN);
+//            headerStyle.setBorderRight(BorderStyle.THIN);
+//
+//            // --- Row 0 left empty ---
+//            sheet.createRow(0);
+//
+//            // --- Row 1: Headers (all blue) ---
+//            Row headerRow = sheet.createRow(1);
+//            for (int i = 0; i < headers.size(); i++) {
+//                Cell c = headerRow.createCell(i);
+//                c.setCellValue(headers.get(i));
+//                c.setCellStyle(headerStyle);
+//            }
+//
+//            // Number style
+//            XSSFCellStyle numberStyle = workbook.createCellStyle();
+//            XSSFDataFormat format = workbook.createDataFormat();
+//            numberStyle.setDataFormat(format.getFormat("#,##0.00"));
+//
+//            // Currency style ₦
+//            XSSFCellStyle currencyStyle = workbook.createCellStyle();
+//            currencyStyle.cloneStyleFrom(numberStyle);
+////            currencyStyle.setDataFormat(format.getFormat("₦#,##0.00"));
+//
+//            // 🔹 Build runtime currency set = base + dynamic headers
+//            Set<String> currencyColumns = new HashSet<>(BASE_CURRENCY_COLUMNS);
+//
+//            // Any header that is not a pure text column and is not already in base,
+//            // we treat as currency (this will include all dynamic components like PHONE ALLOWANCE)
+//            for (String h : headers) {
+//                if (!TEXT_COLUMNS.contains(h)) {
+//                    currencyColumns.add(h);
+//                }
+//            }
+//
+//            // --- Rows 2+: Data ---
+//            for (int i = 0; i < dataRows.size(); i++) {
+//                Row row = sheet.createRow(i + 2); // shifted up by 1
+//                Map<String, Object> rowData = dataRows.get(i);
+//
+//                for (int j = 0; j < headers.size(); j++) {
+//                    String headerName = headers.get(j);
+//                    Object value = rowData.get(headerName);
+//                    Cell cell = row.createCell(j);
+//
+//                    if (value instanceof Number number) {
+//                        cell.setCellValue(number.doubleValue());
+//
+//                        // Use dynamic currencyColumns instead of static set
+//                        if (currencyColumns.contains(headerName)) {
+//                            cell.setCellStyle(currencyStyle);
+//                        } else {
+//                            cell.setCellStyle(numberStyle);
+//                        }
+//                    } else if (value != null) {
+//                        cell.setCellValue(value.toString());
+//                    } else {
+//                        cell.setBlank();
+//                    }
+//                }
+//            }
+//
+//            // Autosize + minimum width
+//            for (int i = 0; i < headers.size(); i++) {
+//                sheet.autoSizeColumn(i);
+//                int currentWidth = sheet.getColumnWidth(i);
+//                int minWidth = 22 * 256; // ~22 chars
+//                if (currentWidth < minWidth) sheet.setColumnWidth(i, minWidth);
+//            }
+//
+//            // Freeze top 2 rows (empty row 0 + header row 1)
+//            sheet.createFreezePane(0, 2);
+//
+//            workbook.write(outputStream);
+//            return outputStream.toByteArray();
+//        }
+//    }
 
     private Map<String, Object> swapKey(Map<String, Object> result) {
         // Preserve insertion order so header building sees a stable order

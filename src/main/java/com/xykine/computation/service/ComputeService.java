@@ -160,12 +160,8 @@ public class ComputeService {
                     }
 
                     if (setting.getName().equalsIgnoreCase("Monthly Performance Bonus")) {
-                        LOGGER.info("Monthly Performance Bonus {} ", setting.getValue());
                         BigDecimal performanceBonus = ComputationUtils.prorate(mainCopy.getBasicSalary().multiply(setting.getValue().divide(BigDecimal.valueOf(100))),
                                 numberOfUnpaidAbsence, PaymentFrequencyEnum.MONTHLY, paymentInfo.getStartDate());
-
-                        LOGGER.info("performanceBonus ====> {} ", performanceBonus);
-                        LOGGER.info("numberOfUnpaidAbsence ====> {} ", numberOfUnpaidAbsence);
 
                         setting.setValue(performanceBonus);
                     } else {
