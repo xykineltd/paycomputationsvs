@@ -9,6 +9,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -25,7 +26,11 @@ public class YTDReport {
     private BigDecimal netPay;
     private BigDecimal nhf;
     private BigDecimal payeeTax;
+    private BigDecimal employeePension;
+    private BigDecimal employerPension;
+    private BigDecimal voluntarPensionContribution;
     private BigDecimal pension;
     private BigDecimal taxableIncome;
     private BigDecimal wht;
+    private Map<String, BigDecimal> deductions;
 }
