@@ -362,7 +362,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
         payeeTax.put(!paymentInfo.isOffCycle() ?  "Monthly Paye" : "Paye Tax on " + getOffCyclePaymentDetails(paymentInfo).getName(), monthlyPayeeTax);
         paymentInfo.setPayeeTax(payeeTax);
-        updateReportSummary(paymentInfo, sessionCalculationObject, MapKeys.TOTAL_PAYEE_TAX,
+        updateReportSummary(paymentInfo, sessionCalculationObject, "Total Paye Tax",
                 monthlyPayeeTax);
         return paymentInfo;
     }
