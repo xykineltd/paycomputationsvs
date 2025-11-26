@@ -229,10 +229,12 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     }
 
     public PaymentInfo computeNonTaxableIncomeExemptForMFB(PaymentInfo paymentInfo, BigDecimal nationalHousingFund) {
+        Map<String, BigDecimal> nonTaxableIncomeExemptMap = new HashMap<>();
+
+
         if (isContract(paymentInfo)) {
             return paymentInfo;
         }
-        Map<String, BigDecimal> nonTaxableIncomeExemptMap = new HashMap<>();
         BigDecimal annualGrossSalary = paymentInfo.getBasicSalary();
         BigDecimal voluntaryPensionContribution = getEmployeeMetaData(paymentInfo).getVoluntaryPensionContribution();
         BigDecimal annualVoluntaryPensionContribution = voluntaryPensionContribution.multiply(BigDecimal.valueOf(12));
@@ -255,6 +257,11 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         nonTaxableIncomeExemptMap.put("ANNUAL EMPLOYEE PENSION @ 8%", annualEmployeePensionAtEightPercent);
         nonTaxableIncomeExemptMap.put("RELIEF ALLOWANCE", reliefAllowance);
         nonTaxableIncomeExemptMap.put("CHARGEABLE INCOME", chargeableIncome);
+        nonTaxableIncomeExemptMap.put("MONTHLY CHARGEABLE INCOME",chargeableIncome.divide(
+                BigDecimal.valueOf(12),
+                2,
+                RoundingMode.HALF_UP
+        ));
         nonTaxableIncomeExemptMap.put("Annual Voluntary Pension Contribution", annualVoluntaryPensionContribution);
         paymentInfo.setTaxRelief(nonTaxableIncomeExemptMap);
         return paymentInfo;
@@ -274,6 +281,9 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         pension.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION, BigDecimal.ZERO);
 
         BigDecimal grossIncomeForCRA  = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY);
+
+        // Do not apply Tax Releif for Off-Cycle
+
         BigDecimal rawFXR = roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("craFraction")
                         .multiply(grossIncomeForCRA));
         if (rawFXR.compareTo(sessionCalculationObject.getComputationConstants().get("craCutOff")) == 1) {
@@ -288,8 +298,9 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         nonTaxableIncomeExemptMap.put(MapKeys.VARIABLE_CONSOLIDATED_RELIEF_ALLOWANCE, roundToTwoDecimalPlaces(prorate(variableCRA, 0, salaryFrequency, paymentInfo.getStartDate())));
 
         BigDecimal total = getTotal(nonTaxableIncomeExemptMap);
-
         nonTaxableIncomeExemptMap.put(MapKeys.TOTAL_TAX_RELIEF, total);
+        nonTaxableIncomeExemptMap.put("MONTHLY CHARGEABLE INCOME", roundToTwoDecimalPlaces(grossIncomeForCRA));
+
         paymentInfo.setNhf(nhf);
         paymentInfo.setPension(pension);
         paymentInfo.setTaxRelief(nonTaxableIncomeExemptMap);
@@ -355,7 +366,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
         payeeTax.put(!paymentInfo.isOffCycle() ?  "Monthly Paye" : "Paye Tax on " + getOffCyclePaymentDetails(paymentInfo).getName(), monthlyPayeeTax);
         paymentInfo.setPayeeTax(payeeTax);
-        updateReportSummary(paymentInfo, sessionCalculationObject, MapKeys.TOTAL_PAYEE_TAX,
+        updateReportSummary(paymentInfo, sessionCalculationObject, "Total Paye Tax",
                 monthlyPayeeTax);
         return paymentInfo;
     }
@@ -398,11 +409,19 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
             BigDecimal withHoldingTaxPercentage = sessionCalculationObject.getComputationConstants().get("withHoldingTax");
             BigDecimal withHoldingTaxAmount = ComputationUtils.roundToTwoDecimalPlaces(withHoldingTaxPercentage.multiply(contractorGross));
             deductionMap.put("WHT", withHoldingTaxAmount);
+
+            var deductions = getDeductionsForEmployee(paymentInfo);
+            deductions
+                    .forEach(x -> {
+                        deductionMap.put(x.getName(), x.getValue());
+                        updateReportSummary(paymentInfo, sessionCalculationObject, MapKeys.TOTAL_PERSONAL_DEDUCTION, x.getValue());
+                    });
+
             deductionMap.put(MapKeys.TOTAL_DEDUCTION, getTotal(deductionMap));
             paymentInfo.setDeduction(deductionMap);
 
             Map<String, BigDecimal> nonTaxableIncomeExemptMap = new HashMap<>();
-            nonTaxableIncomeExemptMap.put("CHARGEABLE INCOME",contractorGross);
+            nonTaxableIncomeExemptMap.put("MONTHLY CHARGEABLE INCOME",contractorGross);
             paymentInfo.setTaxRelief(nonTaxableIncomeExemptMap);
 
             updateReportSummary(paymentInfo, sessionCalculationObject, "TotaL Withholding Tax", withHoldingTaxAmount);

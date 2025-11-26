@@ -54,38 +54,38 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
     private static final Logger LOGGER = LoggerFactory.getLogger(ReportGeneratorServiceImpl.class);
 
 
-    private static final List<String> TEMPLATE_HEADERS = List.of(
-            "EMP ID",
-            "EMPLOYEE NAME",
-            "HIRE DATE",
-            "EXIT DATE",
-            "ROLE",
-            "GROSS PAY",
-            "GROSS SALARY",
-            "BASIC SALARY",
-            "HOUSING",
-            "TRANSPORT",
-            "UTILITY",
-            "ENTERTAINMENT",
-            "MEDICAL",
-            "PERSONAL OUTFIT",
-            "LEAVE",
-            "TRAINING",
-            "PERFORMANCE BONUS",
-            "OVERTIME",
-//            "OTHER VARIABLE",
-//            "OTHER ALLOWANCE",
-//            "OTHER WAGE TYPES",
-            "TAXABLE INCOME",
-            "OTHER DEDUCTION",
-            "LOAN DEDUCTION",
-            "PAYE",
-            "NHF",
-            "EMPLOYEE PENSION",
-            "VOLUNTARY PENSION CONTRIBUTION",
-            "EMPLOYER PENSION",
-            "NETPAY"
-    );
+//    private static final List<String> TEMPLATE_HEADERS = List.of(
+//            "EMP ID",
+//            "EMPLOYEE NAME",
+//            "HIRE DATE",
+//            "EXIT DATE",
+//            "ROLE",
+//            "GROSS PAY",
+//            "GROSS SALARY",
+//            "BASIC SALARY",
+//            "HOUSING",
+//            "TRANSPORT",
+//            "UTILITY",
+//            "ENTERTAINMENT",
+//            "MEDICAL",
+//            "PERSONAL OUTFIT",
+//            "LEAVE",
+//            "TRAINING",
+//            "PERFORMANCE BONUS",
+//            "OVERTIME",
+////            "OTHER VARIABLE",
+////            "OTHER ALLOWANCE",
+////            "OTHER WAGE TYPES",
+//            "TAXABLE INCOME",
+//            "OTHER DEDUCTION",
+//            "LOAN DEDUCTION",
+//            "PAYE",
+//            "NHF",
+//            "EMPLOYEE PENSION",
+//            "VOLUNTARY PENSION CONTRIBUTION",
+//            "EMPLOYER PENSION",
+//            "NETPAY"
+//    );
 
     // Everything up to OVERTIME (fixed order)
     private static final List<String> TEMPLATE_PREFIX = List.of(
@@ -236,7 +236,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
 //            defaultHeaders.add("other variable");
 //            defaultHeaders.add("other allowance");
 //            defaultHeaders.add("other wage types");
-            defaultHeaders.add("CHARGEABLE INCOME");
+            defaultHeaders.add("MONTHLY CHARGEABLE INCOME");
 //            defaultHeaders.add("other deduction");
 //            defaultHeaders.add("Loan");   // **
             defaultHeaders.add("Monthly Paye");
@@ -496,6 +496,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         finalResult.putAll(otherComponents);
         finalResult.putAll(otherDeductions);
 
+        System.out.println("finalResult" + finalResult);
         return swapKey(finalResult);
     }
 
@@ -822,7 +823,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                 case "Training" -> newKey = "TRAINING";
 //                case "Monthly Performance Bonus" -> newKey = "PERFORMANCE BONUS";
 //                case "overtime" -> newKey = "OVERTIME";
-                case "CHARGEABLE INCOME" -> newKey = "TAXABLE INCOME";
+                case "MONTHLY CHARGEABLE INCOME" -> newKey = "TAXABLE INCOME";
                 case "Loan", "Loan." -> newKey = "LOAN DEDUCTION";
                 case "other deduction" -> newKey = "OTHER DEDUCTION";
                 case "Monthly Paye" -> newKey = "PAYE";

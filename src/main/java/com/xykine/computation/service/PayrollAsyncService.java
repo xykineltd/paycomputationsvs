@@ -82,77 +82,77 @@ public class PayrollAsyncService {
 
     @Async
     public void saveReportDetails(PaymentComputeResponse paymentComputeResponse,
-                                  String companyId) {
+                                   String companyId) {
         List<PaymentInfo> paymentInfoList = Optional.ofNullable(paymentComputeResponse.getReport())
                 .orElse(Collections.emptyList());
 
-        paymentInfoList.forEach(x -> {
-            try {
-                PayrollReportDetail existingReport =
-                        payrollReportDetailRepo.findPayrollReportDetailByCompanyIdAndEmployeeIdAndStartDateAndEndDateAndSummaryId(
-                                companyId,
-                                x.getEmployeeID(),
-                                x.getStartDate(),
-                                x.getEndDate(),
-                                String.valueOf(paymentComputeResponse.getId()));
+            paymentInfoList.forEach(x -> {
+                try {
+                    PayrollReportDetail existingReport =
+                            payrollReportDetailRepo.findPayrollReportDetailByCompanyIdAndEmployeeIdAndStartDateAndEndDateAndSummaryId(
+                                    companyId,
+                                    x.getEmployeeID(),
+                                    x.getStartDate(),
+                                    x.getEndDate(),
+                                    String.valueOf(paymentComputeResponse.getId()));
 
-                PaymentInfo paymentInfoToSave = x;
-                if (existingReport != null) {
-                    // safely unwrap old report or create empty PaymentInfo
-                    PaymentInfo oldPaymentInfo = Optional.ofNullable(ReportUtils.transform(existingReport))
-                            .map(r -> r.getDetail())
-                            .map(d -> d.getReport())
-                            .orElse(new PaymentInfo());
-                    //  merge maps safely
-                    boolean mapsDifferent = !Objects.equals(oldPaymentInfo.getPayeeTax(), x.getPayeeTax()) && !Objects.equals(oldPaymentInfo.getPension(), x.getPension());
-                    if (mapsDifferent) {
-                        oldPaymentInfo.setGrossPay(mergeMaps(oldPaymentInfo.getGrossPay(), paymentInfoToSave.getGrossPay()));
-                        oldPaymentInfo.setDeduction(mergeMaps(oldPaymentInfo.getDeduction(), x.getDeduction()));
-                        oldPaymentInfo.setTaxRelief(mergeMaps(oldPaymentInfo.getTaxRelief(), x.getTaxRelief()));
-                        oldPaymentInfo.setPayeeTax(mergeMaps(oldPaymentInfo.getPayeeTax(), x.getPayeeTax()));
-                        oldPaymentInfo.setEarning(mergeMaps(oldPaymentInfo.getEarning(), x.getEarning()));
-                        oldPaymentInfo.setNhf(mergeMaps(oldPaymentInfo.getNhf(), x.getNhf()));
-                        oldPaymentInfo.setOthers(mergeMaps(oldPaymentInfo.getOthers(), x.getOthers()));
-                        oldPaymentInfo.setPension(mergeMaps(oldPaymentInfo.getPension(), x.getPension()));
-                        oldPaymentInfo.setNetPay(oldPaymentInfo.getNetPay().add(paymentInfoToSave.getNetPay()));
-                        paymentInfoToSave = oldPaymentInfo;
+                    PaymentInfo paymentInfoToSave = x;
+                    if (existingReport != null) {
+                        // safely unwrap old report or create empty PaymentInfo
+                        PaymentInfo oldPaymentInfo = Optional.ofNullable(ReportUtils.transform(existingReport))
+                                .map(r -> r.getDetail())
+                                .map(d -> d.getReport())
+                                .orElse(new PaymentInfo());
+                        //  merge maps safely
+                        boolean mapsDifferent = !Objects.equals(oldPaymentInfo.getPayeeTax(), x.getPayeeTax()) && !Objects.equals(oldPaymentInfo.getPension(), x.getPension());
+                        if (mapsDifferent) {
+                            oldPaymentInfo.setGrossPay(mergeMaps(oldPaymentInfo.getGrossPay(), paymentInfoToSave.getGrossPay()));
+                            oldPaymentInfo.setDeduction(mergeMaps(oldPaymentInfo.getDeduction(), x.getDeduction()));
+                            oldPaymentInfo.setTaxRelief(mergeMaps(oldPaymentInfo.getTaxRelief(), x.getTaxRelief()));
+                            oldPaymentInfo.setPayeeTax(mergeMaps(oldPaymentInfo.getPayeeTax(), x.getPayeeTax()));
+                            oldPaymentInfo.setEarning(mergeMaps(oldPaymentInfo.getEarning(), x.getEarning()));
+                            oldPaymentInfo.setNhf(mergeMaps(oldPaymentInfo.getNhf(), x.getNhf()));
+                            oldPaymentInfo.setOthers(mergeMaps(oldPaymentInfo.getOthers(), x.getOthers()));
+                            oldPaymentInfo.setPension(mergeMaps(oldPaymentInfo.getPension(), x.getPension()));
+                            oldPaymentInfo.setNetPay(oldPaymentInfo.getNetPay().add(paymentInfoToSave.getNetPay()));
+                            paymentInfoToSave = oldPaymentInfo;
+                        }
                     }
+
+                    PayComputeDetailResponse payComputeDetailResponse = PayComputeDetailResponse.builder()
+                            .report(paymentInfoToSave)
+                            .build();
+
+                    // update existing report in-place or create new if null
+                    PayrollReportDetail payrollReportDetail = existingReport != null ? existingReport :
+                            PayrollReportDetail.builder()
+                                    .id(UUID.randomUUID().toString())
+                                    .build();
+
+                    payrollReportDetail.setEmployeeId(paymentInfoToSave.getEmployeeID());
+                    payrollReportDetail.setFullName(Optional.ofNullable(paymentInfoToSave.getFullName()).orElse("Unknown"));
+                    payrollReportDetail.setSummaryId(String.valueOf(paymentComputeResponse.getId()));
+                    payrollReportDetail.setCurrency(paymentInfoToSave.getCurrency() != null ?
+                            paymentInfoToSave.getCurrency().getCode() : null);
+                    payrollReportDetail.setExchangeInfo(Optional.ofNullable(paymentInfoToSave.getExchangeInfo()).orElse(null));
+                    payrollReportDetail.setCompanyId(companyId);
+                    payrollReportDetail.setOffCycleId(paymentComputeResponse.getOffCycleId());
+                    payrollReportDetail.setDepartmentId(paymentInfoToSave.getDepartmentID());
+                    payrollReportDetail.setStartDate(paymentInfoToSave.getStartDate());
+                    payrollReportDetail.setEndDate(paymentInfoToSave.getEndDate());
+                    payrollReportDetail.setReport(ReportUtils.serializeResponse(payComputeDetailResponse));
+                    payrollReportDetail.setCreatedDate(LocalDateTime.now());
+                    payrollReportDetail.setPayrollSimulation(paymentComputeResponse.isPayrollSimulation());
+                    payrollReportDetail.setPayrollStatus(paymentComputeResponse.isPayrollSimulation() ? PayrollStatus.SIMULATED : PayrollStatus.INITIATED);
+                    payrollReportDetail.setOffCycle(paymentComputeResponse.isOffCycle());
+                    payrollReportDetailRepo.save(payrollReportDetail);
+
+                } catch (Exception e) {
+                    LOGGER.error("Error processing report for employeeId={} startDate={} endDate={}",
+                            x.getEmployeeID(), x.getStartDate(), x.getEndDate(), e);
+                    throw e; // rethrow so CompletableFuture sees the error
                 }
-
-                PayComputeDetailResponse payComputeDetailResponse = PayComputeDetailResponse.builder()
-                        .report(paymentInfoToSave)
-                        .build();
-
-                // update existing report in-place or create new if null
-                PayrollReportDetail payrollReportDetail = existingReport != null ? existingReport :
-                        PayrollReportDetail.builder()
-                                .id(UUID.randomUUID().toString())
-                                .build();
-
-                payrollReportDetail.setEmployeeId(paymentInfoToSave.getEmployeeID());
-                payrollReportDetail.setFullName(Optional.ofNullable(paymentInfoToSave.getFullName()).orElse("Unknown"));
-                payrollReportDetail.setSummaryId(String.valueOf(paymentComputeResponse.getId()));
-                payrollReportDetail.setCurrency(paymentInfoToSave.getCurrency() != null ?
-                        paymentInfoToSave.getCurrency().getCode() : null);
-                payrollReportDetail.setExchangeInfo(Optional.ofNullable(paymentInfoToSave.getExchangeInfo()).orElse(null));
-                payrollReportDetail.setCompanyId(companyId);
-                payrollReportDetail.setOffCycleId(paymentComputeResponse.getOffCycleId());
-                payrollReportDetail.setDepartmentId(paymentInfoToSave.getDepartmentID());
-                payrollReportDetail.setStartDate(paymentInfoToSave.getStartDate());
-                payrollReportDetail.setEndDate(paymentInfoToSave.getEndDate());
-                payrollReportDetail.setReport(ReportUtils.serializeResponse(payComputeDetailResponse));
-                payrollReportDetail.setCreatedDate(LocalDateTime.now());
-                payrollReportDetail.setPayrollSimulation(paymentComputeResponse.isPayrollSimulation());
-                payrollReportDetail.setPayrollStatus(paymentComputeResponse.isPayrollSimulation() ? PayrollStatus.SIMULATED : PayrollStatus.INITIATED);
-                payrollReportDetail.setOffCycle(paymentComputeResponse.isOffCycle());
-                payrollReportDetailRepo.save(payrollReportDetail);
-
-            } catch (Exception e) {
-                LOGGER.error("Error processing report for employeeId={} startDate={} endDate={}",
-                        x.getEmployeeID(), x.getStartDate(), x.getEndDate(), e);
-                throw e; // rethrow so CompletableFuture sees the error
-            }
-        });
+            });
     }
     @Async
     public void offLoadNewValuesToYTD(List<PayrollReportDetail>  payrollReportDetailList, String companyId, boolean isRollback) {
@@ -206,7 +206,6 @@ public class PayrollAsyncService {
                     ytdReport.setTaxableIncome(ytdReport.getTaxableIncome().add(y.get("Taxable Income")));
                     ytdReport.setWht(ytdReport.getWht().add(y.get("WHT")));
                 } else {
-                    //TODO why is YTD null?
                     ytdReport.setBasicSalary(ytdReport.getBasicSalary().subtract(y.get(MapKeys.BASIC_SALARY)));
                     ytdReport.setGrossPay(ytdReport.getGrossPay().subtract(y.get(MapKeys.GROSS_PAY)));
                     ytdReport.setNetPay(ytdReport.getNetPay().subtract(y.get(MapKeys.NET_PAY)));

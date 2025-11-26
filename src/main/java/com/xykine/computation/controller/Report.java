@@ -74,7 +74,7 @@ public class Report {
         if(AppUtil.hasAdditionalFilters(employeeFilterRequest)) {
              filteredList = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
         }
-        
+
         Map<String, Object> response =  reportPersistenceService.getReportByEmployeeIDList(employeeFilterRequest.getCompanyID(),
                 filteredList, employeeFilterRequest.getReportId(),
                 employeeFilterRequest.getPage(), employeeFilterRequest.getSize());
