@@ -478,8 +478,6 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
             result.put("HIRE DATE", employeeDetail.getHireDate());
             result.put("EXIT DATE", exitDate);
             result.put("ROLE", employeeDetail.getRole());
-        } else if (isDetail) {
-            System.out.println("Employee detail is null for employeeId: " + employeeId);
         }
 
         Map<String, Object> finalResult = new LinkedHashMap<>(result);
@@ -496,7 +494,6 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         finalResult.putAll(otherComponents);
         finalResult.putAll(otherDeductions);
 
-        System.out.println("finalResult" + finalResult);
         return swapKey(finalResult);
     }
 

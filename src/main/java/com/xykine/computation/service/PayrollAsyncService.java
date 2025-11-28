@@ -28,8 +28,7 @@ import org.xykine.payroll.model.enums.PaymentTypeEnum;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 import static com.xykine.computation.service.ReportPersistenceServiceImpl.mergeMaps;
 
@@ -156,95 +155,118 @@ public class PayrollAsyncService {
     }
     @Async
     public void offLoadNewValuesToYTD(List<PayrollReportDetail>  payrollReportDetailList, String companyId, boolean isRollback) {
-        Map<String, Map<String, BigDecimal>> newValuesForAllEmployees = new HashMap<>();
-        Map<String, YTDReport> latestYTDs = new HashMap<>();
-        payrollReportDetailList.stream()
-                .map(ReportUtils::transform)
-                .forEach(x -> {
-                    Map<String, BigDecimal> newValuesForEmployee = new HashMap<>();
+        try {
+            Map<String, Map<String, BigDecimal>> newValuesForAllEmployees = new HashMap<>();
+            Map<String, YTDReport> latestYTDs = new HashMap<>();
+            payrollReportDetailList.stream()
+                    .map(ReportUtils::transform)
+                    .forEach(x -> {
+                        Map<String, BigDecimal> newValuesForEmployee = new HashMap<>();
 
-                    Map<String, BigDecimal> deduction = x.getDetail().getReport().getDeduction();
-                    newValuesForEmployee.put(MapKeys.NATIONAL_HOUSING_FUND, deduction.get(MapKeys.NATIONAL_HOUSING_FUND) != null ? deduction.get(MapKeys.NATIONAL_HOUSING_FUND) : BigDecimal.ZERO);
-                    newValuesForEmployee.put("PAYE TAX", deduction.get("PAYE TAX") != null ? deduction.get("PAYE TAX") : BigDecimal.ZERO);
-                    newValuesForEmployee.put("WHT", deduction.get("WHT") != null ? deduction.get("WHT") : BigDecimal.ZERO);
+                        Map<String, BigDecimal> deduction = x.getDetail().getReport().getDeduction();
+                        newValuesForEmployee.put(MapKeys.NATIONAL_HOUSING_FUND, deduction.get(MapKeys.NATIONAL_HOUSING_FUND) != null ? deduction.get(MapKeys.NATIONAL_HOUSING_FUND) : BigDecimal.ZERO);
+                        newValuesForEmployee.put("PAYE TAX", deduction.get("PAYE TAX") != null ? deduction.get("PAYE TAX") : BigDecimal.ZERO);
+                        newValuesForEmployee.put("WHT", deduction.get("WHT") != null ? deduction.get("WHT") : BigDecimal.ZERO);
 
-                    Map<String, BigDecimal> grossPay = x.getDetail().getReport().getGrossPay();
-                    newValuesForEmployee.put(MapKeys.BASIC_SALARY, grossPay.get(MapKeys.BASIC_SALARY));
-                    newValuesForEmployee.put(MapKeys.GROSS_PAY, grossPay.get(MapKeys.GROSS_PAY));
+                        for (String k : deduction.keySet()) {
+                            newValuesForEmployee.put(k + "-deduction-marker", deduction.get(k) != null ? deduction.get(k) : BigDecimal.ZERO);
+                        }
 
-                    Map<String, BigDecimal> pension = x.getDetail().getReport().getPension();
-                    newValuesForEmployee.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION,  pension != null ? pension.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION) : BigDecimal.ZERO);
-                    newValuesForEmployee.put(MapKeys.EMPLOYER_PENSION_CONTRIBUTION,  pension != null ? pension.get(MapKeys.EMPLOYER_PENSION_CONTRIBUTION) : BigDecimal.ZERO);
-                    newValuesForEmployee.put("Voluntary Pension Contribution", pension != null ? pension.get("Voluntary Pension Contribution") : BigDecimal.ZERO);
+                        Map<String, BigDecimal> grossPay = x.getDetail().getReport().getGrossPay();
+                        newValuesForEmployee.put(MapKeys.BASIC_SALARY, grossPay.get(MapKeys.BASIC_SALARY));
+                        newValuesForEmployee.put(MapKeys.GROSS_PAY, grossPay.get(MapKeys.GROSS_PAY));
 
-                    BigDecimal netPay = x.getDetail().getReport().getNetPay();
-                    newValuesForEmployee.put(MapKeys.NET_PAY,  netPay);
+                        Map<String, BigDecimal> pension = x.getDetail().getReport().getPension();
+                        newValuesForEmployee.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION,  pension != null ? pension.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION) : BigDecimal.ZERO);
+                        newValuesForEmployee.put(MapKeys.EMPLOYER_PENSION_CONTRIBUTION,  pension != null ? pension.get(MapKeys.EMPLOYER_PENSION_CONTRIBUTION) : BigDecimal.ZERO);
+                        newValuesForEmployee.put("Voluntary Pension Contribution", pension != null ? pension.get("Voluntary Pension Contribution") : BigDecimal.ZERO);
 
-                    Map<String, BigDecimal> taxRelief = x.getDetail().getReport().getTaxRelief();
-                    newValuesForEmployee.put("Taxable Income", taxRelief.get("CHARGEABLE INCOME"));
+                        BigDecimal netPay = x.getDetail().getReport().getNetPay();
+                        newValuesForEmployee.put(MapKeys.NET_PAY,  netPay);
 
-                    newValuesForAllEmployees.put(x.getEmployeeId(), newValuesForEmployee);
-                });
+                        Map<String, BigDecimal> taxRelief = x.getDetail().getReport().getTaxRelief();
+                        newValuesForEmployee.put("Taxable Income", taxRelief.get("MONTHLY CHARGEABLE INCOME"));
+                        newValuesForAllEmployees.put(x.getEmployeeId(), newValuesForEmployee);
+                    });
 
 
-        newValuesForAllEmployees.forEach((x,y) -> {
-            Optional<YTDReport> ytdReportOptional = ytdReportRepo.findYTDReportByEmployeeIdAndCompanyId(x, companyId);
-            YTDReport ytdReport;
-            if (ytdReportOptional.isEmpty()) {
-                ytdReport = createYTDReportForNewEmployee(x, y, companyId);
-            } else {
-                ytdReport = ytdReportOptional.get();
-                if (!isRollback) {
-                    ytdReport.setBasicSalary(ytdReport.getBasicSalary().add(y.get(MapKeys.BASIC_SALARY)));
-                    ytdReport.setGrossPay(ytdReport.getGrossPay().add(y.get(MapKeys.GROSS_PAY)));
-                    ytdReport.setNetPay(ytdReport.getNetPay().add(y.get(MapKeys.NET_PAY)));
-                    ytdReport.setNhf(ytdReport.getNhf().add(y.get(MapKeys.NATIONAL_HOUSING_FUND)));
-                    ytdReport.setPayeeTax(ytdReport.getPayeeTax().add(y.get("PAYE TAX")));
-                    ytdReport.setPension(ytdReport.getPension().add(y.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION))
-                            .add(y.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION))
-                            .add(y.get("Voluntary Pension Contribution")));
-                    ytdReport.setTaxableIncome(ytdReport.getTaxableIncome().add(y.get("Taxable Income")));
-                    ytdReport.setWht(ytdReport.getWht().add(y.get("WHT")));
+            newValuesForAllEmployees.forEach((x,y) -> {
+                Optional<YTDReport> ytdReportOptional = ytdReportRepo.findYTDReportByEmployeeIdAndCompanyId(x, companyId);
+                YTDReport ytdReport;
+                if (ytdReportOptional.isEmpty()) {
+                    ytdReport = createYTDReportForNewEmployee(x, y, companyId);
                 } else {
-                    ytdReport.setBasicSalary(ytdReport.getBasicSalary().subtract(y.get(MapKeys.BASIC_SALARY)));
-                    ytdReport.setGrossPay(ytdReport.getGrossPay().subtract(y.get(MapKeys.GROSS_PAY)));
-                    ytdReport.setNetPay(ytdReport.getNetPay().subtract(y.get(MapKeys.NET_PAY)));
-                    ytdReport.setNhf(ytdReport.getNhf().subtract(y.get(MapKeys.NATIONAL_HOUSING_FUND)));
-                    ytdReport.setPayeeTax(ytdReport.getPayeeTax().subtract(y.get("PAYE TAX")));
-                    ytdReport.setPension(ytdReport.getPension().subtract(y.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION))
-                            .add(y.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION))
-                            .add(y.get("Voluntary Pension Contribution")));
-                    ytdReport.setTaxableIncome(ytdReport.getTaxableIncome().subtract(y.get("Taxable Income")));
-                    ytdReport.setWht(ytdReport.getWht().subtract(y.get("WHT")));
-                }
-            }
-            ytdReportRepo.save(ytdReport);
-            latestYTDs.put(x, ytdReport);
-        });
-
-        payrollReportDetailList
-                .forEach(x -> {
-                    PayrollReportDetail payrollReportDetail = payrollReportDetailRepo.findById(x.getId()).get();
+                    ytdReport = ytdReportOptional.get();
                     if (!isRollback) {
-                        YTDReport ytdReport = latestYTDs.get(payrollReportDetail.getEmployeeId());
-                        Map<String, BigDecimal> ytdReportMap = new HashMap<>();
-                        ytdReportMap.put(MapKeys.BASIC_SALARY, ytdReport.getBasicSalary());
-                        ytdReportMap.put(MapKeys.GROSS_PAY, ytdReport.getGrossPay());
-                        ytdReportMap.put(MapKeys.NET_PAY, ytdReport.getNetPay());
-                        ytdReportMap.put(MapKeys.NATIONAL_HOUSING_FUND, ytdReport.getNhf());
-                        ytdReportMap.put("PAYE TAX", ytdReport.getPayeeTax());
-                        ytdReportMap.put("Pension", ytdReport.getPension());
-                        ytdReportMap.put("Taxable Income", ytdReport.getTaxableIncome());
-                        ytdReportMap.put("WHT", ytdReport.getWht());
-                        PayComputeDetailResponse payComputeDetailResponse = SerializationUtils.deserialize(payrollReportDetail.getReport());
-                        PaymentInfo paymentInfo = payComputeDetailResponse.getReport();
-                        paymentInfo.setYtdReport(ytdReportMap);
-                        payComputeDetailResponse.setReport(paymentInfo);
-                        payrollReportDetail.setReport(ReportUtils.serializeResponse(payComputeDetailResponse));
-                        payrollReportDetail.setPayrollStatus(!isRollback ? PayrollStatus.APPROVED : PayrollStatus.ROLLED_BACK);
-                        payrollReportDetailRepo.save(payrollReportDetail);
+                        ytdReport.setBasicSalary(ytdReport.getBasicSalary().add(y.get(MapKeys.BASIC_SALARY)));
+                        ytdReport.setGrossPay(ytdReport.getGrossPay().add(y.get(MapKeys.GROSS_PAY)));
+                        ytdReport.setNetPay(ytdReport.getNetPay().add(y.get(MapKeys.NET_PAY)));
+                        ytdReport.setNhf(ytdReport.getNhf().add(y.get(MapKeys.NATIONAL_HOUSING_FUND)));
+                        ytdReport.setPayeeTax(ytdReport.getPayeeTax().add(y.get("PAYE TAX")));
+                        ytdReport.setEmployerPension(y.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION));
+                        ytdReport.setEmployeePension(y.get(MapKeys.EMPLOYER_PENSION_CONTRIBUTION));
+                        ytdReport.setVoluntarPensionContribution(y.get("Voluntary Pension Contribution"));
+                        ytdReport.setPension(ytdReport.getPension().add(y.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION))
+                                .add(y.get(MapKeys.EMPLOYER_PENSION_CONTRIBUTION))
+                                .add(y.get("Voluntary Pension Contribution")));
+                        ytdReport.setTaxableIncome(ytdReport.getTaxableIncome().add(y.get("Taxable Income")));
+                        ytdReport.setWht(ytdReport.getWht().add(y.get("WHT")));
+                        ytdReport.setDeductions(mergeDeductionMap(ytdReport.getDeductions(), y));
+                    } else {
+                        ytdReport.setBasicSalary(ytdReport.getBasicSalary().subtract(y.get(MapKeys.BASIC_SALARY)));
+                        ytdReport.setGrossPay(ytdReport.getGrossPay().subtract(y.get(MapKeys.GROSS_PAY)));
+                        ytdReport.setNetPay(ytdReport.getNetPay().subtract(y.get(MapKeys.NET_PAY)));
+                        ytdReport.setNhf(ytdReport.getNhf().subtract(y.get(MapKeys.NATIONAL_HOUSING_FUND)));
+                        ytdReport.setPayeeTax(ytdReport.getPayeeTax().subtract(y.get("PAYE TAX")));
+                        ytdReport.setEmployerPension(y.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION));
+                        ytdReport.setEmployeePension(y.get(MapKeys.EMPLOYER_PENSION_CONTRIBUTION));
+                        ytdReport.setVoluntarPensionContribution(y.get("Voluntary Pension Contribution"));
+                        ytdReport.setPension(ytdReport.getPension().subtract(y.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION))
+                                .add(y.get(MapKeys.EMPLOYER_PENSION_CONTRIBUTION))
+                                .add(y.get("Voluntary Pension Contribution")));
+                        ytdReport.setTaxableIncome(ytdReport.getTaxableIncome().subtract(y.get("Taxable Income")));
+                        ytdReport.setWht(ytdReport.getWht().subtract(y.get("WHT")));
+                        ytdReport.setDeductions(reverseDeductionMap(ytdReport.getDeductions(), y));
                     }
-                });
+                }
+                ytdReportRepo.save(ytdReport);
+                latestYTDs.put(x, ytdReport);
+            });
+
+            payrollReportDetailList
+                    .forEach(x -> {
+                        PayrollReportDetail payrollReportDetail = payrollReportDetailRepo.findById(x.getId()).get();
+                        if (!isRollback) {
+                            YTDReport ytdReport = latestYTDs.get(payrollReportDetail.getEmployeeId());
+                            Map<String, BigDecimal> ytdReportMap = new HashMap<>();
+                            ytdReportMap.put(MapKeys.BASIC_SALARY, ytdReport.getBasicSalary());
+                            ytdReportMap.put(MapKeys.GROSS_PAY, ytdReport.getGrossPay());
+                            ytdReportMap.put(MapKeys.NET_PAY, ytdReport.getNetPay());
+                            ytdReportMap.put(MapKeys.NATIONAL_HOUSING_FUND, ytdReport.getNhf());
+                            ytdReportMap.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION, ytdReport.getEmployeePension());
+                            ytdReportMap.put(MapKeys.EMPLOYER_PENSION_CONTRIBUTION, ytdReport.getEmployerPension());
+                            ytdReportMap.put("Voluntary Pension Contribution", ytdReport.getVoluntarPensionContribution());
+                            ytdReportMap.put("PAYE TAX", ytdReport.getPayeeTax());
+                            ytdReportMap.put("Pension", ytdReport.getPension());
+                            ytdReportMap.put("Taxable Income", ytdReport.getTaxableIncome());
+                            ytdReportMap.put("WHT", ytdReport.getWht());
+
+                            for (String k : ytdReport.getDeductions().keySet()) {
+                                ytdReportMap.put(k, ytdReport.getDeductions().get(k));
+                            }
+
+                            PayComputeDetailResponse payComputeDetailResponse = SerializationUtils.deserialize(payrollReportDetail.getReport());
+                            PaymentInfo paymentInfo = payComputeDetailResponse.getReport();
+                            paymentInfo.setYtdReport(ytdReportMap);
+                            payComputeDetailResponse.setReport(paymentInfo);
+                            payrollReportDetail.setReport(ReportUtils.serializeResponse(payComputeDetailResponse));
+                            payrollReportDetail.setPayrollStatus(!isRollback ? PayrollStatus.APPROVED : PayrollStatus.ROLLED_BACK);
+                            payrollReportDetailRepo.save(payrollReportDetail);
+                        }
+                    });
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private YTDReport createYTDReportForNewEmployee(String employeeId, Map<String, BigDecimal> currentValues, String companyId) {
@@ -257,12 +279,57 @@ public class PayrollAsyncService {
                 .netPay(currentValues.get(MapKeys.NET_PAY))
                 .nhf(currentValues.get(MapKeys.NATIONAL_HOUSING_FUND))
                 .payeeTax(currentValues.get("PAYE TAX"))
+                .employeePension(currentValues.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION))
+                .employerPension(currentValues.get(MapKeys.EMPLOYER_PENSION_CONTRIBUTION))
+                .voluntarPensionContribution(currentValues.get("Voluntary Pension Contribution"))
                 .pension(currentValues.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION)
                         .add(currentValues.get(MapKeys.EMPLOYER_PENSION_CONTRIBUTION))
                         .add(currentValues.get("Voluntary Pension Contribution"))
                 )
                 .taxableIncome(currentValues.get("Taxable Income"))
                 .wht(currentValues.get("WHT"))
+                .deductions(extractDeductionMap(currentValues))
                 .build();
+    }
+
+    private Map<String, BigDecimal> extractDeductionMap(Map<String, BigDecimal> currentValues) {
+        Map<String, BigDecimal> mergedMap =  currentValues.entrySet()
+                .stream()
+                .filter(entry -> entry.getKey().contains("-deduction-marker"))
+                .collect(Collectors.toMap(
+                        entry -> entry.getKey().replace("-deduction-marker", ""),
+                        Map.Entry::getValue
+                ));
+
+        BigDecimal totalDeduction = mergedMap.entrySet().stream().filter(x -> "Total Deduction".equalsIgnoreCase(x.getKey()))
+                .map(Map.Entry::getValue).reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        mergedMap.put("Total Deduction", totalDeduction);
+        return mergedMap;
+    }
+
+    private Map<String, BigDecimal> mergeDeductionMap(Map<String, BigDecimal> currentValues, Map<String, BigDecimal> newValues) {
+        Map<String, BigDecimal> filteredNewValues = extractDeductionMap(newValues);
+        Map<String, BigDecimal> mergedMap = new HashMap<>(currentValues);
+        try {
+            filteredNewValues.forEach((key, value) ->
+                    mergedMap.merge(key, value, BigDecimal::add)
+            );
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return mergedMap;
+    }
+
+    private Map<String, BigDecimal> reverseDeductionMap(Map<String, BigDecimal> currentValues, Map<String, BigDecimal> newValues) {
+        Map<String, BigDecimal> filteredNewValues = extractDeductionMap(newValues);
+        Map<String, BigDecimal> resultMap = new HashMap<>(currentValues);
+        filteredNewValues.forEach((key, value) -> {
+            resultMap.computeIfPresent(key, (k, v) -> {
+                BigDecimal newVal = v.subtract(value); // subtract
+                return newVal.compareTo(BigDecimal.ZERO) == 0 ? null : newVal;
+            });
+        });
+        return resultMap;
     }
 }

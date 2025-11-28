@@ -258,10 +258,11 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         nonTaxableIncomeExemptMap.put("RELIEF ALLOWANCE", reliefAllowance);
         nonTaxableIncomeExemptMap.put("CHARGEABLE INCOME", chargeableIncome);
         nonTaxableIncomeExemptMap.put("MONTHLY CHARGEABLE INCOME",chargeableIncome.divide(
-                BigDecimal.valueOf(12),
-                2,
-                RoundingMode.HALF_UP
-        ));
+                        BigDecimal.valueOf(12),
+                        2,
+                        RoundingMode.HALF_UP
+                ));
+        // put monthly chargeable income here
         nonTaxableIncomeExemptMap.put("Annual Voluntary Pension Contribution", annualVoluntaryPensionContribution);
         paymentInfo.setTaxRelief(nonTaxableIncomeExemptMap);
         return paymentInfo;
@@ -374,7 +375,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     @Override
     public PaymentInfo computeTotalDeduction(PaymentInfo paymentInfo) {
         Map<String, BigDecimal> deductionMap = new HashMap<>();
-        String payee_tax_key;
+        String payee_tax_key = "";
         if (!isContract(paymentInfo)) {
             if (paymentInfo.isOffCycle()) {
                 payee_tax_key = "Paye Tax on " + getOffCyclePaymentDetails(paymentInfo).getName();
@@ -386,7 +387,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 return paymentInfo;
             }
         payee_tax_key = "Monthly Paye";
-
         deductionMap.put(payee_tax_key, paymentInfo.getPayeeTax().get(payee_tax_key));
         deductionMap.put("Total Monthly Paye", paymentInfo.getPayeeTax().get(payee_tax_key));
         deductionMap.put(MapKeys.PENSION_FUND, paymentInfo.getPension().get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION));

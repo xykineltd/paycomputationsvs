@@ -85,6 +85,7 @@ public class Report {
     @PostMapping("/details/report")
     public ResponseEntity<?> getDetailsReportByFilter(
             @RequestBody EmployeeFilterRequest employeeFilterRequest) {
+
         Map<String, Object> response =  reportPersistenceService.getReportByEmployeeIDList(employeeFilterRequest.getCompanyID(),
                 employeeFilterRequest.getEmployeeIds(), employeeFilterRequest.getReportId(),
                 employeeFilterRequest.getPage(), employeeFilterRequest.getSize());
@@ -192,6 +193,14 @@ public class Report {
             @RequestParam() String companyId
     ) {
         YTDReport response = reportPersistenceService.getYTDReport(employeeId, companyId);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping("/ytdReport-by-employeeIds")
+    public ResponseEntity<?> getYtdReportsByEmployeeIds(
+            @RequestBody() YtdRequest request
+    ) {
+        List<YTDReport> response = reportPersistenceService.getYTDReports(request);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

@@ -44,7 +44,6 @@ public class ReportUtils {
                     .summary(summary)
                     .build();
         }).collect(Collectors.toList());
-
     }
 
     public static ReportResponse transform(PayrollReportDetail x){

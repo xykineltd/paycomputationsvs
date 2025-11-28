@@ -1,7 +1,7 @@
 // seedPayrollConfig.js
 
 // change "aced_payroll" to your actual database name
-use("prod_db");
+use("staging");
 
 // ---------- TAX RULES (collection: taxt) ----------
 

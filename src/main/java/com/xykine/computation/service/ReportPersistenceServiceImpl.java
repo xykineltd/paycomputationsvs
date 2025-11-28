@@ -497,7 +497,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                         getEndDateRange(request.getEnd()),
                         isOffCycle, paging);
 
-        return retrievePayrolDetails(payrollReportDetailPage);
+        return retrievePayrollDetails(payrollReportDetailPage);
     }
 
 
@@ -544,7 +544,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         Pageable paging = PageRequest.of(page, size);
         Page<PayrollReportDetail> payrollReportDetailPage = payrollReportDetailRepo.findPayrollReportDetailByCompanyIdAndEmployeeId(companyId, employeeID, paging);
 
-        Map<String, Object> response = retrievePayrolDetails(payrollReportDetailPage);
+        Map<String, Object> response = retrievePayrollDetails(payrollReportDetailPage);
         auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Pulled payroll report for company id :" + companyId + "and employee id: " + employeeID, companyId);
         return response;
     }
@@ -569,16 +569,14 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             payrollReportDetailPage = payrollReportDetailRepo.findPayrollReportDetailByCompanyIdAndEmployeeIdInAndSummaryId(companyId, employeeIDList, summaryId, paging);
         }
 
-        Map<String, Object> response = retrievePayrolDetails(payrollReportDetailPage);
+        Map<String, Object> response = retrievePayrollDetails(payrollReportDetailPage);
         return response;
     }
 
-    private Map<String, Object> retrievePayrolDetails(Page<PayrollReportDetail> payrollReportDetailPage) {
+    private Map<String, Object> retrievePayrollDetails(Page<PayrollReportDetail> payrollReportDetailPage) {
         List<PayrollReportDetail> payrollDetails;
         payrollDetails = payrollReportDetailPage.getContent();
         List<ReportResponse> reportResponses = ReportUtils.transform(payrollDetails);
-
-        LOGGER.info("payrollDetails report Response: {}", reportResponses.get(0));
 
         Map<String, Object> response = new HashMap<>();
         response.put("payrollDetails", reportResponses);
@@ -923,6 +921,11 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                     newReport.setTaxableIncome(BigDecimal.ZERO);
                     return newReport;
                 });
+    }
+
+    @Override
+    public List<YTDReport> getYTDReports(YtdRequest request) {
+        return ytdReportRepo.findYTDReportByEmployeeIdInAndCompanyId(request.getEmployeeIds(), request.getCompanyId());
     }
 
     private CompletableFuture<Void> saveReportDetailsAsync(

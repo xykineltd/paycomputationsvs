@@ -38,5 +38,5 @@ public interface ReportPersistenceService {
     Map<String, Object> getPaymentDetailForDates(String employeeId, String companyId, List<String> endDates,  int page, int size);
     Map<String, Object> getPayRollReportByType(ReportByTypeRequest request, int page, int size);
     Map<String, Object> getPayRollReportDetailByType(ReportByTypeRequest request, int page, int size);
-
+    List<YTDReport> getYTDReports(YtdRequest request);
 }
