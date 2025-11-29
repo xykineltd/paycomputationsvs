@@ -5,6 +5,7 @@ import com.xykine.computation.dto.LoanFilter;
 import com.xykine.computation.entity.*;
 import com.xykine.computation.repo.PaymentSettingMetadataRepo;
 import com.xykine.computation.repo.TaxRepo;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -22,6 +23,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static com.xykine.computation.utils.ComputationUtils.*;
 
@@ -145,7 +147,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         } else {
             grossPayMap.put("Gross Salary", BigDecimal.ZERO);
         }
-
         paymentInfo.setGrossPay(grossPayMap);
         return paymentInfo;
     }
@@ -236,9 +237,10 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         BigDecimal customTaxReleifApplicable = getEmployeeMetaData(paymentInfo).getCustomTaxReliefApplicable();
         BigDecimal annualCustomTaxReleifApplicable = customTaxReleifApplicable.multiply(BigDecimal.valueOf(12));
 
-        BigDecimal annualEmployeePensionAtEightPercent = ComputationUtils.roundToTwoDecimalPlaces(
+        BigDecimal annualEmployeePensionAtEightPercent = isIntern(paymentInfo) ? BigDecimal.ZERO : ComputationUtils.roundToTwoDecimalPlaces(
                 sessionCalculationObject.getComputationConstants().get("pensionFundPercent")
                         .multiply(annualGrossSalary));
+
         annualEmployeePensionAtEightPercent = ComputationUtils.roundToTwoDecimalPlaces(annualEmployeePensionAtEightPercent.multiply(BigDecimal.valueOf(0.3292)));
         annualEmployeePensionAtEightPercent = ComputationUtils.roundToTwoDecimalPlaces(annualEmployeePensionAtEightPercent.subtract(annualVoluntaryPensionContribution));
         BigDecimal grossPayForTaxPurpose = annualGrossSalary.subtract(annualEmployeePensionAtEightPercent).subtract(voluntaryPensionContribution);
@@ -295,7 +297,27 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
       BigDecimal total = getTotal(nonTaxableIncomeExemptMap);
       nonTaxableIncomeExemptMap.put(MapKeys.TOTAL_TAX_RELIEF, total);
 
-        nonTaxableIncomeExemptMap.put("MONTHLY CHARGEABLE INCOME", roundToTwoDecimalPlaces(grossIncomeForCRA));
+        LocalDate start = LocalDate.parse(paymentInfo.getStartDate());
+
+        List<String> nonTaxableEntries =
+                paymentSettingMetadataRepo.findByEmployeeIdAndTaxable(paymentInfo.getEmployeeID(), false)
+                        .stream()
+                        .filter(x -> !x.getStartDate().isAfter(start) && !x.getEndDate().isBefore(start))
+                        .map(PaymentSettingMetaData::getPaymentName)
+                        .toList();
+
+        BigDecimal nonTaxableValue = paymentInfo.getPaymentSettings()
+                .stream()
+                .filter(x -> nonTaxableEntries.contains(x.getName()))
+                .map(PaymentSettingsResponse::getValue).reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal totalChargeable = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(nonTaxableValue);
+        nonTaxableIncomeExemptMap.put("MONTHLY CHARGEABLE INCOME", totalChargeable.divide(
+                BigDecimal.valueOf(12),
+                2,
+                RoundingMode.HALF_UP
+        ));
+
         paymentInfo.setNhf(nhf);
         paymentInfo.setPension(pension);
         paymentInfo.setTaxRelief(nonTaxableIncomeExemptMap);
@@ -470,6 +492,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         BigDecimal total = input.entrySet().stream()
                 .filter(e -> !"Total Monthly Paye".equalsIgnoreCase(e.getKey()))
                 .filter(e -> !"Gross Salary".equalsIgnoreCase(e.getKey()))
+                .filter(e -> !"Taxable Gross".equalsIgnoreCase(e.getKey()))
                 .map(Map.Entry::getValue)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -511,6 +534,12 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         return Optional.ofNullable(getEmployeeMetaData(paymentInfo))
                 .map(EmployeeMetadata::getEmployeeType)
                 .orElse(EmployeeType.FULL_TIME) == EmployeeType.CONTRACT ;
+    }
+
+    private boolean isIntern(PaymentInfo paymentInfo) {
+        return Optional.ofNullable(getEmployeeMetaData(paymentInfo))
+                .map(EmployeeMetadata::getEmployeeType)
+                .orElse(EmployeeType.FULL_TIME) == EmployeeType.INTERN ;
     }
 
     private boolean isNHFSubscribed (PaymentInfo paymentInfo) {
