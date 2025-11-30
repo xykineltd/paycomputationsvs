@@ -19,7 +19,6 @@ import com.xykine.computation.response.PaymentComputeResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.xykine.payroll.model.PaymentFrequencyEnum;
 import org.xykine.payroll.model.PaymentInfo;
@@ -30,7 +29,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
@@ -51,7 +49,7 @@ public class ComputeService {
 
     public PaymentComputeResponse computePayroll(List<PaymentInfo> rawInfo) {
 
-        if(rawInfo.size() > 0) {
+        if(!rawInfo.isEmpty()) {
             LOGGER.debug("First data received {} ", rawInfo.get(0));
         }
             ObjectMapper mapper = new ObjectMapper();
@@ -159,7 +157,7 @@ public class ComputeService {
                         numberOfUnpaidAbsence = 0;
                     }
 
-                    if (setting.getName().equalsIgnoreCase("Monthly Performance Bonus")) {
+                    if (setting.getName().equalsIgnoreCase("Performance Bonus")) {
                         BigDecimal performanceBonus = ComputationUtils.prorate(mainCopy.getBasicSalary().multiply(setting.getValue().divide(BigDecimal.valueOf(100))),
                                 numberOfUnpaidAbsence, PaymentFrequencyEnum.MONTHLY, paymentInfo.getStartDate());
 

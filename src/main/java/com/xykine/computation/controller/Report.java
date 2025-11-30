@@ -307,7 +307,6 @@ public class Report {
             @RequestHeader("Authorization") String authorizationHeader) {
         employeeFilterRequest.setSize(5000);
         List<String> filteredList = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
-        LOGGER.info("FilteredList: {}", filteredList);
         ConcurrentHashMap<String, Set<SummaryDetail>> response =
                 reportPersistenceService.getSummaryVarianceDetails(
                         employeeFilterRequest.getReportId(),

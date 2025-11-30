@@ -230,20 +230,20 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     public PaymentInfo computeNonTaxableIncomeExemptForMFB(PaymentInfo paymentInfo, BigDecimal nationalHousingFund) {
         Map<String, BigDecimal> nonTaxableIncomeExemptMap = new HashMap<>();
-
-
         if (isContract(paymentInfo)) {
             return paymentInfo;
         }
+
         BigDecimal annualGrossSalary = paymentInfo.getBasicSalary();
         BigDecimal voluntaryPensionContribution = getEmployeeMetaData(paymentInfo).getVoluntaryPensionContribution();
         BigDecimal annualVoluntaryPensionContribution = voluntaryPensionContribution.multiply(BigDecimal.valueOf(12));
         BigDecimal customTaxReleifApplicable = getEmployeeMetaData(paymentInfo).getCustomTaxReliefApplicable();
         BigDecimal annualCustomTaxReleifApplicable = customTaxReleifApplicable.multiply(BigDecimal.valueOf(12));
 
-        BigDecimal annualEmployeePensionAtEightPercent = ComputationUtils.roundToTwoDecimalPlaces(
+        BigDecimal annualEmployeePensionAtEightPercent = isIntern(paymentInfo) ? BigDecimal.ZERO : ComputationUtils.roundToTwoDecimalPlaces(
                 sessionCalculationObject.getComputationConstants().get("pensionFundPercent")
                         .multiply(annualGrossSalary));
+
         annualEmployeePensionAtEightPercent = ComputationUtils.roundToTwoDecimalPlaces(annualEmployeePensionAtEightPercent.multiply(BigDecimal.valueOf(0.3292)));
         annualEmployeePensionAtEightPercent = ComputationUtils.roundToTwoDecimalPlaces(annualEmployeePensionAtEightPercent.subtract(annualVoluntaryPensionContribution));
         BigDecimal grossPayForTaxPurpose = annualGrossSalary.subtract(annualEmployeePensionAtEightPercent).subtract(voluntaryPensionContribution);
@@ -257,57 +257,107 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         nonTaxableIncomeExemptMap.put("ANNUAL EMPLOYEE PENSION @ 8%", annualEmployeePensionAtEightPercent);
         nonTaxableIncomeExemptMap.put("RELIEF ALLOWANCE", reliefAllowance);
         nonTaxableIncomeExemptMap.put("CHARGEABLE INCOME", chargeableIncome);
-        nonTaxableIncomeExemptMap.put("MONTHLY CHARGEABLE INCOME",chargeableIncome.divide(
-                        BigDecimal.valueOf(12),
-                        2,
-                        RoundingMode.HALF_UP
-                ));
+
+        nonTaxableIncomeExemptMap.put("MONTHLY CHARGEABLE INCOME", chargeableIncome.divide(
+                BigDecimal.valueOf(12),
+                2,
+                RoundingMode.HALF_UP
+        ));
         // put monthly chargeable income here
         nonTaxableIncomeExemptMap.put("Annual Voluntary Pension Contribution", annualVoluntaryPensionContribution);
         paymentInfo.setTaxRelief(nonTaxableIncomeExemptMap);
         return paymentInfo;
     }
 
-    private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo paymentInfo) {
-        if (isContract(paymentInfo)) {
-            return paymentInfo;
-        }
-        PaymentFrequencyEnum salaryFrequency = paymentInfo.isOffCycle() ? getOffCyclePaymentFrequency(paymentInfo) :  getSalaryFrequency(paymentInfo);
-        Map<String, BigDecimal> nonTaxableIncomeExemptMap = new HashMap<>();
-        Map<String, BigDecimal> nhf = new HashMap<>();
-        nhf.put(MapKeys.NATIONAL_HOUSING_FUND, BigDecimal.ZERO);
+//    public PaymentInfo computeNonTaxableIncomeExemptForMFB(PaymentInfo paymentInfo, BigDecimal nationalHousingFund) {
+//        Map<String, BigDecimal> nonTaxableIncomeExemptMap = new HashMap<>();
+//
+//
+//        if (isContract(paymentInfo)) {
+//            return paymentInfo;
+//        }
+//        BigDecimal annualGrossSalary = paymentInfo.getBasicSalary();
+//        BigDecimal voluntaryPensionContribution = getEmployeeMetaData(paymentInfo).getVoluntaryPensionContribution();
+//        BigDecimal annualVoluntaryPensionContribution = voluntaryPensionContribution.multiply(BigDecimal.valueOf(12));
+//        BigDecimal customTaxReleifApplicable = getEmployeeMetaData(paymentInfo).getCustomTaxReliefApplicable();
+//        BigDecimal annualCustomTaxReleifApplicable = customTaxReleifApplicable.multiply(BigDecimal.valueOf(12));
+//
+//        BigDecimal annualEmployeePensionAtEightPercent = ComputationUtils.roundToTwoDecimalPlaces(
+//                sessionCalculationObject.getComputationConstants().get("pensionFundPercent")
+//                        .multiply(annualGrossSalary));
+//
+//        annualEmployeePensionAtEightPercent = ComputationUtils.roundToTwoDecimalPlaces(annualEmployeePensionAtEightPercent.multiply(BigDecimal.valueOf(0.3292)));
+//        annualEmployeePensionAtEightPercent = ComputationUtils.roundToTwoDecimalPlaces(annualEmployeePensionAtEightPercent.subtract(annualVoluntaryPensionContribution));
+//        BigDecimal grossPayForTaxPurpose = annualGrossSalary.subtract(annualEmployeePensionAtEightPercent).subtract(voluntaryPensionContribution);
+//        BigDecimal annualConsolidatedAllowance = getAnnualConsolidatedAllowance(grossPayForTaxPurpose);
+//        BigDecimal reliefAllowance = annualConsolidatedAllowance.add(annualEmployeePensionAtEightPercent).add(annualVoluntaryPensionContribution).add(nationalHousingFund).add(annualCustomTaxReleifApplicable);
+//        BigDecimal chargeableIncome = annualGrossSalary.subtract(reliefAllowance);
+//
+//        nonTaxableIncomeExemptMap.put("CUSTOM TAX RELIEF APPLICABLE", customTaxReleifApplicable);
+//        nonTaxableIncomeExemptMap.put("GROSS PAY (TAX PURPOSE)", grossPayForTaxPurpose);
+//        nonTaxableIncomeExemptMap.put("ANNUAL CONSOLIDATED ALLOWANCE", annualConsolidatedAllowance);
+////        nonTaxableIncomeExemptMap.put("ANNUAL EMPLOYEE PENSION @ 8%", annualEmployeePensionAtEightPercent);
+//
+//
+//
+//        BigDecimal annualEmployeePensionAtEightPercent = isIntern(paymentInfo) ? BigDecimal.ZERO : ComputationUtils.roundToTwoDecimalPlaces(
+//                sessionCalculationObject.getComputationConstants().get("pensionFundPercent")
+//                        .multiply(annualGrossSalary));
+//
+//
+//
+//        nonTaxableIncomeExemptMap.put("RELIEF ALLOWANCE", reliefAllowance);
+//        nonTaxableIncomeExemptMap.put("CHARGEABLE INCOME", chargeableIncome);
+//        nonTaxableIncomeExemptMap.put("MONTHLY CHARGEABLE INCOME",chargeableIncome.divide(
+//                        BigDecimal.valueOf(12),
+//                        2,
+//                        RoundingMode.HALF_UP
+//                ));
+//        // put monthly chargeable income here
+//        nonTaxableIncomeExemptMap.put("Annual Voluntary Pension Contribution", annualVoluntaryPensionContribution);
+//        paymentInfo.setTaxRelief(nonTaxableIncomeExemptMap);
+//        return paymentInfo;
+//    }
 
-        Map<String, BigDecimal> pension = new HashMap<>();
-        pension.put(MapKeys.EMPLOYER_PENSION_CONTRIBUTION, BigDecimal.ZERO);
-        pension.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION, BigDecimal.ZERO);
-
-        BigDecimal grossIncomeForCRA  = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY);
-
-        // Do not apply Tax Releif for Off-Cycle
-
-        BigDecimal rawFXR = roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("craFraction")
-                        .multiply(grossIncomeForCRA));
-        if (rawFXR.compareTo(sessionCalculationObject.getComputationConstants().get("craCutOff")) == 1) {
-            nonTaxableIncomeExemptMap.put(MapKeys.FIXED_CONSOLIDATED_RELIEF_ALLOWANCE, prorate(rawFXR, 0, salaryFrequency, paymentInfo.getStartDate()));
-        } else {
-            nonTaxableIncomeExemptMap.put(MapKeys.FIXED_CONSOLIDATED_RELIEF_ALLOWANCE, prorate(
-                    BigDecimal.valueOf(200000),0, salaryFrequency, paymentInfo.getStartDate()));
-        }
-
-        BigDecimal variableCRA = roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("variableCRAFraction")
-                        .multiply(grossIncomeForCRA));
-        nonTaxableIncomeExemptMap.put(MapKeys.VARIABLE_CONSOLIDATED_RELIEF_ALLOWANCE, roundToTwoDecimalPlaces(prorate(variableCRA, 0, salaryFrequency, paymentInfo.getStartDate())));
-
-        BigDecimal total = getTotal(nonTaxableIncomeExemptMap);
-        nonTaxableIncomeExemptMap.put(MapKeys.TOTAL_TAX_RELIEF, total);
-        nonTaxableIncomeExemptMap.put("MONTHLY CHARGEABLE INCOME", roundToTwoDecimalPlaces(grossIncomeForCRA));
-
-        paymentInfo.setNhf(nhf);
-        paymentInfo.setPension(pension);
-        paymentInfo.setTaxRelief(nonTaxableIncomeExemptMap);
-
+private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo paymentInfo) {
+    if (isContract(paymentInfo)) {
         return paymentInfo;
     }
+    PaymentFrequencyEnum salaryFrequency = paymentInfo.isOffCycle() ? getOffCyclePaymentFrequency(paymentInfo) :  getSalaryFrequency(paymentInfo);
+    Map<String, BigDecimal> nonTaxableIncomeExemptMap = new HashMap<>();
+    Map<String, BigDecimal> nhf = new HashMap<>();
+    nhf.put(MapKeys.NATIONAL_HOUSING_FUND, BigDecimal.ZERO);
+
+    Map<String, BigDecimal> pension = new HashMap<>();
+    pension.put(MapKeys.EMPLOYER_PENSION_CONTRIBUTION, BigDecimal.ZERO);
+    pension.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION, BigDecimal.ZERO);
+
+    BigDecimal grossIncomeForCRA  = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY);
+
+    // Do not apply Tax Releif for Off-Cycle
+
+    BigDecimal rawFXR = roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("craFraction")
+            .multiply(grossIncomeForCRA));
+    if (rawFXR.compareTo(sessionCalculationObject.getComputationConstants().get("craCutOff")) == 1) {
+        nonTaxableIncomeExemptMap.put(MapKeys.FIXED_CONSOLIDATED_RELIEF_ALLOWANCE, prorate(rawFXR, 0, salaryFrequency, paymentInfo.getStartDate()));
+    } else {
+        nonTaxableIncomeExemptMap.put(MapKeys.FIXED_CONSOLIDATED_RELIEF_ALLOWANCE, prorate(
+                BigDecimal.valueOf(200000),0, salaryFrequency, paymentInfo.getStartDate()));
+    }
+
+    BigDecimal variableCRA = roundToTwoDecimalPlaces(sessionCalculationObject.getComputationConstants().get("variableCRAFraction")
+            .multiply(grossIncomeForCRA));
+    nonTaxableIncomeExemptMap.put(MapKeys.VARIABLE_CONSOLIDATED_RELIEF_ALLOWANCE, roundToTwoDecimalPlaces(prorate(variableCRA, 0, salaryFrequency, paymentInfo.getStartDate())));
+    BigDecimal total = getTotal(nonTaxableIncomeExemptMap);
+    nonTaxableIncomeExemptMap.put(MapKeys.TOTAL_TAX_RELIEF, total);
+
+    //nonTaxableIncomeExemptMap.put("MONTHLY CHARGEABLE INCOME", roundToTwoDecimalPlaces(grossIncomeForCRA));
+    paymentInfo.setNhf(nhf);
+    paymentInfo.setPension(pension);
+    paymentInfo.setTaxRelief(nonTaxableIncomeExemptMap);
+
+    return paymentInfo;
+}
 
     @Override
     public PaymentInfo prorateEarnings(PaymentInfo paymentInfo){
@@ -370,6 +420,12 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         updateReportSummary(paymentInfo, sessionCalculationObject, "Total Paye Tax",
                 monthlyPayeeTax);
         return paymentInfo;
+    }
+
+    private boolean isIntern(PaymentInfo paymentInfo) {
+        return Optional.ofNullable(getEmployeeMetaData(paymentInfo))
+                .map(EmployeeMetadata::getEmployeeType)
+                .orElse(EmployeeType.FULL_TIME) == EmployeeType.INTERN ;
     }
 
     @Override
