@@ -56,6 +56,7 @@ public class EmployeeMetadataService {
             existing.setCompanyId(updatedEmployee.getCompanyId());
             existing.setEmployeeType(updatedEmployee.getEmployeeType());
             existing.setNHFSubscribed(updatedEmployee.isNHFSubscribed());
+            existing.setPensioned(updatedEmployee.isPensioned());
             existing.setCustomTaxReliefApplicable(updatedEmployee.getCustomTaxReliefApplicable());
             existing.setVoluntaryPensionContribution(updatedEmployee.getVoluntaryPensionContribution());
             return employeeMetadataRepo.save(existing);
