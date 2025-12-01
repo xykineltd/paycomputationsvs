@@ -561,6 +561,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
     @Override
     public Map<String, Object> getReportByEmployeeIDList(String companyId, List<String> employeeIDList, String summaryId, int page, int size) {
+
         Pageable paging = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "fullName"));
 
         Page<PayrollReportDetail> payrollReportDetailPage ;

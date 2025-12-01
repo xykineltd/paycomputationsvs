@@ -8,4 +8,5 @@ import java.util.List;
 
 public interface PaymentSettingMetadataRepo  extends MongoRepository<PaymentSettingMetaData, String> {
     List<PaymentSettingMetaData> findByEmployeeId(String employeeId);
+    List<PaymentSettingMetaData> findByEmployeeIdAndTaxable(String employeeId, boolean taxable);
 }

@@ -93,21 +93,28 @@ public class DashboardDataService {
 
     public Map<String, Object> getDashboardGraph(PaymentFrequencyEnum paymentFrequencyEnum, String companyId, int page, int size) {
         Pageable paging = PageRequest.of(page, size);
-        Page<DashboardGraph> dashboardGraphs = dashboardGraphRepo.findDashboardGraphByPaymentFrequencyAndCompanyIdOrderByDateAddedDesc(paymentFrequencyEnum, companyId, paging);
-        List<DashboardGraph> dashboardGraphList = dashboardGraphs.getContent();
+//        Page<DashboardGraph> dashboardGraphs = dashboardGraphRepo.findDashboardGraphByPaymentFrequencyAndCompanyIdOrderByDateAddedDesc(paymentFrequencyEnum, companyId, paging);
+        Page<DashboardGraph> dashboardGraphs2 = dashboardGraphRepo.findDashboardGraphByCompanyIdOrderByDateAddedDesc(companyId, paging);
+        List<DashboardGraph> dashboardGraphList = dashboardGraphs2.getContent();
         List<DashboardGraphResponse> dashboardResponse = ReportUtils.transformToResponse(dashboardGraphList);
+
 
         Map<String, Object> response = new HashMap<>();
         response.put("payrollDetails", dashboardResponse);
-        response.put("currentPage", dashboardGraphs.getNumber());
-        response.put("totalItems", dashboardGraphs.getTotalElements());
-        response.put("totalPages", dashboardGraphs.getTotalPages());
+        response.put("currentPage", dashboardGraphs2.getNumber());
+        response.put("totalItems", dashboardGraphs2.getTotalElements());
+        response.put("totalPages", dashboardGraphs2.getTotalPages());
         return response;
     }
 
     public void updateYTDReport(String id, String companyId, boolean isRollBack) {
         List<PayrollReportDetail>  payrollReportDetailList = payrollReportDetailRepo.findPayrollReportDetailBySummaryId(id);
         payrollAsyncService.offLoadNewValuesToYTD(payrollReportDetailList, companyId, isRollBack);
+    }
+
+    public void rollbackDashboardGraph(String companyId, String startDate, String endDate) {
+        Optional<DashboardGraph> dashboardGraphOptional = dashboardGraphRepo.findByCompanyIdAndStartDateAndEndDate(companyId, startDate, endDate);
+        dashboardGraphOptional.ifPresent(dashboardGraphRepo::delete);
     }
 
     private void updateDashboardData(DashboardCard dashboardCard, PayrollReportSummary payrollReportSummary, boolean isRollBack) {
@@ -127,20 +134,35 @@ public class DashboardDataService {
             ));
         }
 
-        LOGGER.debug(" ====> netPay, currentNetPay,  payrollReportSummary.getTotalNumberOfEmployees()  {} {} {} ",
-                netPay, currentNetPay, payrollReportSummary.getTotalNumberOfEmployees());
-
         dashboardCardRepo.save(dashboardCard);
-        DashboardGraph dashboardGraph = DashboardGraph.builder()
-                .id(UUID.randomUUID().toString())
-                .companyId(payrollReportSummary.getCompanyId())
-                .startDate(payrollReportSummary.getStartDate().toString())
-                .endDate(payrollReportSummary.getEndDate().toString())
-                .paymentFrequency(payrollReportSummary.getPaymentFrequency())
-                .netPay(netPay)
-                .dateAdded(LocalDateTime.now())
-                .build();
-        dashboardGraphRepo.save(dashboardGraph);
+
+        String companyId = payrollReportSummary.getCompanyId();
+        String startDate = payrollReportSummary.getStartDate();
+        String endDate = payrollReportSummary.getEndDate();
+
+        if(isRollBack) {
+            dashboardGraphRepo.deleteByCompanyIdAndStartDateAndEndDate(companyId, startDate, endDate);
+        } else {
+            Optional<DashboardGraph> dashboardGraphOptional = dashboardGraphRepo.findByCompanyIdAndStartDateAndEndDate(companyId, startDate, endDate);
+            DashboardGraph dashboardGraph;
+            if (dashboardGraphOptional.isPresent()) {
+                dashboardGraph = dashboardGraphOptional.get();
+                dashboardGraph.setNetPay(netPay);
+                dashboardGraph.setPaymentFrequency(payrollReportSummary.getPaymentFrequency());
+                dashboardGraph.setDateAdded(LocalDateTime.now());
+            } else {
+                dashboardGraph = DashboardGraph.builder()
+                        .id(UUID.randomUUID().toString())
+                        .companyId(companyId)
+                        .startDate(startDate)
+                        .endDate(endDate)
+                        .paymentFrequency(payrollReportSummary.getPaymentFrequency())
+                        .netPay(netPay)
+                        .dateAdded(LocalDateTime.now())
+                        .build();
+            }
+            dashboardGraphRepo.save(dashboardGraph);
+        }
         updateYTDReport(payrollReportSummary.getId().toString(), payrollReportSummary.getCompanyId(), isRollBack );
     }
 
