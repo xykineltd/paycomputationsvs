@@ -393,6 +393,28 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
     nonTaxableIncomeExemptMap.put(MapKeys.TOTAL_TAX_RELIEF, total);
 
     //nonTaxableIncomeExemptMap.put("MONTHLY CHARGEABLE INCOME", roundToTwoDecimalPlaces(grossIncomeForCRA));
+
+    LocalDate start = LocalDate.parse(paymentInfo.getStartDate());
+
+    List<String> nonTaxableEntries =
+            paymentSettingMetadataRepo.findByEmployeeIdAndTaxable(paymentInfo.getEmployeeID(), false)
+                    .stream()
+                    .filter(x -> !x.getStartDate().isAfter(start) && !x.getEndDate().isBefore(start))
+                    .map(PaymentSettingMetaData::getPaymentName)
+                    .toList();
+
+    BigDecimal nonTaxableValue = paymentInfo.getPaymentSettings()
+            .stream()
+            .filter(x -> nonTaxableEntries.contains(x.getName()))
+            .map(PaymentSettingsResponse::getValue).reduce(BigDecimal.ZERO, BigDecimal::add);
+
+    BigDecimal totalChargeable = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(nonTaxableValue);
+    nonTaxableIncomeExemptMap.put("MONTHLY CHARGEABLE INCOME", totalChargeable.divide(
+            BigDecimal.valueOf(12),
+            2,
+            RoundingMode.HALF_UP
+    ));
+
     paymentInfo.setNhf(nhf);
     paymentInfo.setPension(pension);
     paymentInfo.setTaxRelief(nonTaxableIncomeExemptMap);
