@@ -7,6 +7,7 @@ import com.xykine.computation.exceptions.EmployeeFilterException;
 import com.xykine.computation.exceptions.PayrollValidationException;
 import com.xykine.computation.request.EmployeeFilterRequest;
 import com.xykine.computation.request.PaymentInfoRequest;
+import com.xykine.computation.request.SelectedEmployeeField;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -15,6 +16,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.BodyInserters;
@@ -74,35 +76,41 @@ public class AdminService {
                 .block(); // Block to wait for the response
     }
 
-    public List<String> getEmployeeIdListForFilter(EmployeeFilterRequest employeeFilterRequest, String token) {
+    public List<SelectedEmployeeField> getEmployeeIdListForFilter(
+            EmployeeFilterRequest employeeFilterRequest, String token) {
+
         return webClient
                 .post()
                 .uri("admin/employee/get-employee-ids")
                 .header(HttpHeaders.AUTHORIZATION, token)
+                .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(employeeFilterRequest)
-                .exchangeToMono(response ->{
+                .exchangeToMono(response -> {
+
                     if (response.statusCode().is2xxSuccessful()) {
-                        // Extract the body as a List if the response is successful
-                        return response.bodyToMono(List.class);
+                        // Deserialize directly into List<CustomEmployeeField>
+                        return response.bodyToMono(
+                                new ParameterizedTypeReference<List<SelectedEmployeeField>>() {}
+                        );
                     } else {
-                        // Extract error message from the response body and throw custom exception
+                        // Extract API error and convert to custom exception
                         return response.bodyToMono(ApiException.class)
                                 .flatMap(errorBody -> {
-                                    LOGGER.error("Non-successful response: {}", response.statusCode());
-                                    LOGGER.info("Error Message: {}", errorBody.getErrorMessage());
-                                    LOGGER.info("Error Code: {}", errorBody.getErrorCode());
+                                    LOGGER.error("Non-successful response status: {}", response.statusCode());
+                                    LOGGER.error("Error Message: {}", errorBody.getErrorMessage());
+                                    LOGGER.error("Error Code: {}", errorBody.getErrorCode());
 
-                                    // Throw custom exception with the error message
-                                    return Mono.error(new EmployeeFilterException(errorBody.getMessage()));
+                                    return Mono.error(
+                                            new EmployeeFilterException(errorBody.getErrorMessage())
+                                    );
                                 });
                     }
                 })
                 .onErrorResume(WebClientResponseException.class, ex -> {
-                    // Handle WebClient exceptions, if needed
-                    LOGGER.error("WebClient call failed: {}", ex.getMessage());
+                    LOGGER.error("WebClient call failed: {}", ex.getResponseBodyAsString());
                     return Mono.error(new EmployeeFilterException(ex.getMessage()));
                 })
-                .block(); // Block to wait for the response
+                .block();   // Blocking for synchronous result
     }
 
     public Map<String, List<String>> getCostCenterDetails(EmployeeFilterRequest employeeFilterRequest, String token) {

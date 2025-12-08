@@ -70,13 +70,15 @@ public class Report {
             @RequestBody EmployeeFilterRequest employeeFilterRequest,
             @RequestHeader("Authorization") String authorizationHeader) {
 
-        List<String> filteredList = new ArrayList<>();
-        if(AppUtil.hasAdditionalFilters(employeeFilterRequest)) {
-             filteredList = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
-        }
+        List<SelectedEmployeeField> selectedEmployeeField = new ArrayList<>();
+//        if(AppUtil.hasAdditionalFilters(employeeFilterRequest)) {
+            selectedEmployeeField = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
+//        }
+
+        List<String> filteredList = selectedEmployeeField.stream().map(SelectedEmployeeField::getEmployeeID).toList();
 
         Map<String, Object> response =  reportPersistenceService.getReportByEmployeeIDList(employeeFilterRequest.getCompanyID(),
-                filteredList, employeeFilterRequest.getReportId(),
+                filteredList, employeeFilterRequest.getReportId(), selectedEmployeeField,
                 employeeFilterRequest.getPage(), employeeFilterRequest.getSize());
 
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -87,7 +89,7 @@ public class Report {
             @RequestBody EmployeeFilterRequest employeeFilterRequest) {
 
         Map<String, Object> response =  reportPersistenceService.getReportByEmployeeIDList(employeeFilterRequest.getCompanyID(),
-                employeeFilterRequest.getEmployeeIds(), employeeFilterRequest.getReportId(),
+                employeeFilterRequest.getEmployeeIds(), employeeFilterRequest.getReportId(), List.of(),
                 employeeFilterRequest.getPage(), employeeFilterRequest.getSize());
 
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -306,7 +308,10 @@ public class Report {
             @RequestBody EmployeeFilterRequest employeeFilterRequest,
             @RequestHeader("Authorization") String authorizationHeader) {
         employeeFilterRequest.setSize(5000);
-        List<String> filteredList = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
+        List<SelectedEmployeeField> selectedEmployeeField = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
+
+        List<String> filteredList = selectedEmployeeField.stream().map(SelectedEmployeeField::getEmployeeID).toList();
+
         ConcurrentHashMap<String, Set<SummaryDetail>> response =
                 reportPersistenceService.getSummaryVarianceDetails(
                         employeeFilterRequest.getReportId(),

@@ -4,7 +4,9 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import org.xykine.payroll.model.UserRole;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 @Data
@@ -15,6 +17,7 @@ public class EmployeeFilterRequest {
     private String companyID;
     private String departmentID;
     private String position;
+    private LocalDate startDate;
     private String employeeIsLocked;
     private String active;
     private Set<UserRole> roles;

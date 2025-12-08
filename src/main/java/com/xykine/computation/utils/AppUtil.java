@@ -13,6 +13,7 @@ public class AppUtil {
                         isBlank(req.getLastName()) &&
                         isBlank(req.getDepartmentID()) &&
                         isBlank(req.getPosition()) &&
+                        (req.getStartDate() == null) &&
                         isBlank(req.getEmployeeIsLocked()) &&
                         isBlank(req.getActive()) &&
                         (req.getRoles() == null || req.getRoles().isEmpty()) &&

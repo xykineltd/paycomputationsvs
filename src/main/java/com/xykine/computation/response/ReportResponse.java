@@ -16,6 +16,8 @@ public class ReportResponse {
     String offCycleId;
     String employeeId;
     String fullName;
+    String employeeCode;
+    String employeeHireDate;
     String departmentId;
     PayComputeDetailResponse detail;
     PayComputeSummaryResponse summary;

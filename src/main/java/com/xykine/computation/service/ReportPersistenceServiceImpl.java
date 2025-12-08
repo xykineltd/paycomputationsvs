@@ -33,6 +33,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.xykine.computation.exceptions.PayrollReportNotException;
@@ -499,7 +500,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                         getEndDateRange(request.getEnd()),
                         isOffCycle, paging);
 
-        return retrievePayrollDetails(payrollReportDetailPage);
+        return retrievePayrollDetails(payrollReportDetailPage, List.of());
     }
 
 
@@ -546,7 +547,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         Pageable paging = PageRequest.of(page, size);
         Page<PayrollReportDetail> payrollReportDetailPage = payrollReportDetailRepo.findPayrollReportDetailByCompanyIdAndEmployeeId(companyId, employeeID, paging);
 
-        Map<String, Object> response = retrievePayrollDetails(payrollReportDetailPage);
+        Map<String, Object> response = retrievePayrollDetails(payrollReportDetailPage, List.of());
         auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Pulled payroll report for company id :" + companyId + "and employee id: " + employeeID, companyId);
         return response;
     }
@@ -560,7 +561,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 //    }
 
     @Override
-    public Map<String, Object> getReportByEmployeeIDList(String companyId, List<String> employeeIDList, String summaryId, int page, int size) {
+    public Map<String, Object> getReportByEmployeeIDList(String companyId, List<String> employeeIDList, String summaryId, List<SelectedEmployeeField> selectedEmployeeField, int page, int size) {
 
         Pageable paging = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "fullName"));
 
@@ -572,15 +573,20 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             payrollReportDetailPage = payrollReportDetailRepo.findPayrollReportDetailByCompanyIdAndEmployeeIdInAndSummaryId(companyId, employeeIDList, summaryId, paging);
         }
 
-        Map<String, Object> response = retrievePayrollDetails(payrollReportDetailPage);
+        Map<String, Object> response = retrievePayrollDetails(payrollReportDetailPage, selectedEmployeeField);
         return response;
     }
 
-    private Map<String, Object> retrievePayrollDetails(Page<PayrollReportDetail> payrollReportDetailPage) {
+    private Map<String, Object> retrievePayrollDetails(Page<PayrollReportDetail> payrollReportDetailPage, List<SelectedEmployeeField> selectedEmployeeFields) {
         List<PayrollReportDetail> payrollDetails;
         payrollDetails = payrollReportDetailPage.getContent();
         List<ReportResponse> reportResponses = ReportUtils.transform(payrollDetails);
 
+
+        if(selectedEmployeeFields != null && !selectedEmployeeFields.isEmpty()) {
+            mergeEmployeeFields(reportResponses, selectedEmployeeFields);
+        }
+        
         Map<String, Object> response = new HashMap<>();
         response.put("payrollDetails", reportResponses);
         response.put("currentPage", payrollReportDetailPage.getNumber());
@@ -588,6 +594,29 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         response.put("totalPages", payrollReportDetailPage.getTotalPages());
         return response;
     }
+
+    private void mergeEmployeeFields(
+            List<ReportResponse> reportResponses,
+            List<SelectedEmployeeField> selectedEmployeeFields) {
+
+        Map<String, SelectedEmployeeField> fieldMap =
+                selectedEmployeeFields.stream()
+                        .collect(Collectors.toMap(
+                                SelectedEmployeeField::getEmployeeID,
+                                Function.identity(),
+                                (x, y) -> x
+                        ));
+
+        reportResponses.forEach(report -> {
+            SelectedEmployeeField match = fieldMap.get(report.getEmployeeId());
+
+            if (match != null) {
+                report.setEmployeeCode(match.getEmployeeCode());
+                report.setEmployeeHireDate(match.getStartDate());  //
+            }
+        });
+    }
+
 
     private Map<String, Object> retrievePayroll(Page<PayrollReportSummary> payrollReportSummaryPage) {
         List<PayrollReportSummary> payrollReportSummaryList;
@@ -656,6 +685,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             }
         }
     }
+
 
 //    @Async
 //    protected void updateDetailReportsAndDashboard(UpdatePayrollStatusRequest request, PayrollReportSummary existingSummaryReport) {
