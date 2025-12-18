@@ -6,6 +6,6 @@ import java.time.LocalDate;
 
 @Data
 public class DateRange {
-    private LocalDate fromDate;
-    private LocalDate endDate;
+    private LocalDate start;
+    private LocalDate end;
 }

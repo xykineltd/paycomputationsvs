@@ -500,7 +500,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                         getEndDateRange(request.getEnd()),
                         isOffCycle, paging);
 
-        return retrievePayrollDetails(payrollReportDetailPage, List.of());
+        return retrievePayrollDetails(payrollReportDetailPage, null);
     }
 
 
@@ -547,7 +547,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         Pageable paging = PageRequest.of(page, size);
         Page<PayrollReportDetail> payrollReportDetailPage = payrollReportDetailRepo.findPayrollReportDetailByCompanyIdAndEmployeeId(companyId, employeeID, paging);
 
-        Map<String, Object> response = retrievePayrollDetails(payrollReportDetailPage, List.of());
+        Map<String, Object> response = retrievePayrollDetails(payrollReportDetailPage, null);
         auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Pulled payroll report for company id :" + companyId + "and employee id: " + employeeID, companyId);
         return response;
     }
@@ -561,7 +561,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 //    }
 
     @Override
-    public Map<String, Object> getReportByEmployeeIDList(String companyId, List<String> employeeIDList, String summaryId, List<SelectedEmployeeField> selectedEmployeeField, int page, int size) {
+    public Map<String, Object> getReportByEmployeeIDList(String companyId, List<String> employeeIDList, String summaryId, PaginatedSelectedEmployeeField selectedEmployeeField, int page, int size) {
 
         Pageable paging = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "fullName"));
 
@@ -570,34 +570,39 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         if(employeeIDList.isEmpty()) {
             payrollReportDetailPage = payrollReportDetailRepo.findPayrollReportDetailByCompanyIdAndSummaryId(companyId, summaryId, paging);
         } else {
-            payrollReportDetailPage = payrollReportDetailRepo.findPayrollReportDetailByCompanyIdAndEmployeeIdInAndSummaryId(companyId, employeeIDList, summaryId, paging);
+            //Admin svc already fetched the paginated employeeIDs, that is why we only fetch that specific list with the employeeIds
+            Pageable page0 = PageRequest.of(0, size);
+            payrollReportDetailPage = payrollReportDetailRepo.findPayrollReportDetailByCompanyIdAndEmployeeIdInAndSummaryId(companyId, employeeIDList, summaryId, page0);
         }
 
         Map<String, Object> response = retrievePayrollDetails(payrollReportDetailPage, selectedEmployeeField);
         return response;
     }
 
-    private Map<String, Object> retrievePayrollDetails(Page<PayrollReportDetail> payrollReportDetailPage, List<SelectedEmployeeField> selectedEmployeeFields) {
+    private Map<String, Object> retrievePayrollDetails(Page<PayrollReportDetail> payrollReportDetailPage, PaginatedSelectedEmployeeField paginatedSelectedEmployeeField) {
         List<PayrollReportDetail> payrollDetails;
         payrollDetails = payrollReportDetailPage.getContent();
         List<ReportResponse> reportResponses = ReportUtils.transform(payrollDetails);
 
-
-        if(selectedEmployeeFields != null && !selectedEmployeeFields.isEmpty()) {
-            mergeEmployeeFields(reportResponses, selectedEmployeeFields);
+        if(paginatedSelectedEmployeeField != null && !paginatedSelectedEmployeeField.getSelectedEmployeeFields().isEmpty()) {
+            mergeEmployeeFields(reportResponses, paginatedSelectedEmployeeField.getSelectedEmployeeFields());
         }
         
         Map<String, Object> response = new HashMap<>();
         response.put("payrollDetails", reportResponses);
-        response.put("currentPage", payrollReportDetailPage.getNumber());
-        response.put("totalItems", payrollReportDetailPage.getTotalElements());
-        response.put("totalPages", payrollReportDetailPage.getTotalPages());
+        assert paginatedSelectedEmployeeField != null;
+        response.put("currentPage", paginatedSelectedEmployeeField.getCurrentPage());
+        response.put("totalItems", paginatedSelectedEmployeeField.getTotalItems());
+        response.put("totalPages", paginatedSelectedEmployeeField.getTotalPages());
         return response;
     }
 
     private void mergeEmployeeFields(
             List<ReportResponse> reportResponses,
             List<SelectedEmployeeField> selectedEmployeeFields) {
+
+        System.out.println("reportResponses===>" + reportResponses.size());
+        System.out.println("mergeEmployeeFields===>" + selectedEmployeeFields.size());
 
         Map<String, SelectedEmployeeField> fieldMap =
                 selectedEmployeeFields.stream()

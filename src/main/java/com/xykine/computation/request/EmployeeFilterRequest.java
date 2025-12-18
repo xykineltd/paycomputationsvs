@@ -18,6 +18,9 @@ public class EmployeeFilterRequest {
     private String departmentID;
     private String position;
     private LocalDate startDate;
+    private LocalDate endDate;
+    private DateRange startDateRange;
+    private DateRange endDateRange;
     private String employeeIsLocked;
     private String active;
     private Set<UserRole> roles;

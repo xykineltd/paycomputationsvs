@@ -32,7 +32,7 @@ public class OperationUtils {
 
         sessionSummary.put(MapKeys.TOTAL_NET_PAY, BigDecimal.ZERO);
         sessionSummary.put(MapKeys.TOTAL_GROSS_PAY, BigDecimal.ZERO);
-        sessionSummary.put("Total Paye Tax", BigDecimal.ZERO);
+        sessionSummary.put("Pay-As-You-Earn (PAYE)", BigDecimal.ZERO);
         sessionSummary.put(MapKeys.TOTAL_EMPLOYEE_PENSION_CONTRIBUTION, BigDecimal.ZERO);
         sessionSummary.put(MapKeys.TOTAL_NHF, BigDecimal.ZERO);
         sessionSummary.put(MapKeys.TOTAL_PERSONAL_DEDUCTION, BigDecimal.ZERO);
@@ -45,7 +45,7 @@ public class OperationUtils {
                 ConcurrentHashMap<String, BigDecimal> costCenterNetPay = new ConcurrentHashMap<>();
                 costCenterNetPay.put(MapKeys.TOTAL_NET_PAY, BigDecimal.ZERO);
                 costCenterNetPay.put(MapKeys.TOTAL_GROSS_PAY, BigDecimal.ZERO);
-                costCenterNetPay.put("Total Paye Tax", BigDecimal.ZERO);
+                costCenterNetPay.put("Pay-As-You-Earn (PAYE)", BigDecimal.ZERO);
                 costCenterNetPay.put(MapKeys.TOTAL_EMPLOYEE_PENSION_CONTRIBUTION, BigDecimal.ZERO);
                 costCenterNetPay.put(MapKeys.TOTAL_NHF, BigDecimal.ZERO);
                 costCenterNetPay.put(MapKeys.TOTAL_PERSONAL_DEDUCTION, BigDecimal.ZERO);
@@ -57,7 +57,7 @@ public class OperationUtils {
 
         sessionSummaryDetails.put(MapKeys.TOTAL_NET_PAY, Collections.synchronizedSet(new HashSet<>()));
         sessionSummaryDetails.put(MapKeys.TOTAL_GROSS_PAY,Collections.synchronizedSet(new HashSet<>()));
-        sessionSummaryDetails.put("Total Paye Tax", Collections.synchronizedSet(new HashSet<>()));
+        sessionSummaryDetails.put("Pay-As-You-Earn (PAYE)", Collections.synchronizedSet(new HashSet<>()));
         sessionSummaryDetails.put(MapKeys.TOTAL_EMPLOYEE_PENSION_CONTRIBUTION, Collections.synchronizedSet(new HashSet<>()));
         sessionSummaryDetails.put(MapKeys.TOTAL_NHF, Collections.synchronizedSet(new HashSet<>()));
         sessionSummaryDetails.put(MapKeys.TOTAL_PERSONAL_DEDUCTION,Collections.synchronizedSet(new HashSet<>()));

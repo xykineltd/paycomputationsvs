@@ -8,6 +8,7 @@ import com.xykine.computation.exceptions.PayrollValidationException;
 import com.xykine.computation.request.EmployeeFilterRequest;
 import com.xykine.computation.request.PaymentInfoRequest;
 import com.xykine.computation.request.SelectedEmployeeField;
+import com.xykine.computation.response.PaginatedSelectedEmployeeField;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -76,7 +77,7 @@ public class AdminService {
                 .block(); // Block to wait for the response
     }
 
-    public List<SelectedEmployeeField> getEmployeeIdListForFilter(
+    public PaginatedSelectedEmployeeField getEmployeeIdListForFilter(
             EmployeeFilterRequest employeeFilterRequest, String token) {
 
         return webClient
@@ -90,7 +91,7 @@ public class AdminService {
                     if (response.statusCode().is2xxSuccessful()) {
                         // Deserialize directly into List<CustomEmployeeField>
                         return response.bodyToMono(
-                                new ParameterizedTypeReference<List<SelectedEmployeeField>>() {}
+                                new ParameterizedTypeReference<PaginatedSelectedEmployeeField>() {}
                         );
                     } else {
                         // Extract API error and convert to custom exception

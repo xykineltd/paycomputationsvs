@@ -4,6 +4,7 @@ import com.xykine.computation.entity.YTDReport;
 import com.xykine.computation.exceptions.PayrollValidationException;
 import com.xykine.computation.request.*;
 
+import com.xykine.computation.response.PaginatedSelectedEmployeeField;
 import com.xykine.computation.response.ReportAnalytics;
 import com.xykine.computation.response.ReportResponse;
 import com.xykine.computation.response.SummaryDetail;
@@ -70,12 +71,13 @@ public class Report {
             @RequestBody EmployeeFilterRequest employeeFilterRequest,
             @RequestHeader("Authorization") String authorizationHeader) {
 
-        List<SelectedEmployeeField> selectedEmployeeField = new ArrayList<>();
-//        if(AppUtil.hasAdditionalFilters(employeeFilterRequest)) {
+        PaginatedSelectedEmployeeField selectedEmployeeField;
+          // we need to always call admin so that we can pull the hire date and employeeCode
             selectedEmployeeField = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
-//        }
 
-        List<String> filteredList = selectedEmployeeField.stream().map(SelectedEmployeeField::getEmployeeID).toList();
+        assert selectedEmployeeField != null;
+
+        List<String> filteredList = selectedEmployeeField.getSelectedEmployeeFields().stream().map(SelectedEmployeeField::getEmployeeID).toList();
 
         Map<String, Object> response =  reportPersistenceService.getReportByEmployeeIDList(employeeFilterRequest.getCompanyID(),
                 filteredList, employeeFilterRequest.getReportId(), selectedEmployeeField,
@@ -89,7 +91,7 @@ public class Report {
             @RequestBody EmployeeFilterRequest employeeFilterRequest) {
 
         Map<String, Object> response =  reportPersistenceService.getReportByEmployeeIDList(employeeFilterRequest.getCompanyID(),
-                employeeFilterRequest.getEmployeeIds(), employeeFilterRequest.getReportId(), List.of(),
+                employeeFilterRequest.getEmployeeIds(), employeeFilterRequest.getReportId(), null,
                 employeeFilterRequest.getPage(), employeeFilterRequest.getSize());
 
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -265,7 +267,7 @@ public class Report {
             fileName = "payroll-report." +
                     (payload.getDocType().equalsIgnoreCase("pdf") ? "pdf" : "xlsx");
         } else {
-            fileName = "payroll-report" + payload.getDateRange().getFromDate() + "." +
+            fileName = "payroll-report" + payload.getDateRange().getStart() + "." +
                     (payload.getDocType().equalsIgnoreCase("pdf") ? "pdf" : "xlsx");
         }
 
@@ -308,9 +310,9 @@ public class Report {
             @RequestBody EmployeeFilterRequest employeeFilterRequest,
             @RequestHeader("Authorization") String authorizationHeader) {
         employeeFilterRequest.setSize(5000);
-        List<SelectedEmployeeField> selectedEmployeeField = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
+        PaginatedSelectedEmployeeField selectedEmployeeField = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
 
-        List<String> filteredList = selectedEmployeeField.stream().map(SelectedEmployeeField::getEmployeeID).toList();
+        List<String> filteredList = selectedEmployeeField.getSelectedEmployeeFields().stream().map(SelectedEmployeeField::getEmployeeID).toList();
 
         ConcurrentHashMap<String, Set<SummaryDetail>> response =
                 reportPersistenceService.getSummaryVarianceDetails(

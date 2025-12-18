@@ -125,76 +125,13 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
 
     private static final List<String> DEDUCTION_COMPONENTS = List.of(
             "National Housing Fund",
-            "Monthly Paye",
+            "Total PAYE",
             "Paye Tax on Monthly Performance Bonus",
             "Paye Tax on Phone Bonus ",
             "Pension Fund",
             "Total Deduction",
             "NETPAY"
     );
-
-
-//    Monthly Paye
-//:
-//        402806.04
-//    National Housing Fund
-//:
-//        0
-//    Paye Tax on Monthly Performance Bonus
-//:
-//        64597.71
-//    Paye Tax on Phone Bonus
-//:
-//        5100
-//    Pension Fund
-//:
-//        59937.11
-//    Student Loan
-//:
-//        75000
-//    Total Deduction
-//:
-//        607440.86
-//    Total Monthly Paye
-//:
-//        472503.75
-//    Voluntary Pension Contribution
-//:
-//        0
-
-
-    // ✅ New: columns that should be formatted as currency (₦#,##0.00)
-//    private static final Set<String> BASE_CURRENCY_COLUMNS = Set.of(
-//            "GROSS PAY",
-//            "GROSS SALARY",
-//            "BASIC SALARY",
-//            "HOUSING",
-//            "TRANSPORT",
-//            "UTILITY",
-//            "ENTERTAINMENT",
-//            "MEDICAL",
-//            "PERSONAL OUTFIT",
-//            "LEAVE",
-//            "TRAINING",
-//            "TAXABLE INCOME",
-////            "OTHER DEDUCTION",
-////            "LOAN DEDUCTION",
-//            "PAYE",
-//            "NHF",
-//            "EMPLOYEE PENSION",
-//            "VOLUNTARY PENSION CONTRIBUTION",
-//            "EMPLOYER PENSION",
-//            "NETPAY"
-//    );
-//
-//    // Columns that should never be formatted as currency
-//    private static final Set<String> TEXT_COLUMNS = Set.of(
-//            "EMP ID",
-//            "EMPLOYEE NAME",
-//            "HIRE DATE",
-//            "EXIT DATE",
-//            "ROLE"
-//    );
 
     @Override
     public byte[] generateReport(ReportRequestPayload reportRequestPayload, String token) throws IOException {
@@ -239,7 +176,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
             defaultHeaders.add("MONTHLY CHARGEABLE INCOME");
 //            defaultHeaders.add("other deduction");
 //            defaultHeaders.add("Loan");   // **
-            defaultHeaders.add("Monthly Paye");
+            defaultHeaders.add("PAYE");
             defaultHeaders.add("National Housing Fund");
             defaultHeaders.add("Employee Pension Contribution");
             defaultHeaders.add("Voluntary Pension Contribution");
@@ -362,8 +299,8 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         // file name stays same
         String fileName = reportRequestPayload.getCompanyID() + "_" +
                 reportRequestPayload.getEntityType() + "_" +
-                reportRequestPayload.getDateRange().getFromDate() + "_" +
-                reportRequestPayload.getDateRange().getEndDate() + ".xlsx";
+                reportRequestPayload.getDateRange().getStart() + "_" +
+                reportRequestPayload.getDateRange().getEnd() + ".xlsx";
 
         return generateExcel(headers, normalizedRows, fileName);
 
@@ -435,8 +372,8 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         } catch (DateTimeParseException e) {
             return false;
         }
-        return !startDateInstance.isBefore(dateRange.getFromDate())
-                && !startDateInstance.isAfter(dateRange.getEndDate());
+        return !startDateInstance.isBefore(dateRange.getStart())
+                && !startDateInstance.isAfter(dateRange.getEnd());
     }
 
     //TODO debug and merge
@@ -823,7 +760,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                 case "MONTHLY CHARGEABLE INCOME" -> newKey = "TAXABLE INCOME";
                 case "Loan", "Loan." -> newKey = "LOAN DEDUCTION";
                 case "other deduction" -> newKey = "OTHER DEDUCTION";
-                case "Monthly Paye" -> newKey = "PAYE";
+                case "Total PAYE" -> newKey = "PAYE";
                 case "National Housing Fund" -> newKey = "NHF";
                 case "Employee Pension Contribution" -> newKey = "EMPLOYEE PENSION";
                 case "Voluntary Pension Contribution" -> newKey = "VOLUNTARY PENSION CONTRIBUTION";
@@ -872,7 +809,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
 //                case "Loan":
 //                case "Loan.": newKey = "LOAN DEDUCTION"; break;
 //                case "other deduction": newKey = "OTHER DEDUCTION"; break;
-//                case "Monthly Paye": newKey = "PAYE"; break;
+//                case "PAYE": newKey = "PAYE"; break;
 //                case "National Housing Fund": newKey = "NHF"; break;
 //                case "Employee Pension Contribution": newKey = "EMPLOYEE PENSION"; break;
 //                case "Voluntary Pension Contribution": newKey = "VOLUNTARY PENSION CONTRIBUTION"; break;

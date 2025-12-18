@@ -7,10 +7,7 @@ import com.xykine.computation.request.PaymentInfoRequest;
 import com.xykine.computation.request.ReportByTypeRequest;
 import com.xykine.computation.request.UpdatePayrollStatusRequest;
 import com.xykine.computation.request.UpdateReportRequest;
-import com.xykine.computation.response.PaymentComputeResponse;
-import com.xykine.computation.response.ReportAnalytics;
-import com.xykine.computation.response.ReportResponse;
-import com.xykine.computation.response.SummaryDetail;
+import com.xykine.computation.response.*;
 
 import java.io.IOException;
 import java.util.*;
@@ -27,7 +24,7 @@ public interface ReportPersistenceService {
     List<ReportResponse> getPayRollReportsByStatus(String companyId, String status);
     Map<String, Object> getReportByEmployeeID(String companyId, String employeeID, int page, int size);
 //    Map<String, Object> getReportByEmployeeIDList(String companyId, List<String> employeeIDList, String summaryId, int page, int size);
-    Map<String, Object> getReportByEmployeeIDList(String companyId, List<String> employeeIDList, String summaryId, List<SelectedEmployeeField> selectedEmployeeField, int page, int size);
+    Map<String, Object> getReportByEmployeeIDList(String companyId, List<String> employeeIDList, String summaryId, PaginatedSelectedEmployeeField paginatedSelectedEmployeeField, int page, int size);
 //    PayrollReportSummary approveReport(UpdateReportRequest updateReportRequest);
     void updateReportStatus(UpdatePayrollStatusRequest request);
 //    boolean deleteReport(UpdateReportRequest updateReportRequest, String token);

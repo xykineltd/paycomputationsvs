@@ -460,7 +460,7 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
             PaymentSettingsResponse setting = paymentInfo.getPaymentSettings().iterator().next();
 
             if (!isTaxable(setting, settingsMetadata)) {
-                payeeTax.put(!paymentInfo.isOffCycle() ?  "Monthly Paye" : "Paye Tax on " + getOffCyclePaymentDetails(paymentInfo).getName(), BigDecimal.ZERO);
+                payeeTax.put(!paymentInfo.isOffCycle() ?  "PAYE" : "Paye Tax on " + getOffCyclePaymentDetails(paymentInfo).getName(), BigDecimal.ZERO);
                 paymentInfo.setPayeeTax(payeeTax);
                 return paymentInfo;
             }
@@ -478,9 +478,9 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
             payeeTax.put("ANNUAL PAYE TAX", ComputationUtils.getAnnualTaxAmount(chargeableIncome, jsonTaxRule));
         }
 
-        payeeTax.put(!paymentInfo.isOffCycle() ?  "Monthly Paye" : "Paye Tax on " + getOffCyclePaymentDetails(paymentInfo).getName(), monthlyPayeeTax);
+        payeeTax.put(!paymentInfo.isOffCycle() ?  "PAYE" : "Paye Tax on " + getOffCyclePaymentDetails(paymentInfo).getName(), monthlyPayeeTax);
         paymentInfo.setPayeeTax(payeeTax);
-        updateReportSummary(paymentInfo, sessionCalculationObject, "Total Paye Tax",
+        updateReportSummary(paymentInfo, sessionCalculationObject, "Pay-As-You-Earn (PAYE)",
                 monthlyPayeeTax);
         return paymentInfo;
     }
@@ -499,15 +499,15 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
             if (paymentInfo.isOffCycle()) {
                 payee_tax_key = "Paye Tax on " + getOffCyclePaymentDetails(paymentInfo).getName();
                 deductionMap.put(payee_tax_key, paymentInfo.getPayeeTax().get(payee_tax_key));
-                deductionMap.put("Total Monthly Paye", paymentInfo.getPayeeTax().get(payee_tax_key));
+                deductionMap.put("Total PAYE", paymentInfo.getPayeeTax().get(payee_tax_key));
                 deductionMap.put(MapKeys.TOTAL_DEDUCTION, paymentInfo.getPayeeTax().get(payee_tax_key));
                 updateReportSummary(paymentInfo, sessionCalculationObject, MapKeys.TOTAL_PERSONAL_DEDUCTION, paymentInfo.getPayeeTax().get(payee_tax_key));
                 paymentInfo.setDeduction(deductionMap);
                 return paymentInfo;
             }
-        payee_tax_key = "Monthly Paye";
+        payee_tax_key = "PAYE";
         deductionMap.put(payee_tax_key, paymentInfo.getPayeeTax().get(payee_tax_key));
-        deductionMap.put("Total Monthly Paye", paymentInfo.getPayeeTax().get(payee_tax_key));
+        deductionMap.put("Total PAYE", paymentInfo.getPayeeTax().get(payee_tax_key));
         deductionMap.put(MapKeys.PENSION_FUND, paymentInfo.getPension().get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION));
         deductionMap.put(MapKeys.NATIONAL_HOUSING_FUND, paymentInfo.getNhf().get(MapKeys.NATIONAL_HOUSING_FUND));
         var deductions = getDeductionsForEmployee(paymentInfo);
@@ -593,7 +593,7 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
 
     private BigDecimal getTotal(Map<String, BigDecimal> input) {
         BigDecimal total = input.entrySet().stream()
-                .filter(e -> !"Total Monthly Paye".equalsIgnoreCase(e.getKey()))
+                .filter(e -> !"Total PAYE".equalsIgnoreCase(e.getKey()))
                 .filter(e -> !"Gross Salary".equalsIgnoreCase(e.getKey()))
                 .filter(e -> !"Taxable Gross".equalsIgnoreCase(e.getKey()))
 
