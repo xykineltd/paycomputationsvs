@@ -17,6 +17,8 @@ public class AppUtil {
                         isBlank(req.getEmployeeIsLocked()) &&
                         isBlank(req.getActive()) &&
                         (req.getRoles() == null || req.getRoles().isEmpty()) &&
+                        (req.getStartDateRange() == null) &&
+                        (req.getEndDateRange() == null) &&
                         isBlank(req.getEmail()) &&
                         isBlank(req.getHeader()) &&
                         (req.getEmployeeIds() == null || req.getEmployeeIds().isEmpty()) &&

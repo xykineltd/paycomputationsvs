@@ -70,10 +70,11 @@ public class Report {
     public ResponseEntity<?> getReportByFilter(
             @RequestBody EmployeeFilterRequest employeeFilterRequest,
             @RequestHeader("Authorization") String authorizationHeader) {
-
+        
         PaginatedSelectedEmployeeField selectedEmployeeField;
-          // we need to always call admin so that we can pull the hire date and employeeCode
-            selectedEmployeeField = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
+
+        // we need to always call admin so that we can pull the hire date and employeeCode
+        selectedEmployeeField = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
 
         assert selectedEmployeeField != null;
 
@@ -288,7 +289,6 @@ public class Report {
 
         return new ResponseEntity<>(excelFile, headers, HttpStatus.OK);
  }
-
 
     @PostMapping("/retrieve-payment-element")
     public List<Map<String, Object>> getPaymentElement(@RequestBody RetrievePaymentElementPayload retrievePaymentElementPayload){

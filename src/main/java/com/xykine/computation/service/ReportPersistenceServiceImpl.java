@@ -102,7 +102,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 startWorkflowRequest.setPayrollType(payrollReportSummary.isOffCycle() ? "OffCycle" : "Regular");
                 startWorkflowRequest.setNumberOfPays(paymentInfoList.size());
                 startWorkflowRequest.setNumberOfEmployees(payrollReportSummary.getTotalNumberOfEmployees());
-                startWorkflowRequest.setNetPay(ReportUtils.transform(payrollReportSummary).getSummary().getSummary().get(MapKeys.TOTAL_NET_PAY));
+                //This is intentional to display the total gross on the payroll card instead of the net pay, so we are setting TOTAL_GROSS_PAY
+                startWorkflowRequest.setNetPay(ReportUtils.transform(payrollReportSummary).getSummary().getSummary().get(MapKeys.TOTAL_GROSS_PAY));
                 startWorkflowRequest.setCreatedBy(payrollReportSummary.getCreatedBy());
 
                 workflowService.startWorkflow(startWorkflowRequest, authorizationHeader);
@@ -137,7 +138,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             long endTimeC = System.currentTimeMillis();
 
             LOGGER.info("Total computePayroll processing time--------> {} ms", endTimeC - startTimeC);
-
 
             computeResponse = OperationUtils.refineResponse(computeResponse, sessionCalculationObject, paymentRequest);
             ReportResponse reportResponse = serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
@@ -292,7 +292,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
         PayComputeSummaryResponse payComputeSummaryResponse = PayComputeSummaryResponse.builder()
                 .summary(paymentComputeResponse.getSummary())
-                .summaryDetails(paymentComputeResponse.getSummaryDetails())
+//                .summaryDetails(paymentComputeResponse.getSummaryDetails())
                 .summaryVariance(processSummaryVariance(paymentComputeResponse.getSummary(), previousReportSummary))
                 .costCenterSummary(paymentComputeResponse.getCostCenterSummary())
                 //.summaryDetailsVariance(processSummaryDetailsVariance(paymentComputeResponse.getSummaryDetails(), previousReportSummary))
@@ -576,6 +576,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         }
 
         Map<String, Object> response = retrievePayrollDetails(payrollReportDetailPage, selectedEmployeeField);
+
         return response;
     }
 
@@ -600,9 +601,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     private void mergeEmployeeFields(
             List<ReportResponse> reportResponses,
             List<SelectedEmployeeField> selectedEmployeeFields) {
-
-        System.out.println("reportResponses===>" + reportResponses.size());
-        System.out.println("mergeEmployeeFields===>" + selectedEmployeeFields.size());
 
         Map<String, SelectedEmployeeField> fieldMap =
                 selectedEmployeeFields.stream()
