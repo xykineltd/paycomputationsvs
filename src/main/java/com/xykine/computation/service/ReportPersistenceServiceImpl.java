@@ -7,8 +7,7 @@ import com.xykine.computation.request.*;
 import com.xykine.computation.response.*;
 
 import com.xykine.computation.session.SessionCalculationObject;
-import com.xykine.computation.utils.AuthUtil;
-import com.xykine.computation.utils.OperationUtils;
+import com.xykine.computation.utils.*;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,8 +39,6 @@ import java.util.stream.Collectors;
 
 import com.xykine.computation.exceptions.PayrollReportNotException;
 import com.xykine.computation.exceptions.PayrollUnmodifiableException;
-import com.xykine.computation.utils.ReportUtils;
-import com.xykine.computation.utils.AppConstants;
 
 @Service
 @RequiredArgsConstructor
@@ -61,6 +58,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     private final AdminService adminService;
     private final ComputeService computeService;
     private final PayrollVarianceDetailsRepo payrollVarianceDetailsRepo;
+    private final PayrollVarianceDetailsCustomizedRepo payrollVarianceDetailsCustomizedRepo;
     private final WorkflowService workflowService;
 
     @Autowired
@@ -128,10 +126,26 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             progressCallback.accept(jobStatusStore);
 
         } catch (Exception e) {
-
+             //e.printStackTrace();
             jobStatusStore.updateJob(jobId, "FAILED", e.getMessage(), e.toString());
             progressCallback.accept(jobStatusStore);
         }
+    }
+
+    public Map<String, Map<String, BigDecimal>> getSummaryVarianceDetails(String reportId, List<String> employeeIds){
+        PayrollVarianceDetailsCustomized payrollVarianceDetails = payrollVarianceDetailsCustomizedRepo.findById(UUID.fromString(reportId)).orElse(null);
+        Map<String, Map<String, BigDecimal>> summaryVarianceDetails = new HashMap<>();
+        if (payrollVarianceDetails == null) {
+            return summaryVarianceDetails;
+        }
+        PayCompteVarianceDetailsCustomized payComputeVarianceDetails = ReportUtils.transform(payrollVarianceDetails).getPayComputeVarianceDetails();
+        summaryVarianceDetails = payComputeVarianceDetails.getSummaryDetailsVariance();
+
+        return summaryVarianceDetails.entrySet()
+                .stream()
+                .filter(variance -> employeeIds.contains(variance.getKey()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
     }
 
     public ConcurrentHashMap<String, Set<SummaryDetail>> getSummaryVarianceDetails(String reportId, List<String> employeeIds, String header) {
@@ -144,10 +158,18 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         PayComputeVarianceDetails payComputeVarianceDetails = ReportUtils.transform(payrollVarianceDetails).getPayComputeVarianceDetails();
         summaryVarianceDetails = payComputeVarianceDetails.getSummaryDetailsVariance();
 
-        String finalHeader = header;
+        boolean isFilteredBHeader = header != null && !header.isEmpty();
+        List<String> headers = new ArrayList<>();
+
+        if (isFilteredBHeader) {
+            headers.add(header);
+        } else {
+            headers.addAll(summaryVarianceDetails.keySet());
+        }
+
         return summaryVarianceDetails.entrySet()
                 .stream()
-                .filter(entry -> finalHeader.equalsIgnoreCase(entry.getKey()))
+                .filter(entry -> headers.contains(entry.getKey()))
                 .map(entry -> {
                     // Filter the Set<SummaryDetail> for this key
                     Set<SummaryDetail> filteredSet = entry.getValue()
@@ -197,6 +219,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         long totalNumberOfEmployees = paymentInfo.getTotalNumberOfEmployees();
         PaymentFrequencyEnum paymentFrequency = paymentInfo.getSalaryFrequency();
 
+        String previousReportSummaryId = previousReportSummary != null ? String.valueOf(previousReportSummary.getId()) : null;
+
         PayComputeSummaryResponse payComputeSummaryResponse = PayComputeSummaryResponse.builder()
                 .summary(paymentComputeResponse.getSummary())
                 .summaryDetails(paymentComputeResponse.getSummaryDetails())
@@ -232,7 +256,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
         payrollVarianceDetailsRepo.save(payrollVarianceDetails);
         payrollReportSummaryRepo.save(payrollReportSummary);
-        payrollAsyncService.saveReportDetails(paymentComputeResponse, companyId);
+        payrollAsyncService.saveReportDetails(paymentComputeResponse, companyId, previousReportSummaryId);
+
         return getPayRollReport(paymentComputeResponse.getId());
     }
 
@@ -725,9 +750,5 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             });
         }
         return result;
-    }
-
-    private void startWorkflow(StartWorkflowRequest startWorkflowRequest) {
-
     }
 }

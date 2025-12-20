@@ -4,13 +4,18 @@ package com.xykine.computation.service;
 import com.xykine.computation.entity.PayrollReportDetail;
 import com.xykine.computation.entity.PayrollStatus;
 
+import com.xykine.computation.entity.PayrollVarianceDetailsCustomized;
 import com.xykine.computation.entity.YTDReport;
 import com.xykine.computation.repo.PayrollReportDetailRepo;
 
+import com.xykine.computation.repo.PayrollVarianceDetailsCustomizedRepo;
 import com.xykine.computation.repo.YTDReportRepo;
 import com.xykine.computation.request.RepaymentRequest;
+import com.xykine.computation.response.PayCompteVarianceDetailsCustomized;
 import com.xykine.computation.response.PayComputeDetailResponse;
 import com.xykine.computation.response.PaymentComputeResponse;
+import com.xykine.computation.response.ReportResponse;
+import com.xykine.computation.utils.PayrollMetrics;
 import com.xykine.computation.utils.ReportUtils;
 import lombok.RequiredArgsConstructor;
 
@@ -39,6 +44,7 @@ public class PayrollAsyncService {
     private final PayrollReportDetailRepo payrollReportDetailRepo;
     private final LoanService loanService;
     private final YTDReportRepo ytdReportRepo;
+    private final PayrollVarianceDetailsCustomizedRepo payrollVarianceDetailsCustomizedRepo;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PayrollAsyncService.class);
 
@@ -80,8 +86,7 @@ public class PayrollAsyncService {
     }
 
     @Async
-    public void saveReportDetails(PaymentComputeResponse paymentComputeResponse,
-                                   String companyId) {
+    public void saveReportDetails(PaymentComputeResponse paymentComputeResponse, String companyId, String previousSummaryId) {
         List<PaymentInfo> paymentInfoList = Optional.ofNullable(paymentComputeResponse.getReport())
                 .orElse(Collections.emptyList());
 
@@ -152,6 +157,19 @@ public class PayrollAsyncService {
                     throw e; // rethrow so CompletableFuture sees the error
                 }
             });
+
+        if (previousSummaryId != null) {
+            PayCompteVarianceDetailsCustomized payComputeVarianceDetailsCustomized = PayCompteVarianceDetailsCustomized.builder()
+                    .summaryDetailsVariance(processSummaryDetailsVarianceCustomized(paymentComputeResponse.getId(), UUID.fromString(previousSummaryId)))
+                    .build();
+
+            PayrollVarianceDetailsCustomized payrollVarianceDetailsCustomized = PayrollVarianceDetailsCustomized.builder()
+                    .id(paymentComputeResponse.getId())
+                    .summaryVarianceDetails(ReportUtils.serializeResponse(payComputeVarianceDetailsCustomized))
+                    .build();
+            payrollVarianceDetailsCustomizedRepo.save(payrollVarianceDetailsCustomized);
+        }
+
     }
     @Async
     public void offLoadNewValuesToYTD(List<PayrollReportDetail>  payrollReportDetailList, String companyId, boolean isRollback) {
@@ -229,6 +247,9 @@ public class PayrollAsyncService {
                         ytdReport.setDeductions(reverseDeductionMap(ytdReport.getDeductions(), y));
                     }
                 }
+
+                LOGGER.info(" ====>  YTDREport {} ", ytdReport);
+
                 ytdReportRepo.save(ytdReport);
                 latestYTDs.put(x, ytdReport);
             });
@@ -270,6 +291,10 @@ public class PayrollAsyncService {
     }
 
     private YTDReport createYTDReportForNewEmployee(String employeeId, Map<String, BigDecimal> currentValues, String companyId) {
+        LOGGER.info(" ZZZA yeePension ====> {} ", currentValues.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION));
+        LOGGER.info(" ZZZA yerPension ====> {} ", currentValues.get(MapKeys.EMPLOYER_PENSION_CONTRIBUTION));
+        LOGGER.info(" ZZZA volunPension ====> {} ", currentValues.get("Voluntary Pension Contribution"));
+
         return YTDReport.builder()
                 .id(UUID.randomUUID().toString())
                 .employeeId(employeeId)
@@ -331,5 +356,94 @@ public class PayrollAsyncService {
             });
         });
         return resultMap;
+    }
+
+    private Map<String, Map<String, BigDecimal>> processSummaryDetailsVarianceCustomized(UUID currentSummaryId , UUID previousSummaryId) {
+
+        Map<String, Map<String, BigDecimal>> previous =
+                extractCustomValues(String.valueOf(previousSummaryId));
+
+        Map<String, Map<String, BigDecimal>> current =
+                extractCustomValues(String.valueOf(currentSummaryId));
+
+        Map<String, Map<String, BigDecimal>> varianceResult = new HashMap<>();
+
+        for (Map.Entry<String, Map<String, BigDecimal>> entry : current.entrySet()) {
+
+            String employeeId = entry.getKey();
+            Map<String, BigDecimal> currentValues = entry.getValue();
+            Map<String, BigDecimal> previousValues = previous.getOrDefault(employeeId, Collections.emptyMap());
+
+            Map<String, BigDecimal> employeeVariance = calculateVariance(currentValues, previousValues);
+
+            varianceResult.put(employeeId, employeeVariance);
+        }
+
+        return varianceResult;
+    }
+
+    private Map<String, BigDecimal> calculateVariance(
+            Map<String, BigDecimal> current,
+            Map<String, BigDecimal> previous) {
+
+        Map<String, BigDecimal> variance = new HashMap<>();
+
+        for (Map.Entry<String, BigDecimal> entry : current.entrySet()) {
+
+            String metric = entry.getKey();
+            BigDecimal currentValue = defaultZero(entry.getValue());
+            BigDecimal previousValue = defaultZero(previous.get(metric));
+
+            variance.put(metric, currentValue.subtract(previousValue));
+        }
+        return variance;
+    }
+
+    private BigDecimal defaultZero(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
+    }
+
+    private Map<String, Map<String, BigDecimal>> extractCustomValues(String reportId) {
+
+        Map<String, Map<String, BigDecimal>> extractedValues = new HashMap<>();
+
+        LOGGER.info(" =====> details {} ",  payrollReportDetailRepo.findPayrollReportDetailBySummaryId(reportId));
+
+        payrollReportDetailRepo.findPayrollReportDetailBySummaryId(reportId)
+                .forEach(details -> {
+
+                    ReportResponse response = ReportUtils.transform(details);
+                    PaymentInfo report = response.getDetail().getReport();
+
+                    Map<String, BigDecimal> values = new HashMap<>();
+
+                    values.put(PayrollMetrics.GROSS_PAY,
+                            defaultZero(report.getGrossPay().get("Gross Pay")));
+
+                    values.put(PayrollMetrics.GROSS_SALARY,
+                            defaultZero(report.getGrossPay().get("Gross Salary")));
+
+                    values.put(PayrollMetrics.EMPLOYEE_PENSION,
+                            defaultZero(report.getPension().get("Employee Pension Contribution")));
+
+                    values.put(PayrollMetrics.NHF,
+                            defaultZero(report.getNhf().get("National Housing Fund")));
+
+                    values.put(PayrollMetrics.PAYE,
+                            defaultZero(report.getPayeeTax().get("Monthly Paye")));
+
+                    values.put(PayrollMetrics.PERFORMANCE_BONUS,
+                            defaultZero(report.getGrossPay().get("Monthly Performance Bonus")));
+
+                    values.put(PayrollMetrics.TOTAL_DEDUCTION,
+                            defaultZero(report.getDeduction().get("Total Deduction")));
+
+                    values.put(PayrollMetrics.NET_PAY,
+                            defaultZero(report.getNetPay()));
+
+                    extractedValues.put(response.getEmployeeId(), values);
+                });
+
+        return extractedValues;
     }
 }

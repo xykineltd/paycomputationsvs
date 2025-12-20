@@ -11,6 +11,7 @@ import com.xykine.computation.response.ReportResponse;
 import com.xykine.computation.response.SummaryDetail;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
@@ -33,5 +34,6 @@ public interface ReportPersistenceService {
     Map<String, Object> getPaymentDetailForDates(String employeeId, String companyId, List<String> endDates,  int page, int size);
     Map<String, Object> getPayRollReportByType(ReportByTypeRequest request, int page, int size);
     Map<String, Object> getPayRollReportDetailByType(ReportByTypeRequest request, int page, int size);
+    Map<String, Map<String, BigDecimal>> getSummaryVarianceDetails(String reportId, List<String> employeeIds);
 
 }

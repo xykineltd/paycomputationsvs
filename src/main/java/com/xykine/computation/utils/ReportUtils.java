@@ -117,5 +117,11 @@ public class ReportUtils {
                 .payComputeVarianceDetails(SerializationUtils.deserialize(payrollVarianceDetails.getSummaryVarianceDetails()))
                 .build();
     }
+
+    public static SummaryVarianceDetailsCustomizedResponse transform(PayrollVarianceDetailsCustomized payrollVarianceDetails) {
+        return SummaryVarianceDetailsCustomizedResponse.builder()
+                .payComputeVarianceDetails(SerializationUtils.deserialize(payrollVarianceDetails.getSummaryVarianceDetails()))
+                .build();
+    }
 }
 

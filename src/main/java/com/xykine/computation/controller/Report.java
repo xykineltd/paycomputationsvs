@@ -18,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -184,6 +185,13 @@ public class Report {
             @RequestHeader("Authorization") String authorizationHeader) {
         List<String> filteredList = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
         ConcurrentHashMap<String, Set<SummaryDetail>> response = reportPersistenceService.getSummaryVarianceDetails(employeeFilterRequest.getReportId(), filteredList, employeeFilterRequest.getHeader());
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping("/variance-details-customized")
+    public ResponseEntity<?> getVarianceDetailsCustomized(
+            @RequestBody CustomizedVarianceRequest request) {
+        Map<String, Map<String, BigDecimal>> response = reportPersistenceService.getSummaryVarianceDetails(request.getReportId(), request.getEmployeeIds());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }
