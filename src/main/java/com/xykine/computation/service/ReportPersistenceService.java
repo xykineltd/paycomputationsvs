@@ -1,15 +1,14 @@
 package com.xykine.computation.service;
 
-import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.entity.YTDReport;
 import com.xykine.computation.request.*;
 import com.xykine.computation.request.PaymentInfoRequest;
 import com.xykine.computation.request.ReportByTypeRequest;
 import com.xykine.computation.request.UpdatePayrollStatusRequest;
-import com.xykine.computation.request.UpdateReportRequest;
 import com.xykine.computation.response.*;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
@@ -37,4 +36,6 @@ public interface ReportPersistenceService {
     Map<String, Object> getPayRollReportByType(ReportByTypeRequest request, int page, int size);
     Map<String, Object> getPayRollReportDetailByType(ReportByTypeRequest request, int page, int size);
     List<YTDReport> getYTDReports(YtdRequest request);
+    Map<String, Map<String, BigDecimal>> getSummaryVarianceDetails(String reportId, List<String> employeeIds);
+    PaginatedReportSummaryResponse getReportSummaryByFilter(ReportFilterRequest request);
 }

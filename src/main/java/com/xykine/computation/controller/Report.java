@@ -4,14 +4,10 @@ import com.xykine.computation.entity.YTDReport;
 import com.xykine.computation.exceptions.PayrollValidationException;
 import com.xykine.computation.request.*;
 
-import com.xykine.computation.response.PaginatedSelectedEmployeeField;
-import com.xykine.computation.response.ReportAnalytics;
-import com.xykine.computation.response.ReportResponse;
-import com.xykine.computation.response.SummaryDetail;
+import com.xykine.computation.response.*;
 import com.xykine.computation.service.AdminService;
 import com.xykine.computation.service.ReportGeneratorService;
 import com.xykine.computation.service.ReportPersistenceService;
-import com.xykine.computation.utils.AppUtil;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +15,7 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.*;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -55,6 +52,11 @@ public class Report {
         return reportPersistenceService.getPayRollReport(UUID.fromString(request.getReportId()));
     }
 
+    @PostMapping("/report-summary-by-filter")
+    public PaginatedReportSummaryResponse getReportSummaryByFilter(@RequestBody ReportFilterRequest request) {
+        return reportPersistenceService.getReportSummaryByFilter(request);
+    }
+
     @GetMapping("/{companyId}/{employeeId}")
     public ResponseEntity<?> getReportByEmployeeID(
             @PathVariable String companyId,
@@ -70,7 +72,7 @@ public class Report {
     public ResponseEntity<?> getReportByFilter(
             @RequestBody EmployeeFilterRequest employeeFilterRequest,
             @RequestHeader("Authorization") String authorizationHeader) {
-        
+
         PaginatedSelectedEmployeeField selectedEmployeeField;
 
         // we need to always call admin so that we can pull the hire date and employeeCode
@@ -320,6 +322,14 @@ public class Report {
                         filteredList,
                         employeeFilterRequest.getHeader()
                 );
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+
+    @PostMapping("/variance-details-customized")
+    public ResponseEntity<?> getVarianceDetailsCustomized(
+            @RequestBody CustomizedVarianceRequest request) {
+        Map<String, Map<String, BigDecimal>> response = reportPersistenceService.getSummaryVarianceDetails(request.getReportId(), request.getEmployeeIds());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }
