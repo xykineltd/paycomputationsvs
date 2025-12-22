@@ -4,14 +4,18 @@ import com.xykine.computation.entity.PayrollReportSummary;
 import com.xykine.computation.entity.PayrollType;
 import com.xykine.computation.request.ReportFilterRequest;
 import com.xykine.computation.response.PaginatedReportSummaryResponse;
+import com.xykine.computation.response.PayComputeSummaryResponse;
 import com.xykine.computation.response.ReportSummaryResponse;
+import com.xykine.computation.utils.ReportUtils;
 import lombok.AllArgsConstructor;
+import org.apache.commons.lang3.SerializationUtils;
 import org.springframework.data.domain.*;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Collation;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Repository;
+import org.xykine.payroll.model.MapKeys;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -109,6 +113,8 @@ public class PayrollReportSummaryCustomFilter {
     }
 
     private ReportSummaryResponse toSummaryResponse(PayrollReportSummary s) {
+        PayComputeSummaryResponse summaryResponse =  SerializationUtils.deserialize(s.getReport());
+
         return ReportSummaryResponse.builder()
                 .reportId(s.getId().toString())
                 .companyId(s.getCompanyId())
@@ -125,6 +131,7 @@ public class PayrollReportSummaryCustomFilter {
                 .offCycle(s.isOffCycle())
                 .totalNumberOfEmployees(s.getTotalNumberOfEmployees())
                 .code(s.getCode())
+                .grossPay(summaryResponse.getSummary().get(MapKeys.TOTAL_GROSS_PAY))
                 .build();
     }
 }
