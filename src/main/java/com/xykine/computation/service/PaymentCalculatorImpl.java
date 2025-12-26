@@ -408,6 +408,7 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
             .filter(x -> nonTaxableEntries.contains(x.getName()))
             .map(PaymentSettingsResponse::getValue).reduce(BigDecimal.ZERO, BigDecimal::add);
 
+
     BigDecimal totalChargeable = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(nonTaxableValue);
     nonTaxableIncomeExemptMap.put("MONTHLY CHARGEABLE INCOME", totalChargeable.divide(
             BigDecimal.valueOf(12),
@@ -444,22 +445,75 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
         return paymentInfo;
     }
 
+//    @Override
+//    public PaymentInfo computePayeeTax(PaymentInfo paymentInfo) {
+//        if (isContract(paymentInfo)) {
+//            return paymentInfo;
+//        }
+//
+//        List<PaymentSettingMetaData> settingsMetadata = paymentSettingMetadataRepo.findByEmployeeId(paymentInfo.getEmployeeID());
+//
+//        Map<String, BigDecimal> payeeTax = new HashMap<>();
+//
+//        if (paymentInfo.isOffCycle()
+//                && paymentInfo.getPaymentSettings() != null
+//                && paymentInfo.getPaymentSettings().size() == 1) {
+//
+//            PaymentSettingsResponse setting = paymentInfo.getPaymentSettings().iterator().next();
+//
+//            if (!isTaxable(setting, settingsMetadata)) {
+//                payeeTax.put(!paymentInfo.isOffCycle() ?  "PAYE" : "Paye Tax on " + getOffCyclePaymentDetails(paymentInfo).getName(), BigDecimal.ZERO);
+//                paymentInfo.setPayeeTax(payeeTax);
+//                return paymentInfo;
+//            }
+//        }
+//
+//        String jsonTaxRule = taxRepo.findTaxRuleByCountry("NIGERIA");
+//        PaymentFrequencyEnum salaryFrequency = getSalaryFrequency(paymentInfo);
+//        BigDecimal chargeableIncome = paymentInfo.getTaxRelief().get("CHARGEABLE INCOME");
+//        payeeTax.put(MapKeys.TAXABLE_INCOME, chargeableIncome);
+//        BigDecimal monthlyPayeeTax = !paymentInfo.isOffCycle() ?
+//                ComputationUtils.prorate(ComputationUtils.getAnnualTaxAmount(chargeableIncome, jsonTaxRule), paymentInfo.getNumberOfDaysOfUnpaidAbsence(), salaryFrequency, paymentInfo.getStartDate())
+//                :  ComputationUtils.getTaxAmount(paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY), jsonTaxRule);
+//
+//        if (!paymentInfo.isOffCycle()) {
+//            payeeTax.put("ANNUAL PAYE TAX", ComputationUtils.getAnnualTaxAmount(chargeableIncome, jsonTaxRule));
+//        }
+//
+//        System.out.println("monthlyPayeeTax-->" + monthlyPayeeTax);
+//
+//
+//        payeeTax.put(!paymentInfo.isOffCycle() ?  "PAYE" : "Paye Tax on " + getOffCyclePaymentDetails(paymentInfo).getName(), monthlyPayeeTax);
+//        paymentInfo.setPayeeTax(payeeTax);
+//        updateReportSummary(paymentInfo, sessionCalculationObject, "Pay-As-You-Earn (PAYE)",
+//                monthlyPayeeTax);
+//
+//        return paymentInfo;
+//    }
+
+
+
     @Override
     public PaymentInfo computePayeeTax(PaymentInfo paymentInfo) {
+
         if (isContract(paymentInfo)) {
             return paymentInfo;
         }
 
         List<PaymentSettingMetaData> settingsMetadata = paymentSettingMetadataRepo.findByEmployeeId(paymentInfo.getEmployeeID());
-
         Map<String, BigDecimal> payeeTax = new HashMap<>();
-        if (paymentInfo.isOffCycle()
-                && paymentInfo.getPaymentSettings() != null
-                && paymentInfo.getPaymentSettings().size() == 1) {
 
-            PaymentSettingsResponse setting = paymentInfo.getPaymentSettings().iterator().next();
+        if (paymentInfo.isOffCycle() && paymentInfo.getPaymentSettings() != null) {
 
-            if (!isTaxable(setting, settingsMetadata)) {
+            PaymentSettingsResponse offCyclePayment = paymentInfo.getPaymentSettings().stream()
+                    .filter(payment -> "OFF_CYCLE_PAYMENT_AMOUNT".equalsIgnoreCase(payment.getType().toString()))
+                    .findFirst().orElse(null);
+
+            if (offCyclePayment == null) {
+                return paymentInfo;
+            }
+
+            if (!isTaxable(offCyclePayment, settingsMetadata)) {
                 payeeTax.put(!paymentInfo.isOffCycle() ?  "PAYE" : "Paye Tax on " + getOffCyclePaymentDetails(paymentInfo).getName(), BigDecimal.ZERO);
                 paymentInfo.setPayeeTax(payeeTax);
                 return paymentInfo;
@@ -467,6 +521,7 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
         }
 
         String jsonTaxRule = taxRepo.findTaxRuleByCountry("NIGERIA");
+
         PaymentFrequencyEnum salaryFrequency = getSalaryFrequency(paymentInfo);
         BigDecimal chargeableIncome = paymentInfo.getTaxRelief().get("CHARGEABLE INCOME");
         payeeTax.put(MapKeys.TAXABLE_INCOME, chargeableIncome);
@@ -484,6 +539,7 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
                 monthlyPayeeTax);
         return paymentInfo;
     }
+
 
     private boolean isIntern(PaymentInfo paymentInfo) {
         return Optional.ofNullable(getEmployeeMetaData(paymentInfo))
@@ -565,7 +621,12 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
             ExchangeInfo exchangeInfo = paymentInfo.getExchangeInfo();
             BigDecimal exchangeRate = exchangeInfo.getExchangeRate();
             BigDecimal voluntaryPensionContribution =  !paymentInfo.isOffCycle() ? getEmployeeMetaData(paymentInfo).getVoluntaryPensionContribution() : BigDecimal.ZERO;
-            BigDecimal netPay = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(paymentInfo.getDeduction().get(MapKeys.TOTAL_DEDUCTION)).subtract(voluntaryPensionContribution);
+
+            System.out.println("paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY) " + paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY));
+            System.out.println("paymentInfo.getDeduction().get(MapKeys.TOTAL_DEDUCTION) " + paymentInfo.getDeduction().get(MapKeys.TOTAL_DEDUCTION));
+            System.out.println("voluntaryPensionContribution " + voluntaryPensionContribution);
+
+            BigDecimal netPay = getNetPay(paymentInfo, voluntaryPensionContribution);
             paymentInfo.setNetPay(
                     roundToTwoDecimalPlaces(
                             netPay.divide(exchangeRate, 2, RoundingMode.CEILING)
@@ -577,6 +638,17 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
             updateReportSummary(paymentInfo, sessionCalculationObject, MapKeys.TOTAL_GROSS_PAY, paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY));
         }
         return paymentInfo;
+    }
+
+    private static BigDecimal getNetPay(PaymentInfo paymentInfo, BigDecimal voluntaryPensionContribution) {
+        BigDecimal deduction = paymentInfo.getDeduction().get(MapKeys.TOTAL_DEDUCTION);
+        BigDecimal grossPay = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY);
+
+        if (deduction == null) {
+            deduction = BigDecimal.ZERO;
+        }
+
+        return grossPay.subtract(deduction).subtract(voluntaryPensionContribution);
     }
 
     @Override

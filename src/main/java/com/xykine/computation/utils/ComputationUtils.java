@@ -303,7 +303,6 @@ public class ComputationUtils {
         if (doPrecheck(response, settingsMetadata)) {
             return true;
         }
-
         return !settingsMetadata
                 .stream()
                 .filter(x -> x.getPaymentName().equalsIgnoreCase(response.getName()) &&  x.getProrated())
@@ -316,12 +315,21 @@ public class ComputationUtils {
         if (doPrecheck(response, settingsMetadata)) {
             return true;
         }
-        return !settingsMetadata
-                .stream()
-                .filter(x -> x.getPaymentName().equalsIgnoreCase(response.getName()) &&  x.getTaxable())
-                .findAny()
-                .isEmpty();
+        System.out.println("settingsMetadata " + settingsMetadata);
 
+        var settings = settingsMetadata
+                .stream()
+                .filter(x ->
+                        x.getPaymentName().equalsIgnoreCase(response.getName()) &&
+                                x.getTaxable() &&
+                                x.getEmployeeId().equalsIgnoreCase(response.getEmployeeID())
+                )
+                .findAny();
+
+
+        System.out.println("settingsMetadata " + settings);
+
+        return !settings.isEmpty();
     }
 
     private static boolean doPrecheck(PaymentSettingsResponse response, List<PaymentSettingMetaData> settingsMetadata){

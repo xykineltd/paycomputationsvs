@@ -184,7 +184,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 throw new PayrollValidationException("No payment information found for request");
             }
 
-            System.out.println("paymentInfoList size: " + paymentInfoList.size());
+            System.out.println("paymentInfoList size: " + paymentInfoList);
             PaymentComputeResponse computeResponse = computeService.computePayroll(paymentInfoList);
             computeResponse = OperationUtils.refineResponse(computeResponse, sessionCalculationObject, paymentRequest);
             ReportResponse reportResponse = serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
