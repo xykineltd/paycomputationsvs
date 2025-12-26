@@ -106,7 +106,7 @@ public class ComponentResilienceTest extends AbstractIntegrationTest {
             Thread.sleep(1000);
     }
         for (long x : timeTaken) {
-           System.out.println(" ==> times taken ==> " + x);
+            LOGGER.info("==> time taken ==> {}", x);
        }
     }
 

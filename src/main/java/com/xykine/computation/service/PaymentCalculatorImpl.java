@@ -622,10 +622,6 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
             BigDecimal exchangeRate = exchangeInfo.getExchangeRate();
             BigDecimal voluntaryPensionContribution =  !paymentInfo.isOffCycle() ? getEmployeeMetaData(paymentInfo).getVoluntaryPensionContribution() : BigDecimal.ZERO;
 
-            System.out.println("paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY) " + paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY));
-            System.out.println("paymentInfo.getDeduction().get(MapKeys.TOTAL_DEDUCTION) " + paymentInfo.getDeduction().get(MapKeys.TOTAL_DEDUCTION));
-            System.out.println("voluntaryPensionContribution " + voluntaryPensionContribution);
-
             BigDecimal netPay = getNetPay(paymentInfo, voluntaryPensionContribution);
             paymentInfo.setNetPay(
                     roundToTwoDecimalPlaces(

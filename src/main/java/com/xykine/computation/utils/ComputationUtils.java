@@ -315,8 +315,6 @@ public class ComputationUtils {
         if (doPrecheck(response, settingsMetadata)) {
             return true;
         }
-        System.out.println("settingsMetadata " + settingsMetadata);
-
         var settings = settingsMetadata
                 .stream()
                 .filter(x ->
@@ -325,9 +323,6 @@ public class ComputationUtils {
                                 x.getEmployeeId().equalsIgnoreCase(response.getEmployeeID())
                 )
                 .findAny();
-
-
-        System.out.println("settingsMetadata " + settings);
 
         return !settings.isEmpty();
     }
