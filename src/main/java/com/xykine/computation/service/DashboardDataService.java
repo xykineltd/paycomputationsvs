@@ -4,22 +4,18 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 import com.xykine.computation.entity.*;
 import com.xykine.computation.repo.DashboardGraphRepo;
 import com.xykine.computation.repo.PayrollReportDetailRepo;
-import com.xykine.computation.repo.YTDReportRepo;
 import com.xykine.computation.response.DashboardCardResponse;
 import com.xykine.computation.response.DashboardGraphResponse;
-import com.xykine.computation.response.PayComputeDetailResponse;
 import com.xykine.computation.utils.ComputationUtils;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 
-import org.apache.commons.lang3.SerializationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -33,8 +29,6 @@ import org.xykine.payroll.model.PaymentFrequencyEnum;
 import com.xykine.computation.repo.DashboardCardRepo;
 import com.xykine.computation.response.ReportResponse;
 import com.xykine.computation.utils.ReportUtils;
-import org.xykine.payroll.model.PaymentInfo;
-import org.xykine.payroll.model.PaymentSettingsResponse;
 
 
 @Slf4j
@@ -57,7 +51,11 @@ public class DashboardDataService {
         dashboardCard = dashboardCardOptional.orElseGet(() -> saveFreshDashboardCard(payrollReportSummary.getCompanyId()));
 
         long currentCount = dashboardCard.getTotalOffCyclePayroll();
-        dashboardCard.setTotalOffCyclePayroll(++currentCount);
+        if (!isRollback) {
+            dashboardCard.setTotalOffCyclePayroll(Math.max(++currentCount, 0));
+        } else {
+            dashboardCard.setTotalOffCyclePayroll(Math.max(--currentCount, 0));
+        }
         updateDashboardData(dashboardCard, payrollReportSummary, isRollback);
     }
 
@@ -69,7 +67,7 @@ public class DashboardDataService {
         if (!isRollBack) {
             dashboardCard.setTotalRegularPayroll(++currentCount);
         } else {
-            dashboardCard.setTotalRegularPayroll(--currentCount);
+            dashboardCard.setTotalRegularPayroll(Math.max(--currentCount, 0));
         }
         updateDashboardData(dashboardCard, payrollReportSummary, isRollBack);
     }
@@ -83,6 +81,7 @@ public class DashboardDataService {
                     .totalOffCyclePayroll(dashboardCard.getTotalOffCyclePayroll())
                     .totalRegularPayroll(dashboardCard.getTotalRegularPayroll())
                     .totalPayrollCost(dashboardCard.getTotalPayrollCost())
+                    .totalNetPayrollCost(dashboardCard.getTotalNetPayrollCost())
                     .averageEmployeeCost(dashboardCard.getAverageEmployeeCost())
                     .lastUpdatedAt(dashboardCard.getLastUpdatedAt().toString())
                     .build();
@@ -119,19 +118,39 @@ public class DashboardDataService {
 
     private void updateDashboardData(DashboardCard dashboardCard, PayrollReportSummary payrollReportSummary, boolean isRollBack) {
         BigDecimal netPay = extractNetPayFromReport(payrollReportSummary);
-        BigDecimal currentNetPay = dashboardCard.getTotalPayrollCost();
+        BigDecimal grossPay = extractGrossPayFromReport(payrollReportSummary);
+        BigDecimal currentGrossPay = dashboardCard.getTotalPayrollCost();
+        BigDecimal currentNetPay = dashboardCard.getTotalNetPayrollCost();
+
+
         if (!isRollBack) {
-            dashboardCard.setTotalPayrollCost(currentNetPay.add(netPay));
+            dashboardCard.setTotalPayrollCost(currentGrossPay.add(grossPay));
+            dashboardCard.setTotalNetPayrollCost(currentNetPay.add(netPay));
+
             dashboardCard.setAverageEmployeeCost(ComputationUtils.roundToTwoDecimalPlaces(
-                    currentNetPay.add(netPay)
+                    currentGrossPay.add(grossPay)
                             .divide(BigDecimal.valueOf(payrollReportSummary.getTotalNumberOfEmployees()), 2, RoundingMode.HALF_UP)
             ));
         } else {
-            dashboardCard.setTotalPayrollCost(currentNetPay.subtract(netPay));
-            dashboardCard.setAverageEmployeeCost(ComputationUtils.roundToTwoDecimalPlaces(
-                    currentNetPay.subtract(netPay)
-                            .divide(BigDecimal.valueOf(payrollReportSummary.getTotalNumberOfEmployees()), 2, RoundingMode.HALF_UP)
-            ));
+            dashboardCard.setTotalPayrollCost(
+                    currentGrossPay.subtract(grossPay).max(BigDecimal.ZERO)
+            );
+
+            dashboardCard.setTotalNetPayrollCost(
+                    currentNetPay.subtract(netPay).max(BigDecimal.ZERO)
+            );
+
+            dashboardCard.setAverageEmployeeCost(
+                    ComputationUtils.roundToTwoDecimalPlaces(
+                            currentGrossPay.subtract(grossPay)
+                                    .divide(
+                                            BigDecimal.valueOf(payrollReportSummary.getTotalNumberOfEmployees()),
+                                            2,
+                                            RoundingMode.HALF_UP
+                                    )
+                                    .max(BigDecimal.ZERO)
+                    )
+            );
         }
 
         dashboardCardRepo.save(dashboardCard);
@@ -147,7 +166,7 @@ public class DashboardDataService {
             DashboardGraph dashboardGraph;
             if (dashboardGraphOptional.isPresent()) {
                 dashboardGraph = dashboardGraphOptional.get();
-                dashboardGraph.setNetPay(netPay);
+                dashboardGraph.setNetPay(grossPay);
                 dashboardGraph.setPaymentFrequency(payrollReportSummary.getPaymentFrequency());
                 dashboardGraph.setDateAdded(LocalDateTime.now());
             } else {
@@ -157,7 +176,7 @@ public class DashboardDataService {
                         .startDate(startDate)
                         .endDate(endDate)
                         .paymentFrequency(payrollReportSummary.getPaymentFrequency())
-                        .netPay(netPay)
+                        .netPay(grossPay)
                         .dateAdded(LocalDateTime.now())
                         .build();
             }
@@ -169,6 +188,11 @@ public class DashboardDataService {
     private BigDecimal extractNetPayFromReport(PayrollReportSummary payrollReportSummary){
         ReportResponse reportResponse = ReportUtils.transform(payrollReportSummary);
         return reportResponse.getSummary().getSummary().get(MapKeys.TOTAL_NET_PAY);
+    }
+
+    private BigDecimal extractGrossPayFromReport(PayrollReportSummary payrollReportSummary){
+        ReportResponse reportResponse = ReportUtils.transform(payrollReportSummary);
+        return reportResponse.getSummary().getSummary().get(MapKeys.TOTAL_GROSS_PAY);
     }
 
     private DashboardCard saveFreshDashboardCard(String companyId){

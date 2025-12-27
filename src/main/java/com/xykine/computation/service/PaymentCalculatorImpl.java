@@ -174,6 +174,8 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 .findFirst()
                 .orElse(BigDecimal.ZERO);
 
+        BigDecimal grossPay = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY);
+
         Map<String, BigDecimal> nonTaxableIncomeExemptMap = new HashMap<>();
         Map<String, BigDecimal> pension = new HashMap<>();
         Map<String, BigDecimal> nhf = new HashMap<>();
@@ -215,7 +217,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         BigDecimal nationalHousingFund = isNHFSubscribed(paymentInfo)
                 ? ComputationUtils.roundToTwoDecimalPlaces(
                 sessionCalculationObject.getComputationConstants().get("nationalHousingFundPercent")
-                        .multiply(basicSalary))
+                        .multiply(grossPay))
                 : BigDecimal.ZERO;
 
         BigDecimal nhfValue = ComputationUtils.prorate(nationalHousingFund, unpaidDays, salaryFrequency, paymentInfo.getStartDate());

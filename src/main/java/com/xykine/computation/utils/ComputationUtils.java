@@ -319,8 +319,7 @@ public class ComputationUtils {
                 .stream()
                 .filter(x ->
                         x.getPaymentName().equalsIgnoreCase(response.getName()) &&
-                                x.getTaxable() &&
-                                x.getEmployeeId().equalsIgnoreCase(response.getEmployeeID())
+                        x.getTaxable()
                 )
                 .findAny();
 

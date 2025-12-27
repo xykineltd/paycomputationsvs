@@ -15,6 +15,7 @@ public class DashboardCardResponse {
     private long totalOffCyclePayroll = 0L;
     private long totalRegularPayroll = 0L;
     private BigDecimal totalPayrollCost = BigDecimal.ZERO;
+    private BigDecimal totalNetPayrollCost = BigDecimal.ZERO;
     private BigDecimal averageEmployeeCost= BigDecimal.ZERO;
     private String lastUpdatedAt;
 }
