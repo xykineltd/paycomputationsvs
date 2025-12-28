@@ -18,5 +18,6 @@ public class DashboardGraphResponse {
     private String endDate;
     private PaymentFrequencyEnum paymentFrequency;
     private BigDecimal netPay;
+    private BigDecimal netPayVariance;
     private String dateAdded;
 }

@@ -25,5 +25,6 @@ public class DashboardGraph {
     private String endDate;
     private PaymentFrequencyEnum paymentFrequency;
     private BigDecimal netPay;
+    private BigDecimal netPayVariance;
     private LocalDateTime dateAdded;
 }
