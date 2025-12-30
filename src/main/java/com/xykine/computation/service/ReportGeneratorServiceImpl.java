@@ -8,6 +8,7 @@ import com.xykine.computation.entity.CompanyMetadata;
 import com.xykine.computation.entity.Loan;
 import com.xykine.computation.repo.LoanRepo;
 import com.xykine.computation.request.*;
+import com.xykine.computation.utils.AppUtil;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.*;
 
@@ -412,8 +413,8 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
 
             result.put("EMP ID", employeeDetail.getMappedId());
             result.put("EMPLOYEE NAME", paymentInfo.getFullName());
-            result.put("HIRE DATE", employeeDetail.getHireDate());
-            result.put("EXIT DATE", exitDate);
+            result.put("HIRE DATE", AppUtil.formatDate(employeeDetail.getHireDate()));
+            result.put("EXIT DATE", AppUtil.formatDate(exitDate));
             result.put("ROLE", employeeDetail.getRole());
         }
 

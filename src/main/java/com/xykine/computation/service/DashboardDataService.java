@@ -119,6 +119,7 @@ public class DashboardDataService {
     private void updateDashboardData(DashboardCard dashboardCard, PayrollReportSummary payrollReportSummary, boolean isRollBack) {
         BigDecimal netPay = extractNetPayFromReport(payrollReportSummary);
         BigDecimal grossPay = extractGrossPayFromReport(payrollReportSummary);
+        BigDecimal netPayVariance = extractNetPayVarianceFromReport(payrollReportSummary);
         BigDecimal currentGrossPay = dashboardCard.getTotalPayrollCost();
         BigDecimal currentNetPay = dashboardCard.getTotalNetPayrollCost();
 
@@ -177,6 +178,7 @@ public class DashboardDataService {
                         .endDate(endDate)
                         .paymentFrequency(payrollReportSummary.getPaymentFrequency())
                         .netPay(grossPay)
+                        .netPayVariance(netPayVariance)
                         .dateAdded(LocalDateTime.now())
                         .build();
             }
@@ -207,5 +209,11 @@ public class DashboardDataService {
                 .build();
         dashboardCardRepo.save(dashboardCard);
         return dashboardCard;
+    }
+
+
+    private BigDecimal extractNetPayVarianceFromReport(PayrollReportSummary payrollReportSummary){
+        ReportResponse reportResponse = ReportUtils.transform(payrollReportSummary);
+        return reportResponse.getSummary().getSummaryVariance().get("Total Net Pay");
     }
 }

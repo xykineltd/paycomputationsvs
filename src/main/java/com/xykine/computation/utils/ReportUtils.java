@@ -96,6 +96,7 @@ public class ReportUtils {
                 .endDate(x.getEndDate())
                 .paymentFrequency(x.getPaymentFrequency())
                 .netPay(x.getNetPay())
+                .netPayVariance(x.getNetPayVariance())
                 .dateAdded(x.getDateAdded().toString())
                 .build();
     }

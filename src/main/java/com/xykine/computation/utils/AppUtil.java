@@ -2,6 +2,10 @@ package com.xykine.computation.utils;
 
 import com.xykine.computation.request.EmployeeFilterRequest;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
+
 public class AppUtil {
 
     public static boolean hasAdditionalFilters(EmployeeFilterRequest req) {
@@ -31,6 +35,21 @@ public class AppUtil {
 
     private static boolean isBlank(String s) {
         return s == null || s.trim().isEmpty();
+    }
+
+    public static String formatDate(String dateStr) {
+        if (dateStr == null || dateStr.isBlank()) {
+            return null;
+        }
+
+        // Parse input: yyyy-MM-dd
+        LocalDate date = LocalDate.parse(dateStr, DateTimeFormatter.ISO_LOCAL_DATE);
+
+        // Output format: September 22, 2025
+        DateTimeFormatter outputFormatter =
+                DateTimeFormatter.ofPattern("MMMM d, yyyy", Locale.ENGLISH);
+
+        return date.format(outputFormatter);
     }
 
 }

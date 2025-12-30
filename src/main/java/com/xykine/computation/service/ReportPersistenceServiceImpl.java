@@ -684,10 +684,14 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         PayrollReportSummary existingSummaryReport = payrollReportSummaryRepo.findPayrollReportSummaryByIdAndCompanyId(request.getReportId(), request.getCompanyId()).orElseThrow();
         PayrollStatus currentStatus = existingSummaryReport.getPayrollStatus();
 
+        System.out.println("currentStatus---> from database  " + currentStatus);
+        System.out.println("requested status---> " + request.getStatus());
+
+
         //if we have not approved the payroll, we can go back to simulate which will show as draft from the UI
         // we don't have to roll back the data from the dashboard
         if ((request.getStatus().equals(PayrollStatus.ROLLED_BACK) || request.getStatus().equals(PayrollStatus.REJECTED))
-                && (currentStatus != PayrollStatus.APPROVED)) {
+                && payrollNotYetApproved(currentStatus)) {
             request.setStatus(PayrollStatus.SIMULATED);
         }
 
@@ -715,6 +719,11 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 updateDashboardData(AppConstants.payrollCountRegular, existingSummaryReport, true);
             }
         }
+    }
+
+    private static boolean payrollNotYetApproved(PayrollStatus currentStatus) {
+        System.out.println("currentStatus " + currentStatus);
+        return currentStatus != PayrollStatus.APPROVED && currentStatus != PayrollStatus.APPROVED_AUDIT;
     }
 
 
