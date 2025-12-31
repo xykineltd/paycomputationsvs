@@ -54,40 +54,6 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReportGeneratorServiceImpl.class);
 
-
-//    private static final List<String> TEMPLATE_HEADERS = List.of(
-//            "EMP ID",
-//            "EMPLOYEE NAME",
-//            "HIRE DATE",
-//            "EXIT DATE",
-//            "ROLE",
-//            "GROSS PAY",
-//            "GROSS SALARY",
-//            "BASIC SALARY",
-//            "HOUSING",
-//            "TRANSPORT",
-//            "UTILITY",
-//            "ENTERTAINMENT",
-//            "MEDICAL",
-//            "PERSONAL OUTFIT",
-//            "LEAVE",
-//            "TRAINING",
-//            "PERFORMANCE BONUS",
-//            "OVERTIME",
-////            "OTHER VARIABLE",
-////            "OTHER ALLOWANCE",
-////            "OTHER WAGE TYPES",
-//            "TAXABLE INCOME",
-//            "OTHER DEDUCTION",
-//            "LOAN DEDUCTION",
-//            "PAYE",
-//            "NHF",
-//            "EMPLOYEE PENSION",
-//            "VOLUNTARY PENSION CONTRIBUTION",
-//            "EMPLOYER PENSION",
-//            "NETPAY"
-//    );
-
     // Everything up to OVERTIME (fixed order)
     private static final List<String> TEMPLATE_PREFIX = List.of(
             "EMP ID",
@@ -177,7 +143,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
             defaultHeaders.add("MONTHLY CHARGEABLE INCOME");
 //            defaultHeaders.add("other deduction");
 //            defaultHeaders.add("Loan");   // **
-            defaultHeaders.add("PAYE");
+            defaultHeaders.add("Total PAYE");
             defaultHeaders.add("National Housing Fund");
             defaultHeaders.add("Employee Pension Contribution");
             defaultHeaders.add("Voluntary Pension Contribution");
@@ -420,13 +386,16 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
 
         Map<String, Object> finalResult = new LinkedHashMap<>(result);
         selectedReports.forEach(key -> {
+
             Object value = raw.getOrDefault(key, " ");
+
             finalResult.put(key, value);
         });
 
         finalResult.put("GROSS SALARY", deriveGrossSalary(paymentInfo.getGrossPay(), grossSalaryComponent));
         final Map<String, BigDecimal> otherComponents = getOtherComponents(paymentInfo.getGrossPay(), grossSalaryComponent);
         final Map<String, BigDecimal> otherDeductions = getRemainingDeductions(paymentInfo.getDeduction(), deductionComponent);
+
 
         //  Add each otherComponent into the row so they can become columns
         finalResult.putAll(otherComponents);
@@ -515,7 +484,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
 
         return deductionMap.entrySet().stream()
                 .filter(e -> e.getKey() != null)
-                .filter(e -> deductionComponents.contains(e.getKey().trim()))  // ❌ not in base list
+                .filter(e -> deductionComponents.contains(e.getKey().trim()))  // not in base list
                 .filter(e -> e.getValue() != null)
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
@@ -774,10 +743,8 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                     newKey = normalized.toUpperCase(Locale.ROOT);
                 }
             }
-
             renamed.put(newKey, value);
         }
-
         return renamed;
     }
 
