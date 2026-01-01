@@ -120,9 +120,10 @@ public class DashboardDataService {
         BigDecimal netPay = extractNetPayFromReport(payrollReportSummary);
         BigDecimal grossPay = extractGrossPayFromReport(payrollReportSummary);
         BigDecimal netPayVariance = extractNetPayVarianceFromReport(payrollReportSummary);
-        BigDecimal currentGrossPay = dashboardCard.getTotalPayrollCost();
-        BigDecimal currentNetPay = dashboardCard.getTotalNetPayrollCost();
+        BigDecimal currentGrossPay = dashboardCard.getTotalPayrollCost() == null ? BigDecimal.ZERO : dashboardCard.getTotalPayrollCost();;
+        BigDecimal currentNetPay = dashboardCard.getTotalNetPayrollCost() == null ? BigDecimal.ZERO : dashboardCard.getTotalNetPayrollCost();
 
+        System.out.println("currentNetPay--->" + currentNetPay);
 
         if (!isRollBack) {
             dashboardCard.setTotalPayrollCost(currentGrossPay.add(grossPay));

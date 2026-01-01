@@ -687,9 +687,12 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
     @Override
     public PaymentInfo computeNetPay(PaymentInfo paymentInfo) {
         if(paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY) != null) {
+
+            BigDecimal deduction =  paymentInfo.getDeduction().get(MapKeys.TOTAL_DEDUCTION) != null ?
+                    paymentInfo.getDeduction().get(MapKeys.TOTAL_DEDUCTION) : BigDecimal.ZERO;
             ExchangeInfo exchangeInfo = paymentInfo.getExchangeInfo();
             BigDecimal exchangeRate = exchangeInfo.getExchangeRate();
-            BigDecimal netPay = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(paymentInfo.getDeduction().get(MapKeys.TOTAL_DEDUCTION));
+            BigDecimal netPay = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(deduction);
 
             paymentInfo.setNetPay(
                     roundToTwoDecimalPlaces(
