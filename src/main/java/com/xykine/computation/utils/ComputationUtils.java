@@ -285,7 +285,6 @@ public class ComputationUtils {
                 workDays++;
             }
         }
-
         return workDays;
     }
 

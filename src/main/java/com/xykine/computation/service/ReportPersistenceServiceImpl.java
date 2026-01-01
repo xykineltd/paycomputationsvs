@@ -1,5 +1,7 @@
 package com.xykine.computation.service;
 
+import com.xykine.computation.dto.PagedResult;
+import com.xykine.computation.dto.PayrollReportRow;
 import com.xykine.computation.entity.*;
 import com.xykine.computation.exceptions.PayrollValidationException;
 import com.xykine.computation.repo.*;
@@ -57,6 +59,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     private final WorkflowService workflowService;
     private final PayrollReportDetailStatusService payrollReportDetailStatusService;
     private final PayrollReportSummaryCustomFilter payrollReportSummaryCustomFilter;
+    private final PayrollReportHydrateRepo payrollReportSearchRepo;
 
     @Autowired
     private SessionCalculationObject sessionCalculationObject;
@@ -74,13 +77,12 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         try {
 
             List<PaymentInfo> paymentInfoList = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
+
+            if (paymentInfoList == null || paymentInfoList.isEmpty()) {
+                throw new PayrollValidationException("No payment information found for request");
+            }
+
             LOGGER.info("PaymentInfoList size: {}", paymentInfoList.size());
-//            var payInfo = paymentInfoList.stream().filter( p -> p.getEmployeeID().equals("6928c1ca910b650bbeb779e8"))
-//                    .map(p -> p.);
-//            LOGGER.info("payInfo : {}", payInfo.toList());
-
-//            paymentInfoList.stream().filter(e -> e.getEmployeeID().equalsIgnoreCase("691e9b1dbab63576430b5e98")).forEach(e -> LOGGER.info("payment info {}", e));
-
             PayrollReportSummary simulatedSummary = payrollReportSummaryRepo
                     .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(String.valueOf(paymentRequest.getStart()), paymentRequest.getCompanyId(), true);
             if (simulatedSummary != null && !paymentRequest.isPayrollSimulation()) {
@@ -596,6 +598,11 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     public Map<String, Object> getReportByEmployeeIDList(String companyId, List<String> employeeIDList, String summaryId, PaginatedSelectedEmployeeField selectedEmployeeField, int page, int size) {
 
         Pageable paging = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "fullName"));
+//        var docResponse = payrollReportSearchRepo.searchSortedByEmployeeNameWithReport(companyId,summaryId, null, null, null, null, null, null, null, paging);
+
+        PagedResult<PayrollReportRow> result = payrollReportSearchRepo.searchPagedAndHydrateReport(
+                companyId,summaryId, null, null, null, null, null, null, null, paging
+        );
 
         Page<PayrollReportDetail> payrollReportDetailPage ;
 
