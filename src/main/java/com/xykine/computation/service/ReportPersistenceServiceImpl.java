@@ -1,7 +1,7 @@
 package com.xykine.computation.service;
 
-import com.xykine.computation.dto.PagedResult;
-import com.xykine.computation.dto.PayrollReportRow;
+//import com.xykine.computation.dto.PagedResult;
+//import com.xykine.computation.dto.PayrollReportRow;
 import com.xykine.computation.entity.*;
 import com.xykine.computation.exceptions.PayrollValidationException;
 import com.xykine.computation.repo.*;
@@ -59,7 +59,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     private final WorkflowService workflowService;
     private final PayrollReportDetailStatusService payrollReportDetailStatusService;
     private final PayrollReportSummaryCustomFilter payrollReportSummaryCustomFilter;
-    private final PayrollReportHydrateRepo payrollReportSearchRepo;
+//    private final PayrollReportHydrateRepo payrollReportSearchRepo;
 
     @Autowired
     private SessionCalculationObject sessionCalculationObject;
@@ -600,9 +600,9 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         Pageable paging = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "fullName"));
 //        var docResponse = payrollReportSearchRepo.searchSortedByEmployeeNameWithReport(companyId,summaryId, null, null, null, null, null, null, null, paging);
 
-        PagedResult<PayrollReportRow> result = payrollReportSearchRepo.searchPagedAndHydrateReport(
-                companyId,summaryId, null, null, null, null, null, null, null, paging
-        );
+//        PagedResult<PayrollReportRow> result = payrollReportSearchRepo.searchPagedAndHydrateReport(
+//                companyId,summaryId, null, null, null, null, null, null, null, paging
+//        );
 
         Page<PayrollReportDetail> payrollReportDetailPage ;
 
