@@ -2,10 +2,7 @@ package com.xykine.computation.utils;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.xykine.computation.entity.Loan;
-import com.xykine.computation.entity.PaymentDistribution;
-import com.xykine.computation.entity.PaymentSettingMetaData;
-import com.xykine.computation.entity.TaxRule;
+import com.xykine.computation.entity.*;
 import com.xykine.computation.response.SummaryDetail;
 import com.xykine.computation.service.PaymentCalculatorImpl;
 import com.xykine.computation.session.SessionCalculationObject;
@@ -49,7 +46,7 @@ public class ComputationUtils {
         if (numberOfUnPaiAbsence == 0)
             return rawValue;
 //      if numberOfDaysOfUnpaidAbsence is not 0, remove the daily wage equivalent multiplied by the number of unpaid absences
-        BigDecimal dailyEquivalent = rawValue.divide(BigDecimal.valueOf(21), 2,  RoundingMode.CEILING); // To do ==> verify number of working days in the month
+        BigDecimal dailyEquivalent = rawValue.divide(BigDecimal.valueOf(23), 2,  RoundingMode.CEILING); // To do ==> verify number of working days in the month
         return roundToTwoDecimalPlaces(rawValue.subtract(dailyEquivalent.multiply(BigDecimal.valueOf(numberOfUnPaiAbsence))));
     }
 
@@ -107,13 +104,18 @@ public class ComputationUtils {
         return paymentValue;
     }
 
-    public static BigDecimal getTaxAmount(BigDecimal taxableIncome, String taxRuleJson){
+    public static BigDecimal getTaxAmount(BigDecimal taxableIncome, Tax taxInfo){
+
+        if ("new".equalsIgnoreCase(taxInfo.getVersion())) {
+            return getMonthlyTaxAmountBynewTaxRule(taxableIncome);
+        }
+
         if (taxableIncome.compareTo(BigDecimal.ZERO) < 0) {
             return BigDecimal.ZERO;
         }
         // Convert to annual
         taxableIncome = taxableIncome.multiply(BigDecimal.valueOf(12));
-        List<TaxRule> rules = getTaxRuleList(taxRuleJson);
+        List<TaxRule> rules = getTaxRuleList(taxInfo.getTaxRule());
         BigDecimal taxAmount = BigDecimal.ZERO;
         for (TaxRule rule : rules) {
             if (taxableIncome.compareTo(BigDecimal.ZERO) <= 0) break;
@@ -138,11 +140,16 @@ public class ComputationUtils {
         return roundToTwoDecimalPlaces(exchangeRate.multiply(amount));
     }
 
-    public static BigDecimal getAnnualTaxAmount(BigDecimal taxableIncome, String taxRuleJson) {
+    public static BigDecimal getAnnualTaxAmount(BigDecimal taxableIncome, Tax taxInfo) {
+
+        if ("new".equalsIgnoreCase(taxInfo.getVersion())) {
+            return getAnnualTaxAmountBynewTaxRule(taxableIncome);
+        }
+
         if (taxableIncome.compareTo(BigDecimal.ZERO) <= 0) {
             return BigDecimal.ZERO;
         }
-        List<TaxRule> rules = getTaxRuleList(taxRuleJson);
+        List<TaxRule> rules = getTaxRuleList(taxInfo.getTaxRule());
         BigDecimal taxAmount = BigDecimal.ZERO;
 
         for (TaxRule rule : rules) {
@@ -159,8 +166,46 @@ public class ComputationUtils {
                 taxableIncome = taxableIncome.subtract(applicableAmount);
             }
         }
-        // ✅ Return ANNUAL tax (same as method1)
         return taxAmount.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    public static BigDecimal getAnnualTaxAmountBynewTaxRule(BigDecimal principal) {
+        double tax = 0.0;
+        Double income = principal.doubleValue();
+        if (income <= 800_000) {
+            tax = 0.0;
+
+        } else if (income <= 3_000_000) {
+            tax = (income - 800_000) * 0.15;
+
+        } else if (income <= 12_000_000) {
+            tax = (2_200_000 * 0.15)
+                    + (income - 3_000_000) * 0.18;
+
+        } else if (income <= 25_000_000) {
+            tax = (2_200_000 * 0.15)
+                    + (9_000_000 * 0.18)
+                    + (income - 12_000_000) * 0.21;
+
+        } else if (income <= 50_000_000) {
+            tax = (2_200_000 * 0.15)
+                    + (9_000_000 * 0.18)
+                    + (13_000_000 * 0.21)
+                    + (income - 25_000_000) * 0.23;
+
+        } else {
+            tax = (2_200_000 * 0.15)
+                    + (9_000_000 * 0.18)
+                    + (13_000_000 * 0.21)
+                    + (25_000_000 * 0.23)
+                    + (income - 50_000_000) * 0.25;
+        }
+        return BigDecimal.valueOf(tax);
+    }
+
+    public static BigDecimal getMonthlyTaxAmountBynewTaxRule(BigDecimal principal) {
+        principal = principal.multiply(BigDecimal.valueOf(12));
+        return getAnnualTaxAmountBynewTaxRule(principal).divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
     }
 
     public static BigDecimal exchangeToForeignCurrency(BigDecimal exchangeRate, BigDecimal amount){

@@ -54,13 +54,15 @@ public class LoadComputationConfig {
         Tax nigeriaOldTaxRule = Tax.builder()
                 .country("NIGERIA")
                 .taxRule(oldTaxRule)
-                .active(true)
+                .version("old")
+                .active(false)
                 .build();
 
         Tax nigeriaNewTaxRule = Tax.builder()
                 .country("NIGERIA")
                 .taxRule(newTaxRule)
-                .active(false)
+                .version("new")
+                .active(true)
                 .build();
 
         taxRepo.save(nigeriaOldTaxRule);
@@ -182,12 +184,34 @@ public class LoadComputationConfig {
                 .isPensioned(false)
                 .build();
 
+        EmployeeMetadata intern = EmployeeMetadata.builder()
+                .employeeId("InternStaff")
+                .companyId("1234567")
+                .employeeType(EmployeeType.INTERN)
+                .isNHFSubscribed(false)
+                .customTaxReliefApplicable(BigDecimal.ZERO)
+                .voluntaryPensionContribution(BigDecimal.ZERO)
+                .isPensioned(false)
+                .build();
+
+        EmployeeMetadata gbagi = EmployeeMetadata.builder()
+                .employeeId("7654321")
+                .companyId("1234567")
+                .employeeType(EmployeeType.FULL_TIME)
+                .isNHFSubscribed(false)
+                .customTaxReliefApplicable(BigDecimal.ZERO)
+                .voluntaryPensionContribution(BigDecimal.valueOf(0))
+                .isPensioned(true)
+                .build();
+
+        employeeMetaDataRepo.save(gbagi);
         employeeMetaDataRepo.save(standardNotPensioned);
         employeeMetaDataRepo.save(regularStaffWithCustomTaxReleif);
         employeeMetaDataRepo.save(contractStaff);
         employeeMetaDataRepo.save(regularStaffWithNHF);
         employeeMetaDataRepo.save(regularStaffNoNHF);
         employeeMetaDataRepo.save(regularStaffWithCustomTaxReleifAndVoluntaryPensionContribution);
+        employeeMetaDataRepo.save(intern);
 
         String morufoye_international_payment_distribution = """
     [
@@ -230,11 +254,24 @@ public class LoadComputationConfig {
                 .description("Company Car Loan")
                 .active(true)
                 .startDate(LocalDate.parse("2024-01-01"))
-                .endDate(LocalDate.parse("2024-07-31"))
+                .endDate(LocalDate.parse("2099-07-31"))
                 .build();
-        loanRepo.save(loan);
+        //loanRepo.save(loan);
 
-        PaymentSettingMetaData paymentSettingMetaData = PaymentSettingMetaData.builder()
+        Loan staffLoan = Loan.builder()
+                .companyId("682cf69492b07e60fa109911")
+                .employeeId("8e3b6e4952e8468a84fd84556f8fdf2a")
+                .status(LoanStatus.APPROVED)
+                .scheduledRepaymentAmount(BigDecimal.valueOf(10000))
+                .description("Staff Loan")
+                .active(true)
+                .startDate(LocalDate.parse("2024-01-01"))
+                .endDate(LocalDate.parse("2099-07-31"))
+                .build();
+
+        loanRepo.save(staffLoan);
+
+        PaymentSettingMetaData callAllowance = PaymentSettingMetaData.builder()
                 .companyId("1234567")
                 .employeeId("7654321")
                 .paymentType("ALLOWANCE")
@@ -244,6 +281,43 @@ public class LoadComputationConfig {
                 .prorated(false)
                 .taxable(true)
                 .build();
-        paymentSettingMetadataRepo.save(paymentSettingMetaData);
+
+        PaymentSettingMetaData overtime = PaymentSettingMetaData.builder()
+                .companyId("1234567")
+                .employeeId("7654321")
+                .paymentType("ALLOWANCE")
+                .paymentName("OVERTIME GROSS")
+                .startDate(LocalDate.parse("2025-01-01"))
+                .endDate(LocalDate.parse("2025-07-31"))
+                .prorated(false)
+                .taxable(true)
+                .build();
+
+        PaymentSettingMetaData abasydoOffcycle = PaymentSettingMetaData.builder()
+                .companyId("1234567")
+                .employeeId("7654321")
+                .paymentType("ALLOWANCE")
+                .paymentName("13th month")
+                .startDate(LocalDate.parse("2025-12-23"))
+                .endDate(LocalDate.parse("2025-12-24"))
+                .prorated(false)
+                .taxable(false)
+                .build();
+
+        PaymentSettingMetaData abasydoOffcycle14 = PaymentSettingMetaData.builder()
+                .companyId("1234567")
+                .employeeId("7654321")
+                .paymentType("ALLOWANCE")
+                .paymentName("14th month")
+                .startDate(LocalDate.parse("2025-12-23"))
+                .endDate(LocalDate.parse("2025-12-24"))
+                .prorated(false)
+                .taxable(false)
+                .build();
+
+        paymentSettingMetadataRepo.save(abasydoOffcycle);
+        paymentSettingMetadataRepo.save(abasydoOffcycle14);
+        paymentSettingMetadataRepo.save(overtime);
+        paymentSettingMetadataRepo.save(callAllowance);
     }
 }

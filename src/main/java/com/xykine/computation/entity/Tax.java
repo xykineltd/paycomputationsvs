@@ -20,5 +20,6 @@ public class Tax {
     private String id;
     private String taxRule;
     private String country;
+    private String version;
     private boolean active;
 }
