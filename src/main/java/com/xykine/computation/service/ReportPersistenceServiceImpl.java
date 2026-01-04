@@ -94,7 +94,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 startWorkflowRequest.setNumberOfPays(payrollReportDetailRepo.countBySummaryId(payrollReportSummary.getId().toString()));
                 startWorkflowRequest.setCreatedBy(payrollReportSummary.getCreatedBy());
                 workflowService.startWorkflow(startWorkflowRequest, authorizationHeader);
-
                 return;
             }
 
@@ -116,9 +115,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             );
 
             List<PaymentInfo> paymentInfoList = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
-            if (paymentInfoList == null || paymentInfoList.isEmpty()) {
-                throw new PayrollValidationException("No payment information found for request");
-            }
+
             PaymentComputeResponse computeResponse = computeService.computePayroll(paymentInfoList);
             computeResponse = OperationUtils.refineResponse(computeResponse, sessionCalculationObject, paymentRequest);
             ReportResponse reportResponse = serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
@@ -126,7 +123,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             progressCallback.accept(jobStatusStore);
 
         } catch (Exception e) {
-             //e.printStackTrace();
+             e.printStackTrace();
             jobStatusStore.updateJob(jobId, "FAILED", e.getMessage(), e.toString());
             progressCallback.accept(jobStatusStore);
         }
@@ -141,11 +138,22 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         PayCompteVarianceDetailsCustomized payComputeVarianceDetails = ReportUtils.transform(payrollVarianceDetails).getPayComputeVarianceDetails();
         summaryVarianceDetails = payComputeVarianceDetails.getSummaryDetailsVariance();
 
+        if (employeeIds.isEmpty() || employeeIds == null || employeeIds.size() == 0) {
+           return getSummaryVarianceDetails(summaryVarianceDetails);
+        }
+
         return summaryVarianceDetails.entrySet()
                 .stream()
                 .filter(variance -> employeeIds.contains(variance.getKey()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
+    }
+
+    private Map<String, Map<String, BigDecimal>> getSummaryVarianceDetails(Map<String, Map<String, BigDecimal>> summaryVarianceDetails ){
+        return summaryVarianceDetails.entrySet()
+                .stream()
+                .filter(variance -> variance.getValue().get(PayrollMetrics.NET_PAY).compareTo(BigDecimal.ZERO) != 0)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     public ConcurrentHashMap<String, Set<SummaryDetail>> getSummaryVarianceDetails(String reportId, List<String> employeeIds, String header) {
