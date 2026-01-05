@@ -294,7 +294,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 ));
     }
 
-    public ConcurrentHashMap<String, Map<String, SummaryDetail>> getSummaryVarianceDetailsByEmployee(String reportId) {
+    @Override
+    public List<Map<String, Object>> getSummaryVarianceDetailsByEmployee(String reportId) {
         ConcurrentHashMap<String, Map<String, SummaryDetail>> detailsByEmployee = new ConcurrentHashMap<>();
         ConcurrentHashMap<String, Set<SummaryDetail>> detailsByHeader = getSummaryVarianceDetails(reportId);
 
@@ -310,7 +311,37 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             }
         });
 
-        return detailsByEmployee;
+        return detailsByEmployee.entrySet()
+                .stream()
+                .sorted(Map.Entry.comparingByKey())
+                .map(entry -> {
+                    Map<String, SummaryDetail> headerDetails = entry.getValue();
+                    Map<String, Object> employeeEntry = new LinkedHashMap<>();
+                    employeeEntry.put("employeeId", entry.getKey());
+
+                    String employeeName = headerDetails.values()
+                            .stream()
+                            .map(SummaryDetail::getEmployeeName)
+                            .filter(Objects::nonNull)
+                            .findFirst()
+                            .orElse(null);
+                    employeeEntry.put("employeeName", employeeName);
+
+                    headerDetails.entrySet()
+                            .stream()
+                            .sorted(Map.Entry.comparingByKey())
+                            .forEach(headerEntry -> {
+                                SummaryDetail summaryDetail = headerEntry.getValue();
+                                Map<String, BigDecimal> varianceEntry = new LinkedHashMap<>();
+                                varianceEntry.put("value", summaryDetail.getValue());
+                                varianceEntry.put("variance", summaryDetail.getVariance());
+                                employeeEntry.put(headerEntry.getKey(), varianceEntry);
+                            });
+
+                    employeeEntry.put("reasons", Collections.emptyList());
+                    return employeeEntry;
+                })
+                .collect(Collectors.toList());
     }
 
     @Transactional

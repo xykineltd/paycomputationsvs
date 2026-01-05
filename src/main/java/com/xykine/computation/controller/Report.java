@@ -332,7 +332,7 @@ public class Report {
 
 //        List<String> filteredList = selectedEmployeeField.getSelectedEmployeeFields().stream().map(SelectedEmployeeField::getEmployeeID).toList();
 
-        ConcurrentHashMap<String, Map<String, SummaryDetail>> response =
+        List<Map<String, Object>> response =
                 reportPersistenceService.getSummaryVarianceDetailsByEmployee(
                         employeeFilterRequest.getReportId()
 //                        filteredList,
