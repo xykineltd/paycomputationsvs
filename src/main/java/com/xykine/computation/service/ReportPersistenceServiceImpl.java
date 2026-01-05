@@ -230,11 +230,25 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         PayCompteVarianceDetailsCustomized payComputeVarianceDetails = ReportUtils.transform(payrollVarianceDetails).getPayComputeVarianceDetails();
         summaryVarianceDetails = payComputeVarianceDetails.getSummaryDetailsVariance();
 
+
+        System.out.println("employeeIds   " + employeeIds);
+
+        if (employeeIds == null || employeeIds.isEmpty()) {
+            return getSummaryVarianceDetails(summaryVarianceDetails);
+        }
+
         return summaryVarianceDetails.entrySet()
                 .stream()
                 .filter(variance -> employeeIds.contains(variance.getKey()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
+    }
+
+    private Map<String, Map<String, BigDecimal>> getSummaryVarianceDetails(Map<String, Map<String, BigDecimal>> summaryVarianceDetails ){
+        return summaryVarianceDetails.entrySet()
+                .stream()
+                .filter(variance -> variance.getValue().get(PayrollMetrics.NET_PAY).compareTo(BigDecimal.ZERO) != 0)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     @Override
@@ -252,7 +266,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         PayComputeVarianceDetails payComputeVarianceDetails = ReportUtils.transform(payrollVarianceDetails).getPayComputeVarianceDetails();
         summaryVarianceDetails = payComputeVarianceDetails.getSummaryDetailsVariance();
 
-        boolean isFilteredBHeader = header != null && !header.isEmpty();
+        boolean isFilteredBHeader = header != null;
         List<String> headers = new ArrayList<>();
 
         if (isFilteredBHeader) {
@@ -280,6 +294,25 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                         (a, b) -> a,
                         ConcurrentHashMap::new
                 ));
+    }
+
+    public ConcurrentHashMap<String, Map<String, SummaryDetail>> getSummaryVarianceDetailsByEmployee(String reportId, List<String> employeeIds, String header) {
+        ConcurrentHashMap<String, Map<String, SummaryDetail>> detailsByEmployee = new ConcurrentHashMap<>();
+        ConcurrentHashMap<String, Set<SummaryDetail>> detailsByHeader = getSummaryVarianceDetails(reportId, employeeIds, header);
+
+        detailsByHeader.forEach((headerKey, summaryDetails) -> {
+            for (SummaryDetail summaryDetail : summaryDetails) {
+                String employeeId = summaryDetail.getEmployeeId();
+                if (employeeId == null) {
+                    continue;
+                }
+                detailsByEmployee
+                        .computeIfAbsent(employeeId, key -> new ConcurrentHashMap<>())
+                        .put(headerKey, summaryDetail);
+            }
+        });
+
+        return detailsByEmployee;
     }
 
     @Transactional
@@ -688,16 +721,10 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 //    }
 
 
-
     @Transactional
     public void updateReportStatus(UpdatePayrollStatusRequest request) {
-
         PayrollReportSummary existingSummaryReport = payrollReportSummaryRepo.findPayrollReportSummaryByIdAndCompanyId(request.getReportId(), request.getCompanyId()).orElseThrow();
         PayrollStatus currentStatus = existingSummaryReport.getPayrollStatus();
-
-        System.out.println("currentStatus---> from database  " + currentStatus);
-        System.out.println("requested status---> " + request.getStatus());
-
 
         //if we have not approved the payroll, we can go back to simulate which will show as draft from the UI
         // we don't have to roll back the data from the dashboard
@@ -733,7 +760,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     }
 
     private static boolean payrollNotYetApproved(PayrollStatus currentStatus) {
-        System.out.println("currentStatus " + currentStatus);
         return currentStatus != PayrollStatus.APPROVED && currentStatus != PayrollStatus.APPROVED_AUDIT;
     }
 
@@ -1301,4 +1327,3 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         return result;
     }
 }
-

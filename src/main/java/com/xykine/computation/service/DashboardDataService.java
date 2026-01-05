@@ -123,8 +123,6 @@ public class DashboardDataService {
         BigDecimal currentGrossPay = dashboardCard.getTotalPayrollCost() == null ? BigDecimal.ZERO : dashboardCard.getTotalPayrollCost();;
         BigDecimal currentNetPay = dashboardCard.getTotalNetPayrollCost() == null ? BigDecimal.ZERO : dashboardCard.getTotalNetPayrollCost();
 
-        System.out.println("currentNetPay--->" + currentNetPay);
-
         if (!isRollBack) {
             dashboardCard.setTotalPayrollCost(currentGrossPay.add(grossPay));
             dashboardCard.setTotalNetPayrollCost(currentNetPay.add(netPay));

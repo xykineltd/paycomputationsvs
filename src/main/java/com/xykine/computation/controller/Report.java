@@ -325,6 +325,24 @@ public class Report {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @PostMapping("/variance-details-by-employeeId")
+    public ResponseEntity<?> getVarianceDetailsByEmployeeId(
+            @RequestBody EmployeeFilterRequest employeeFilterRequest,
+            @RequestHeader("Authorization") String authorizationHeader) {
+        employeeFilterRequest.setSize(5000);
+        PaginatedSelectedEmployeeField selectedEmployeeField = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
+
+        List<String> filteredList = selectedEmployeeField.getSelectedEmployeeFields().stream().map(SelectedEmployeeField::getEmployeeID).toList();
+
+        ConcurrentHashMap<String, Map<String, SummaryDetail>> response =
+                reportPersistenceService.getSummaryVarianceDetailsByEmployee(
+                        employeeFilterRequest.getReportId(),
+                        filteredList,
+                        employeeFilterRequest.getHeader()
+                );
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
 
     @PostMapping("/variance-details-customized")
     public ResponseEntity<?> getVarianceDetailsCustomized(
