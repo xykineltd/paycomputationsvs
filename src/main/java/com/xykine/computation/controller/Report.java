@@ -318,9 +318,7 @@ public class Report {
 
         ConcurrentHashMap<String, Set<SummaryDetail>> response =
                 reportPersistenceService.getSummaryVarianceDetails(
-                        employeeFilterRequest.getReportId(),
-                        filteredList,
-                        employeeFilterRequest.getHeader()
+                        employeeFilterRequest.getReportId()
                 );
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -330,15 +328,15 @@ public class Report {
             @RequestBody EmployeeFilterRequest employeeFilterRequest,
             @RequestHeader("Authorization") String authorizationHeader) {
         employeeFilterRequest.setSize(5000);
-        PaginatedSelectedEmployeeField selectedEmployeeField = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
+//        PaginatedSelectedEmployeeField selectedEmployeeField = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
 
-        List<String> filteredList = selectedEmployeeField.getSelectedEmployeeFields().stream().map(SelectedEmployeeField::getEmployeeID).toList();
+//        List<String> filteredList = selectedEmployeeField.getSelectedEmployeeFields().stream().map(SelectedEmployeeField::getEmployeeID).toList();
 
         ConcurrentHashMap<String, Map<String, SummaryDetail>> response =
                 reportPersistenceService.getSummaryVarianceDetailsByEmployee(
-                        employeeFilterRequest.getReportId(),
-                        filteredList,
-                        employeeFilterRequest.getHeader()
+                        employeeFilterRequest.getReportId()
+//                        filteredList,
+//                        employeeFilterRequest.getHeader()
                 );
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

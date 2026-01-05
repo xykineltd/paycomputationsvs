@@ -256,8 +256,9 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         return payrollReportSummaryCustomFilter.filterReports(request);
     }
 
-    public ConcurrentHashMap<String, Set<SummaryDetail>> getSummaryVarianceDetails(String reportId, List<String> employeeIds, String header) {
+    public ConcurrentHashMap<String, Set<SummaryDetail>> getSummaryVarianceDetails(String reportId) {
         PayrollVarianceDetails payrollVarianceDetails = payrollVarianceDetailsRepo.findById(UUID.fromString(reportId)).orElse(null);
+
         ConcurrentHashMap<String, Set<SummaryDetail>> summaryVarianceDetails = new ConcurrentHashMap<>();
         if (payrollVarianceDetails == null) {
             return summaryVarianceDetails;
@@ -266,24 +267,21 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         PayComputeVarianceDetails payComputeVarianceDetails = ReportUtils.transform(payrollVarianceDetails).getPayComputeVarianceDetails();
         summaryVarianceDetails = payComputeVarianceDetails.getSummaryDetailsVariance();
 
-        boolean isFilteredBHeader = header != null;
-        List<String> headers = new ArrayList<>();
-
-        if (isFilteredBHeader) {
-            headers.add(header);
-        } else {
-            headers.addAll(summaryVarianceDetails.keySet());
-        }
+//        boolean isFilteredBHeader = header != null;
+//        List<String> headers = new ArrayList<>();
+//
+//        if (isFilteredBHeader) {
+//            headers.add(header);
+//        } else {
+//            headers.addAll(summaryVarianceDetails.keySet());
+//        }
 
         return summaryVarianceDetails.entrySet()
                 .stream()
-                .filter(entry -> headers.contains(entry.getKey()))
+//                .filter(entry -> headers.contains(entry.getKey()))
                 .map(entry -> {
                     // Filter the Set<SummaryDetail> for this key
-                    Set<SummaryDetail> filteredSet = entry.getValue()
-                            .stream()
-                            .filter(sd -> employeeIds.contains(sd.getEmployeeId()))
-                            .collect(Collectors.toSet());
+                    Set<SummaryDetail> filteredSet = new HashSet<>(entry.getValue());
                     return Map.entry(entry.getKey(), filteredSet);
                 })
                 // Keep only entries where the filtered set is not empty
@@ -296,9 +294,9 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 ));
     }
 
-    public ConcurrentHashMap<String, Map<String, SummaryDetail>> getSummaryVarianceDetailsByEmployee(String reportId, List<String> employeeIds, String header) {
+    public ConcurrentHashMap<String, Map<String, SummaryDetail>> getSummaryVarianceDetailsByEmployee(String reportId) {
         ConcurrentHashMap<String, Map<String, SummaryDetail>> detailsByEmployee = new ConcurrentHashMap<>();
-        ConcurrentHashMap<String, Set<SummaryDetail>> detailsByHeader = getSummaryVarianceDetails(reportId, employeeIds, header);
+        ConcurrentHashMap<String, Set<SummaryDetail>> detailsByHeader = getSummaryVarianceDetails(reportId);
 
         detailsByHeader.forEach((headerKey, summaryDetails) -> {
             for (SummaryDetail summaryDetail : summaryDetails) {
