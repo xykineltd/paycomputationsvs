@@ -15,7 +15,7 @@ import java.util.function.Consumer;
 
 public interface ReportPersistenceService {
     ConcurrentHashMap<String, Set<SummaryDetail>> getSummaryVarianceDetails(String reportId);
-    List<Map<String, Object>> getSummaryVarianceDetailsByEmployee(String reportId);
+    Map<String, Object> getSummaryVarianceDetailsByEmployee(String reportId, int page, int size);
     void computePayrollAsync(Consumer<JobStatusStore> progressCallback, String jobId, String authorizationHeader, PaymentInfoRequest paymentRequest);
     void computeOffCyclePayrollAsync(Consumer<JobStatusStore> progressCallback, String jobId, String authorizationHeader, PaymentInfoRequest paymentRequest);
     ReportResponse serializeAndSaveReport(PaymentComputeResponse paymentComputeResponse, String companyId) throws IOException, ClassNotFoundException;

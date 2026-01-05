@@ -327,14 +327,15 @@ public class Report {
     public ResponseEntity<?> getVarianceDetailsByEmployeeId(
             @RequestBody EmployeeFilterRequest employeeFilterRequest,
             @RequestHeader("Authorization") String authorizationHeader) {
-        employeeFilterRequest.setSize(5000);
 //        PaginatedSelectedEmployeeField selectedEmployeeField = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
 
 //        List<String> filteredList = selectedEmployeeField.getSelectedEmployeeFields().stream().map(SelectedEmployeeField::getEmployeeID).toList();
 
-        List<Map<String, Object>> response =
+        Map<String, Object> response =
                 reportPersistenceService.getSummaryVarianceDetailsByEmployee(
-                        employeeFilterRequest.getReportId()
+                        employeeFilterRequest.getReportId(),
+                        employeeFilterRequest.getPage(),
+                        employeeFilterRequest.getSize()
 //                        filteredList,
 //                        employeeFilterRequest.getHeader()
                 );

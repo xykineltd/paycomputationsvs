@@ -231,8 +231,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         summaryVarianceDetails = payComputeVarianceDetails.getSummaryDetailsVariance();
 
 
-        System.out.println("employeeIds   " + employeeIds);
-
         if (employeeIds == null || employeeIds.isEmpty()) {
             return getSummaryVarianceDetails(summaryVarianceDetails);
         }
@@ -295,7 +293,10 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     }
 
     @Override
-    public List<Map<String, Object>> getSummaryVarianceDetailsByEmployee(String reportId) {
+    public Map<String, Object> getSummaryVarianceDetailsByEmployee(String reportId, int page, int size) {
+        int safePage = Math.max(page, 0);
+        int safeSize = size <= 0 ? 10 : size;
+
         ConcurrentHashMap<String, Map<String, SummaryDetail>> detailsByEmployee = new ConcurrentHashMap<>();
         ConcurrentHashMap<String, Set<SummaryDetail>> detailsByHeader = getSummaryVarianceDetails(reportId);
 
@@ -311,7 +312,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             }
         });
 
-        return detailsByEmployee.entrySet()
+        List<Map<String, Object>> allDetails = detailsByEmployee.entrySet()
                 .stream()
                 .sorted(Map.Entry.comparingByKey())
                 .map(entry -> {
@@ -342,6 +343,18 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                     return employeeEntry;
                 })
                 .collect(Collectors.toList());
+
+        int totalItems = allDetails.size();
+        int fromIndex = Math.min(safePage * safeSize, totalItems);
+        int toIndex = Math.min(fromIndex + safeSize, totalItems);
+        List<Map<String, Object>> pageContent = allDetails.subList(fromIndex, toIndex);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("varianceDetails", pageContent);
+        response.put("currentPage", safePage);
+        response.put("totalItems", totalItems);
+        response.put("totalPages", (int) Math.ceil(totalItems / (double) safeSize));
+        return response;
     }
 
     @Transactional
