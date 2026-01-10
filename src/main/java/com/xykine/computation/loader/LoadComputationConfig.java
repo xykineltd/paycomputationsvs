@@ -162,6 +162,7 @@ public class LoadComputationConfig {
                 .customTaxReliefApplicable(BigDecimal.valueOf(50000))
                 .voluntaryPensionContribution(BigDecimal.ZERO)
                 .isPensioned(true)
+                .rentAllaowance(BigDecimal.valueOf(500000L))
                 .build();
 
         EmployeeMetadata regularStaffWithCustomTaxReleifAndVoluntaryPensionContribution = EmployeeMetadata.builder()
@@ -172,6 +173,7 @@ public class LoadComputationConfig {
                 .customTaxReliefApplicable(BigDecimal.ZERO)
                 .voluntaryPensionContribution(BigDecimal.valueOf(1000))
                 .isPensioned(true)
+                .rentAllaowance(BigDecimal.valueOf(500000L))
                 .build();
 
         EmployeeMetadata standardNotPensioned = EmployeeMetadata.builder()
@@ -182,6 +184,7 @@ public class LoadComputationConfig {
                 .customTaxReliefApplicable(BigDecimal.ZERO)
                 .voluntaryPensionContribution(BigDecimal.ZERO)
                 .isPensioned(false)
+                .rentAllaowance(BigDecimal.valueOf(500000L))
                 .build();
 
         EmployeeMetadata intern = EmployeeMetadata.builder()
@@ -192,6 +195,7 @@ public class LoadComputationConfig {
                 .customTaxReliefApplicable(BigDecimal.ZERO)
                 .voluntaryPensionContribution(BigDecimal.ZERO)
                 .isPensioned(false)
+                .rentAllaowance(BigDecimal.valueOf(500000L))
                 .build();
 
         EmployeeMetadata gbagi = EmployeeMetadata.builder()
@@ -202,6 +206,7 @@ public class LoadComputationConfig {
                 .customTaxReliefApplicable(BigDecimal.ZERO)
                 .voluntaryPensionContribution(BigDecimal.valueOf(0))
                 .isPensioned(true)
+                .rentAllaowance(BigDecimal.valueOf(500000L))
                 .build();
 
         employeeMetaDataRepo.save(gbagi);
