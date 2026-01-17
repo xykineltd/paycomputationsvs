@@ -18,7 +18,9 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-            issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:https://auth.acedpaydev.com/realms/localdev}
+#            issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:https://auth.acedpaydev.com/realms/localdev}
+            jwk-set-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI:https://auth.acedpaydev.com/realms/localdev/protocol/openid-connect/certs}
+
   data:
     redis:
       connect-timeout: 2s
