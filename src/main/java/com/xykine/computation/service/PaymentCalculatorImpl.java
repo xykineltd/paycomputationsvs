@@ -226,6 +226,14 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         paymentInfo.setNhf(nhf);
 
         paymentInfo = computeNonTaxableIncomeExemptForMFB(paymentInfo, nationalHousingFund);
+
+        Tax tax = taxRepo.findTaxByCountryAndActiveIsTrue("NIGERIA");
+
+        System.out.println("Tax Version: " + tax);
+        String taxVersion = taxRepo.findTaxByCountryAndActiveIsTrue("NIGERIA").getVersion().toString();
+
+        paymentInfo = "old".equalsIgnoreCase(taxVersion) ? computeNonTaxableIncomeExemptForMFB(paymentInfo, nationalHousingFund) : computeNonTaxableIncomeExemptForMFBNewTaxLaw(paymentInfo, nationalHousingFund);
+
         paymentInfo.setPension(pension);
         return paymentInfo;
     }
@@ -407,6 +415,47 @@ public PaymentInfo computeNonTaxableIncomeExemptForMFB(PaymentInfo paymentInfo, 
 //        return paymentInfo;
 //    }
 
+
+public PaymentInfo computeNonTaxableIncomeExemptForMFBNewTaxLaw(PaymentInfo paymentInfo, BigDecimal nationalHousingFund) {
+    Map<String, BigDecimal> nonTaxableIncomeExemptMap = new HashMap<>();
+    if (isContract(paymentInfo)) {
+        return paymentInfo;
+    }
+
+    BigDecimal annualGrossSalary = paymentInfo.getBasicSalary();
+    BigDecimal voluntaryPensionContribution = getEmployeeMetaData(paymentInfo).getVoluntaryPensionContribution();
+    BigDecimal annualNationalHousingFund = nationalHousingFund.multiply(BigDecimal.valueOf(12));
+    BigDecimal annualVoluntaryPensionContribution = voluntaryPensionContribution.multiply(BigDecimal.valueOf(12));
+    BigDecimal customTaxReleifApplicable = getEmployeeMetaData(paymentInfo).getCustomTaxReliefApplicable();
+    BigDecimal annualCustomTaxReleifApplicable = customTaxReleifApplicable.multiply(BigDecimal.valueOf(12));
+    BigDecimal rentAllowance = new BigDecimal("500000");
+
+    BigDecimal annualEmployeePensionAtEightPercent = isIntern(paymentInfo) ? BigDecimal.ZERO : ComputationUtils.roundToTwoDecimalPlaces(
+            sessionCalculationObject.getComputationConstants().get("pensionFundPercent")
+                    .multiply(annualGrossSalary));
+
+    annualEmployeePensionAtEightPercent = ComputationUtils.roundToTwoDecimalPlaces(annualEmployeePensionAtEightPercent.multiply(BigDecimal.valueOf(0.3292)));
+    BigDecimal reliefAllowance = annualNationalHousingFund
+            .add(annualEmployeePensionAtEightPercent)
+            .add(annualVoluntaryPensionContribution)
+            .add(rentAllowance)
+            .add(annualCustomTaxReleifApplicable);
+
+    BigDecimal chargeableIncome = annualGrossSalary.subtract(reliefAllowance);
+
+    nonTaxableIncomeExemptMap.put("ANNUAL EMPLOYEE PENSION @ 8%", annualEmployeePensionAtEightPercent);
+    nonTaxableIncomeExemptMap.put("RELIEF ALLOWANCE", reliefAllowance);
+    nonTaxableIncomeExemptMap.put("CHARGEABLE INCOME", chargeableIncome);
+    nonTaxableIncomeExemptMap.put("MONTHLY CHARGEABLE INCOME",chargeableIncome.divide(
+            BigDecimal.valueOf(12),
+            2,
+            RoundingMode.HALF_UP
+    ));
+    nonTaxableIncomeExemptMap.put("Annual Voluntary Pension Contribution", annualVoluntaryPensionContribution);
+    paymentInfo.setTaxRelief(nonTaxableIncomeExemptMap);
+    return paymentInfo;
+}
+
 private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo paymentInfo) {
     if (isContract(paymentInfo)) {
         return paymentInfo;
@@ -567,17 +616,20 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
             }
         }
 
-        String jsonTaxRule = taxRepo.findTaxRuleByCountry("NIGERIA");
+//        String jsonTaxRule = taxRepo.findTaxRuleByCountry("NIGERIA");
+        Tax taxInfo = taxRepo.findTaxByCountryAndActiveIsTrue("NIGERIA");
 
         PaymentFrequencyEnum salaryFrequency = getSalaryFrequency(paymentInfo);
         BigDecimal chargeableIncome = paymentInfo.getTaxRelief().get("CHARGEABLE INCOME");
         payeeTax.put(MapKeys.TAXABLE_INCOME, chargeableIncome);
         BigDecimal monthlyPayeeTax = !paymentInfo.isOffCycle() ?
-                ComputationUtils.prorate(ComputationUtils.getAnnualTaxAmount(chargeableIncome, jsonTaxRule), paymentInfo.getNumberOfDaysOfUnpaidAbsence(), salaryFrequency, paymentInfo.getStartDate())
-                :  ComputationUtils.getTaxAmount(paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY), jsonTaxRule);
+                ComputationUtils.prorate(ComputationUtils.getAnnualTaxAmount(chargeableIncome, taxInfo), paymentInfo.getNumberOfDaysOfUnpaidAbsence(), salaryFrequency, paymentInfo.getStartDate())
+                :  ComputationUtils.getTaxAmount(paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY), taxInfo);
+//                ComputationUtils.prorate(ComputationUtils.getAnnualTaxAmount(chargeableIncome, taxInfo), paymentInfo.getNumberOfDaysOfUnpaidAbsence(), salaryFrequency, paymentInfo.getStartDate())
+//                :  ComputationUtils.getTaxAmount(paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY), jsonTaxRule);
 
         if (!paymentInfo.isOffCycle()) {
-            payeeTax.put("ANNUAL PAYE TAX", ComputationUtils.getAnnualTaxAmount(chargeableIncome, jsonTaxRule));
+            payeeTax.put("ANNUAL PAYE TAX", ComputationUtils.getAnnualTaxAmount(chargeableIncome, taxInfo));
         }
 
         payeeTax.put(!paymentInfo.isOffCycle() ?  "PAYE" : "Paye Tax on " + getOffCyclePaymentDetails(paymentInfo).getName(), monthlyPayeeTax);
@@ -688,12 +740,13 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
     public PaymentInfo computeNetPay(PaymentInfo paymentInfo) {
         if(paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY) != null) {
 
-            BigDecimal deduction =  paymentInfo.getDeduction().get(MapKeys.TOTAL_DEDUCTION) != null ?
-                    paymentInfo.getDeduction().get(MapKeys.TOTAL_DEDUCTION) : BigDecimal.ZERO;
+//            BigDecimal deduction =  paymentInfo.getDeduction().get(MapKeys.TOTAL_DEDUCTION) != null ?
+//                    paymentInfo.getDeduction().get(MapKeys.TOTAL_DEDUCTION) : BigDecimal.ZERO;
             ExchangeInfo exchangeInfo = paymentInfo.getExchangeInfo();
             BigDecimal exchangeRate = exchangeInfo.getExchangeRate();
-            BigDecimal netPay = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(deduction);
-
+            //TODO validate this very well
+//            BigDecimal netPay = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(deduction);
+            BigDecimal netPay = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(paymentInfo.getDeduction().get(MapKeys.TOTAL_DEDUCTION));
             paymentInfo.setNetPay(
                     roundToTwoDecimalPlaces(
                             netPay.divide(exchangeRate, 2, RoundingMode.CEILING)

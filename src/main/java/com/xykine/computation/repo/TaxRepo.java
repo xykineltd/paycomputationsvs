@@ -8,4 +8,5 @@ public interface TaxRepo extends MongoRepository<Tax,String> {
     @Cacheable(value = "taxRule",  key = "#country")
     @Query(value = "{ 'country': ?0, 'active': true }", fields = "{ 'taxRule': 1, '_id': 0 }")
     String findTaxRuleByCountry(String country);
+    Tax findTaxByCountryAndActiveIsTrue(String country);
 }

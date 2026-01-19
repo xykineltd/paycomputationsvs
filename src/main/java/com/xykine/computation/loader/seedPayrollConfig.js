@@ -30,12 +30,14 @@ db.tax.insertMany([
     {
         country: "NIGERIA",
         taxRule: oldTaxRule,
-        active: true
+        versions: "old",
+        active: false
     },
     {
         country: "NIGERIA",
         taxRule: newTaxRule,
-        active: false
+        versions: "new",
+        active: true
     }
 ]);
 
