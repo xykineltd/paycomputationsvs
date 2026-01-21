@@ -280,7 +280,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         BigDecimal annualVoluntaryPensionContribution = voluntaryPensionContribution.multiply(BigDecimal.valueOf(12));
         BigDecimal customTaxReleifApplicable = getEmployeeMetaData(paymentInfo).getCustomTaxReliefApplicable();
         BigDecimal annualCustomTaxReleifApplicable = customTaxReleifApplicable.multiply(BigDecimal.valueOf(12));
-        BigDecimal rentAllowance = getEmployeeMetaData(paymentInfo).getRentAllaowance();
+        BigDecimal rentAllowance = getEmployeeMetaData(paymentInfo).getRentAllowance();
 
         BigDecimal annualEmployeePensionAtEightPercent = isIntern(paymentInfo) ? BigDecimal.ZERO : ComputationUtils.roundToTwoDecimalPlaces(
                 sessionCalculationObject.getComputationConstants().get("pensionFundPercent")
@@ -622,7 +622,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 .employeeType(EmployeeType.FULL_TIME)
                 .customTaxReliefApplicable(BigDecimal.ZERO)
                 .isPensioned(true)
-                .rentAllaowance(BigDecimal.valueOf(500000L))
+                .rentAllowance(BigDecimal.valueOf(500000L))
                 .build();
         return employeeMetadataService.getByEmployeeId(paymentInfo.getEmployeeID()).orElse(defaultEmployeeMetadata);
     }
