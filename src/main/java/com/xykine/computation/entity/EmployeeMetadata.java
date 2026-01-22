@@ -24,4 +24,5 @@ public class EmployeeMetadata {
     private BigDecimal voluntaryPensionContribution;
     private BigDecimal customTaxReliefApplicable;
     private boolean isPensioned;
+    private BigDecimal rentAllowance = BigDecimal.valueOf(500_000L);
 }

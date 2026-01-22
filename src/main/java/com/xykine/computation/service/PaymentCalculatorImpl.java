@@ -428,7 +428,7 @@ public PaymentInfo computeNonTaxableIncomeExemptForMFBNewTaxLaw(PaymentInfo paym
     BigDecimal annualVoluntaryPensionContribution = voluntaryPensionContribution.multiply(BigDecimal.valueOf(12));
     BigDecimal customTaxReleifApplicable = getEmployeeMetaData(paymentInfo).getCustomTaxReliefApplicable();
     BigDecimal annualCustomTaxReleifApplicable = customTaxReleifApplicable.multiply(BigDecimal.valueOf(12));
-    BigDecimal rentAllowance = new BigDecimal("500000");
+    BigDecimal rentAllowance = getEmployeeMetaData(paymentInfo).getRentAllowance();
 
     BigDecimal annualEmployeePensionAtEightPercent = isIntern(paymentInfo) ? BigDecimal.ZERO : ComputationUtils.roundToTwoDecimalPlaces(
             sessionCalculationObject.getComputationConstants().get("pensionFundPercent")
@@ -866,6 +866,7 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
                 .employeeType(EmployeeType.FULL_TIME)
                 .customTaxReliefApplicable(BigDecimal.ZERO)
                 .isPensioned(true)
+                .rentAllowance(BigDecimal.valueOf(500000L))
                 .build();
         return employeeMetadataService.getByEmployeeId(paymentInfo.getEmployeeID()).orElse(defaultEmployeeMetadata);
     }
