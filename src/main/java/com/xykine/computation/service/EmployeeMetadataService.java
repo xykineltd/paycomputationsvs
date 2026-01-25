@@ -59,6 +59,7 @@ public class EmployeeMetadataService {
             existing.setPensioned(updatedEmployee.isPensioned());
             existing.setCustomTaxReliefApplicable(updatedEmployee.getCustomTaxReliefApplicable());
             existing.setVoluntaryPensionContribution(updatedEmployee.getVoluntaryPensionContribution());
+            existing.setRentAllowance(updatedEmployee.getRentAllowance());
             return employeeMetadataRepo.save(existing);
         });
     }
