@@ -187,6 +187,7 @@ public class PayrollAsyncService {
                         newValuesForEmployee.put("WHT", deduction.get("WHT") != null ? deduction.get("WHT") : BigDecimal.ZERO);
 
                         for (String k : deduction.keySet()) {
+                            k = k.replace(".", "-");
                             newValuesForEmployee.put(k + "-deduction-marker", deduction.get(k) != null ? deduction.get(k) : BigDecimal.ZERO);
                         }
 
