@@ -441,13 +441,14 @@ public PaymentInfo computeNonTaxableIncomeExemptForMFBNewTaxLaw(PaymentInfo paym
     BigDecimal annualVoluntaryPensionContribution = voluntaryPensionContribution.multiply(BigDecimal.valueOf(12));
     BigDecimal customTaxReleifApplicable = getEmployeeMetaData(paymentInfo).getCustomTaxReliefApplicable();
     BigDecimal annualCustomTaxReleifApplicable = customTaxReleifApplicable.multiply(BigDecimal.valueOf(12));
-    BigDecimal rentAllowance = !isIntern(paymentInfo) ? getEmployeeMetaData(paymentInfo).getRentAllowance() : BigDecimal.ZERO ;
+//    BigDecimal rentAllowance = !isIntern(paymentInfo) ? getEmployeeMetaData(paymentInfo).getRentAllowance() : BigDecimal.ZERO ;
+    BigDecimal rentAllowance = getEmployeeMetaData(paymentInfo).getRentAllowance();
 
     BigDecimal annualEmployeePensionAtEightPercent = isIntern(paymentInfo) ? BigDecimal.ZERO : ComputationUtils.roundToTwoDecimalPlaces(
             sessionCalculationObject.getComputationConstants().get("pensionFundPercent")
                     .multiply(annualGrossSalary));
 
-    annualEmployeePensionAtEightPercent = ComputationUtils.roundToTwoDecimalPlaces(annualEmployeePensionAtEightPercent.multiply(BigDecimal.valueOf(0.3292)));
+    annualEmployeePensionAtEightPercent = isIntern(paymentInfo) ? BigDecimal.ZERO : ComputationUtils.roundToTwoDecimalPlaces(annualEmployeePensionAtEightPercent.multiply(BigDecimal.valueOf(0.3292)));
     BigDecimal reliefAllowance = nationalHousingFund
             .add(annualEmployeePensionAtEightPercent)
             .add(annualVoluntaryPensionContribution)
