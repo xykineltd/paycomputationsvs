@@ -229,7 +229,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
         Tax tax = taxRepo.findTaxByCountryAndActiveIsTrue("NIGERIA");
 
-        System.out.println("Tax Version: " + tax);
+        LOGGER.debug("Tax Version: {}", tax);
         String taxVersion = taxRepo.findTaxByCountryAndActiveIsTrue("NIGERIA").getVersion().toString();
 
         paymentInfo = "old".equalsIgnoreCase(taxVersion) ? computeNonTaxableIncomeExemptForMFB(paymentInfo, nationalHousingFund) : computeNonTaxableIncomeExemptForMFBNewTaxLaw(paymentInfo, nationalHousingFund);
@@ -448,7 +448,7 @@ public PaymentInfo computeNonTaxableIncomeExemptForMFBNewTaxLaw(PaymentInfo paym
             sessionCalculationObject.getComputationConstants().get("pensionFundPercent")
                     .multiply(annualGrossSalary));
 
-    annualEmployeePensionAtEightPercent = isIntern(paymentInfo) ? BigDecimal.ZERO : ComputationUtils.roundToTwoDecimalPlaces(annualEmployeePensionAtEightPercent.multiply(BigDecimal.valueOf(0.3292)));
+    annualEmployeePensionAtEightPercent = isIntern(paymentInfo) || !isPensionable(paymentInfo) ? BigDecimal.ZERO : ComputationUtils.roundToTwoDecimalPlaces(annualEmployeePensionAtEightPercent.multiply(BigDecimal.valueOf(0.3292)));
     BigDecimal reliefAllowance = nationalHousingFund
             .add(annualEmployeePensionAtEightPercent)
             .add(annualVoluntaryPensionContribution)
@@ -658,6 +658,12 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
         return Optional.ofNullable(getEmployeeMetaData(paymentInfo))
                 .map(EmployeeMetadata::getEmployeeType)
                 .orElse(EmployeeType.FULL_TIME) == EmployeeType.INTERN ;
+    }
+
+    private boolean isPensionable(PaymentInfo paymentInfo) {
+        return Optional.ofNullable(getEmployeeMetaData(paymentInfo))
+                .map(EmployeeMetadata::isPensioned)
+                .orElse(true);
     }
 
     @Override
