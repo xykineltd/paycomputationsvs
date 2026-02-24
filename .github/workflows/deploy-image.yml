@@ -99,5 +99,6 @@ jobs:
           -Ddocker.publishRegistry.password=${DOCKER_PASSWORD} \
           -Ddocker.publishRegistry.url=docker.io \
           -Dspring-boot.build-image.publish=true \
-          -Dspring-boot.build-image.imageName=kacytunde/paycomputation-service:${IMAGE_VERSION}\
-          -Dspring-boot.build-image.environment.JAVA_TOOL_OPTIONS="-Djava.awt.headless=true"
+          -Dspring-boot.build-image.environment.JAVA_TOOL_OPTIONS="-Djava.awt.headless=true"\
+          -Dspring-boot.build-image.imageName=kacytunde/paycomputation-service:${IMAGE_VERSION}
+          
