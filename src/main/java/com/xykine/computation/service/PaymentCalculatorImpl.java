@@ -440,7 +440,8 @@ public PaymentInfo computeNonTaxableIncomeExemptForMFBNewTaxLaw(PaymentInfo paym
     BigDecimal annualNationalHousingFund = nationalHousingFund;
     BigDecimal annualVoluntaryPensionContribution = voluntaryPensionContribution.multiply(BigDecimal.valueOf(12));
     BigDecimal customTaxReleifApplicable = getEmployeeMetaData(paymentInfo).getCustomTaxReliefApplicable();
-    BigDecimal annualCustomTaxReleifApplicable = customTaxReleifApplicable.multiply(BigDecimal.valueOf(12));
+//    BigDecimal annualCustomTaxReleifApplicable = customTaxReleifApplicable.multiply(BigDecimal.valueOf(12));
+    BigDecimal annualCustomTaxReleifApplicable = customTaxReleifApplicable;
 //    BigDecimal rentAllowance = !isIntern(paymentInfo) ? getEmployeeMetaData(paymentInfo).getRentAllowance() : BigDecimal.ZERO ;
     BigDecimal rentAllowance = getEmployeeMetaData(paymentInfo).getRentAllowance();
 
