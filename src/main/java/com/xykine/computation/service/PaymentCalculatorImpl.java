@@ -262,9 +262,9 @@ public PaymentInfo computeNonTaxableIncomeExemptForMFB(PaymentInfo paymentInfo, 
 
 
     if(nationalHousingFund.compareTo(BigDecimal.ZERO) != 0){
-        LOGGER.info("annualConsolidatedAllowance {}", annualConsolidatedAllowance);
-        LOGGER.info("annualEmployeePensionAtEightPercent {}", annualEmployeePensionAtEightPercent);
-        LOGGER.info("annualVoluntaryPensionContribution {}", annualVoluntaryPensionContribution);
+        LOGGER.debug("annualConsolidatedAllowance {}", annualConsolidatedAllowance);
+        LOGGER.debug("annualEmployeePensionAtEightPercent {}", annualEmployeePensionAtEightPercent);
+        LOGGER.debug("annualVoluntaryPensionContribution {}", annualVoluntaryPensionContribution);
     }
 
     BigDecimal chargeableIncome = annualGrossSalary.subtract(reliefAllowance);

@@ -287,7 +287,7 @@ public abstract class AbstractIntegrationTest {
 
     ReportResponse getReportById(String reportId) {
         // @GetMapping("/{companyId}/")
-        String URL_PREFIX = "http://localhost:" + port + "/compute/reports/by-reportId/"+ reportId;
+        String URL_PREFIX = "http://localhost:" + port + "/compute/reports/by-reportId";
         String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX)
                 .toUriString();
         RetrieveSummaryElementRequest retrieveSummaryElementRequest = new RetrieveSummaryElementRequest();
@@ -354,7 +354,8 @@ public abstract class AbstractIntegrationTest {
         // @PutMapping("/approve")
         String URL_PREFIX = "http://localhost:" + port + "/compute/reports/";
 
-        UpdateReportRequest updateReportRequest = new UpdateReportRequest();
+        UpdateReportRequest updateReportRequest = UpdateReportRequest.builder()
+                .build();
         updateReportRequest.setStartDate(LocalDate.now().toString());
         updateReportRequest.setCompanyId(TEST_COMPANY_ID);
         updateReportRequest.setPayrollStatus(PayrollStatus.APPROVED);
@@ -374,7 +375,7 @@ public abstract class AbstractIntegrationTest {
         // @PutMapping("/cancel")
         String URL_PREFIX = "http://localhost:" + port + "/compute/reports/";
 
-        UpdateReportRequest updateReportRequest = new UpdateReportRequest();
+        UpdateReportRequest updateReportRequest = UpdateReportRequest.builder().build();
         updateReportRequest.setStartDate(LocalDate.now().toString());
         updateReportRequest.setCompanyId(TEST_COMPANY_ID);
         updateReportRequest.setPayrollStatus(PayrollStatus.APPROVED);

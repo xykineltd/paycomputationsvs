@@ -349,4 +349,7 @@ public class Report {
         Map<String, Map<String, BigDecimal>> response = reportPersistenceService.getSummaryVarianceDetails(request.getReportId(), request.getEmployeeIds());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+
 }
+
+

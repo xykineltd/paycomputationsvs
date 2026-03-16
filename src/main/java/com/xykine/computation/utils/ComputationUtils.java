@@ -337,9 +337,8 @@ public class ComputationUtils {
     }
 
     public static boolean isValid(PaymentSettingsResponse response, List<PaymentSettingMetaData> settingsMetadata, LocalDate startDate) {
-        if (doPrecheck(response, settingsMetadata)) {
-            return true;
-        }
+        if (doPrecheck(response, settingsMetadata)) return true;
+
         return settingsMetadata
                 .stream()
                 .filter(x -> x.getPaymentName().equalsIgnoreCase(response.getName()))
@@ -347,9 +346,8 @@ public class ComputationUtils {
     }
 
     public static boolean isProrated(PaymentSettingsResponse response, List<PaymentSettingMetaData> settingsMetadata) {
-        if (doPrecheck(response, settingsMetadata)) {
-            return true;
-        }
+        if (doPrecheck(response, settingsMetadata)) return true;
+
         return !settingsMetadata
                 .stream()
                 .filter(x -> x.getPaymentName().equalsIgnoreCase(response.getName()) &&  x.getProrated())
@@ -359,15 +357,11 @@ public class ComputationUtils {
     }
 
     public static boolean isTaxable(PaymentSettingsResponse response, List<PaymentSettingMetaData> settingsMetadata) {
-        if (doPrecheck(response, settingsMetadata)) {
-            return true;
-        }
+        if (doPrecheck(response, settingsMetadata)) return true;
+
         var settings = settingsMetadata
                 .stream()
-                .filter(x ->
-                        x.getPaymentName().equalsIgnoreCase(response.getName()) &&
-                        x.getTaxable()
-                )
+                .filter(x -> x.getPaymentName().equalsIgnoreCase(response.getName()) && x.getTaxable())
                 .findAny();
 
         return !settings.isEmpty();

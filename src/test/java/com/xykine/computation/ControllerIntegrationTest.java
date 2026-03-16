@@ -10,6 +10,7 @@ import com.xykine.computation.repo.LoanRepo;
 import com.xykine.computation.repo.YTDReportRepo;
 import com.xykine.computation.request.UpdateReportRequest;
 import com.xykine.computation.response.DashboardCardResponse;
+import com.xykine.computation.response.PaginatedSelectedEmployeeField;
 import com.xykine.computation.response.ReportResponse;
 
 import com.xykine.computation.testdata.TestDataFactory;
@@ -210,7 +211,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         assertThat(loanOptional.get()).isNotNull();
         assertThat(loanOptional.get().getOutstandingAmount()).isEqualTo(BigDecimal.valueOf(1000000));
 
-        UpdateReportRequest updateReportRequest = new UpdateReportRequest();
+        UpdateReportRequest updateReportRequest = UpdateReportRequest.builder().build();
         updateReportRequest.setPayrollStatus(PayrollStatus.APPROVED);
         updateReportRequest.setCompanyId(companyId);
         updateReportRequest.setStartDate(startDate);
@@ -223,7 +224,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         loanOptional = loanRepo.findOneByCompanyIdAndEmployeeIdAndDescriptionAndActiveIsTrue(companyId, employeeId, loanDescription);
         assertThat(loanOptional.get().getOutstandingAmount()).isEqualTo(BigDecimal.valueOf(1000000).subtract(BigDecimal.valueOf(10000)));
 
-        when(adminService.getEmployeeIdListForFilter(any(), anyString())).thenReturn(List.of(employeeId));
+        when(adminService.getEmployeeIdListForFilter(any(), anyString())).thenReturn((PaginatedSelectedEmployeeField) List.of(employeeId));
         Map<String, Object> response = geReportByFilter(summaryId);
         assertThat(response).isNotNull().satisfies((x) -> {
             assertThat(x.get("totalItems")).isEqualTo(1);
@@ -529,7 +530,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         Map<String, String> startJobResponse = startReportSummary("2025-05-01", "2025-05-30", false);
         Thread.sleep(1000);
 
-        UpdateReportRequest updateReportRequest = new UpdateReportRequest();
+        UpdateReportRequest updateReportRequest = UpdateReportRequest.builder().build();
         updateReportRequest.setPayrollStatus(PayrollStatus.COMPLETED);
         updateReportRequest.setCompanyId("682cf69492b07e60fa109911");
         updateReportRequest.setStartDate("2025-05-01");
@@ -564,7 +565,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
             reportId = jobStatus.getReportId();
         }
 
-        updateReportRequest = new UpdateReportRequest();
+        updateReportRequest = UpdateReportRequest.builder().build();
         updateReportRequest.setPayrollStatus(PayrollStatus.COMPLETED);
         updateReportRequest.setCompanyId("682cf69492b07e60fa109911");
         updateReportRequest.setStartDate("2025-06-01");
@@ -581,7 +582,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
             assertThat(x.get("Taxable Income").compareTo(BigDecimal.valueOf(150000)));
         });
 
-        when(adminService.getEmployeeIdListForFilter(any(), anyString())).thenReturn(List.of("8e3b6e4952e8468a84fd84556f8fdf2a"));
+        when(adminService.getEmployeeIdListForFilter(any(), anyString())).thenReturn((PaginatedSelectedEmployeeField) List.of("8e3b6e4952e8468a84fd84556f8fdf2a"));
         Map<String, Object> summaryDetails = getVarianceDetails(reportId, "Total Gross Pay");
         assertThat(summaryDetails)
                 .isNotNull()
