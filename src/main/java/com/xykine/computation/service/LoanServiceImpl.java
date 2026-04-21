@@ -77,6 +77,8 @@ public class LoanServiceImpl implements LoanService {
             criteria = criteria.and("startDate").lte(startDate).and("endDate").gte(startDate);
         }
 
+        criteria.and("active").is(true);
+
         Query query = new Query(criteria).with(pageable);
 
         List<Loan> loans = mongoTemplate.find(query, Loan.class);

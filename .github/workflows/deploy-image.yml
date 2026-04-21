@@ -98,12 +98,10 @@ jobs:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
           IMAGE_VERSION: ${{ env.image_version }}
-
-          # Buildpack env vars:
-          BP_APT_PACKAGES: "fontconfig fonts-dejavu-core"
           JAVA_TOOL_OPTIONS: "-Djava.awt.headless=true"
         run: |
           mvn -Dmaven.test.skip spring-boot:build-image \
+            -Dspring-boot.build-image.builder=paketobuildpacks/builder-jammy-full \
             -Ddocker.publishRegistry.username=${DOCKER_USERNAME} \
             -Ddocker.publishRegistry.password=${DOCKER_PASSWORD} \
             -Ddocker.publishRegistry.url=docker.io \

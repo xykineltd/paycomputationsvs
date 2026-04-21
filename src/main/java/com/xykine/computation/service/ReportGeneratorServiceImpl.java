@@ -186,6 +186,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         }
         AtomicBoolean isDetail = new AtomicBoolean(false);
         int i = 0;
+
         // Transform, filter, and map into data rows
         List<Map<String, Object>> dataRows = source.stream()
                 .filter(Objects::nonNull)
@@ -199,7 +200,8 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                         throw new IllegalArgumentException("Unsupported type: " + obj.getClass());
                     }
                 })
-                .filter(detail -> filterByDates(detail, reportRequestPayload))
+                // Allow all details entry in the downloaded reports
+//                .filter(detail -> filterByDates(detail, reportRequestPayload))
                 .map(detail -> extractDetail(
                         detail.getDetail().getReport(),
                         reportRequestPayload.getHeaders(),
@@ -598,106 +600,6 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         }
     }
 
-//    private byte[] generateExcel(List<String> headers, List<Map<String, Object>> dataRows, String fileName) throws IOException {
-//        try (XSSFWorkbook workbook = new XSSFWorkbook();
-//             ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-//
-//            XSSFSheet sheet = workbook.createSheet("Report");
-//
-//            // === Colors (ARGB). ===
-//            final String HEADER_BLUE  = "FF1F4E79";  // dark blue; white text recommended
-//
-//            // --- Styles ---
-//            // Header (blue) style
-//            XSSFCellStyle headerStyle = workbook.createCellStyle();
-//            XSSFFont headerFont = workbook.createFont();
-//            headerFont.setBold(true);
-//            headerFont.setColor(IndexedColors.WHITE.getIndex());
-//            headerStyle.setFont(headerFont);
-//            headerStyle.setAlignment(HorizontalAlignment.CENTER);
-//            headerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
-//            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-//            headerStyle.setFillForegroundColor(argb(workbook, HEADER_BLUE));
-//            headerStyle.setBorderBottom(BorderStyle.THIN);
-//            headerStyle.setBorderTop(BorderStyle.THIN);
-//            headerStyle.setBorderLeft(BorderStyle.THIN);
-//            headerStyle.setBorderRight(BorderStyle.THIN);
-//
-//            // --- Row 0 left empty ---
-//            sheet.createRow(0);
-//
-//            // --- Row 1: Headers (all blue) ---
-//            Row headerRow = sheet.createRow(1);
-//            for (int i = 0; i < headers.size(); i++) {
-//                Cell c = headerRow.createCell(i);
-//                c.setCellValue(headers.get(i));
-//                c.setCellStyle(headerStyle);
-//            }
-//
-//            // Number style
-//            XSSFCellStyle numberStyle = workbook.createCellStyle();
-//            XSSFDataFormat format = workbook.createDataFormat();
-//            numberStyle.setDataFormat(format.getFormat("#,##0.00"));
-//
-//            // Currency style ₦
-//            XSSFCellStyle currencyStyle = workbook.createCellStyle();
-//            currencyStyle.cloneStyleFrom(numberStyle);
-////            currencyStyle.setDataFormat(format.getFormat("₦#,##0.00"));
-//
-//            // 🔹 Build runtime currency set = base + dynamic headers
-//            Set<String> currencyColumns = new HashSet<>(BASE_CURRENCY_COLUMNS);
-//
-//            // Any header that is not a pure text column and is not already in base,
-//            // we treat as currency (this will include all dynamic components like PHONE ALLOWANCE)
-//            for (String h : headers) {
-//                if (!TEXT_COLUMNS.contains(h)) {
-//                    currencyColumns.add(h);
-//                }
-//            }
-//
-//            // --- Rows 2+: Data ---
-//            for (int i = 0; i < dataRows.size(); i++) {
-//                Row row = sheet.createRow(i + 2); // shifted up by 1
-//                Map<String, Object> rowData = dataRows.get(i);
-//
-//                for (int j = 0; j < headers.size(); j++) {
-//                    String headerName = headers.get(j);
-//                    Object value = rowData.get(headerName);
-//                    Cell cell = row.createCell(j);
-//
-//                    if (value instanceof Number number) {
-//                        cell.setCellValue(number.doubleValue());
-//
-//                        // Use dynamic currencyColumns instead of static set
-//                        if (currencyColumns.contains(headerName)) {
-//                            cell.setCellStyle(currencyStyle);
-//                        } else {
-//                            cell.setCellStyle(numberStyle);
-//                        }
-//                    } else if (value != null) {
-//                        cell.setCellValue(value.toString());
-//                    } else {
-//                        cell.setBlank();
-//                    }
-//                }
-//            }
-//
-//            // Autosize + minimum width
-//            for (int i = 0; i < headers.size(); i++) {
-//                sheet.autoSizeColumn(i);
-//                int currentWidth = sheet.getColumnWidth(i);
-//                int minWidth = 22 * 256; // ~22 chars
-//                if (currentWidth < minWidth) sheet.setColumnWidth(i, minWidth);
-//            }
-//
-//            // Freeze top 2 rows (empty row 0 + header row 1)
-//            sheet.createFreezePane(0, 2);
-//
-//            workbook.write(outputStream);
-//            return outputStream.toByteArray();
-//        }
-//    }
-
     private Map<String, Object> swapKey(Map<String, Object> result) {
         // Preserve insertion order so header building sees a stable order
         Map<String, Object> renamed = new LinkedHashMap<>();
@@ -747,48 +649,6 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         }
         return renamed;
     }
-
-
-//    private Map<String, Object> swapKey(Map<String, Object> result) {
-//        Map<String, Object> renamed = new HashMap<>();
-//        for (Map.Entry<String, Object> entry : result.entrySet()) {
-//            String key = entry.getKey();
-//            Object value = entry.getValue();
-//            String newKey;
-//
-//            switch (key) {
-//                case "Gross Pay": newKey = "GROSS PAY"; break;
-//                case "Basic Salary": newKey = "BASIC SALARY"; break;
-//                case "GROSS SALARY": newKey = "GROSS SALARY"; break;
-//                case "Housing": newKey = "HOUSING"; break;
-//                case "Transport": newKey = "TRANSPORT"; break;
-//                case "Utility": newKey = "UTILITY"; break;
-//                case "Entertainment": newKey = "ENTERTAINMENT"; break;
-//                case "Medical": newKey = "MEDICAL"; break;
-//                case "Personal Outfit": newKey = "PERSONAL OUTFIT"; break;
-//                case "Leave": newKey = "LEAVE"; break;
-//                case "Training": newKey = "TRAINING"; break;
-//                case "Monthly Performance Bonus": newKey = "PERFORMANCE BONUS"; break;
-//                case "overtime": newKey = "OVERTIME"; break;
-//                case "other variable": newKey = "OTHER VARIABLE"; break;
-//                case "other allowance": newKey = "OTHER ALLOWANCE"; break;
-//                case "other wage types": newKey = "OTHER WAGE TYPES"; break;
-//                case "CHARGEABLE INCOME": newKey = "TAXABLE INCOME"; break;
-//                case "Loan":
-//                case "Loan.": newKey = "LOAN DEDUCTION"; break;
-//                case "other deduction": newKey = "OTHER DEDUCTION"; break;
-//                case "PAYE": newKey = "PAYE"; break;
-//                case "National Housing Fund": newKey = "NHF"; break;
-//                case "Employee Pension Contribution": newKey = "EMPLOYEE PENSION"; break;
-//                case "Voluntary Pension Contribution": newKey = "VOLUNTARY PENSION CONTRIBUTION"; break;
-//                case "Employer Pension Contribution": newKey = "EMPLOYER PENSION"; break;
-//                case "Net Pay": newKey = "NETPAY"; break;
-//                default: newKey = key;
-//            }
-//            renamed.put(newKey, value);
-//        }
-//        return renamed;
-//    }
 
     private static XSSFColor argb(XSSFWorkbook wb, String argbHex) {
         String s = argbHex.startsWith("#") ? argbHex.substring(1) : argbHex;
