@@ -158,8 +158,9 @@ public class ComputeService {
                     }
 
                     if (setting.getName().equalsIgnoreCase("Performance Bonus")) {
-                        BigDecimal performanceBonus = ComputationUtils.prorate(mainCopy.getBasicSalary().multiply(setting.getValue().divide(BigDecimal.valueOf(100))),
-                                numberOfUnpaidAbsence, PaymentFrequencyEnum.MONTHLY, paymentInfo.getStartDate());
+//                        BigDecimal performanceBonus = ComputationUtils.prorate(mainCopy.getBasicSalary().multiply(setting.getValue().divide(BigDecimal.valueOf(100))),
+//                                numberOfUnpaidAbsence, PaymentFrequencyEnum.MONTHLY, paymentInfo.getStartDate());
+                        BigDecimal performanceBonus = setting.getValue();
 
                         setting.setValue(performanceBonus);
                     } else {
