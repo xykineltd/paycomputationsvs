@@ -29,6 +29,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
@@ -78,7 +79,7 @@ public class ComputeService {
 
         futures.addAll(
                 chunks.stream()
-                        .map(chunk -> splitOutOffCycles(chunk))
+                       .map(chunk -> addPaymentSettings(chunk))
                         .map(finalChunk -> CompletableFuture.supplyAsync(() -> processReport(finalChunk)))
                         .toList()
         );
@@ -95,12 +96,12 @@ public class ComputeService {
 
     private List<PaymentInfo> processReport(List<PaymentInfo> job){
         var payInfos =  job.stream()
+                .map(paymentCalculator::expandPaymentSettingsFromGrossAnnual)
                 .map(paymentCalculator::applyExchange)
                 .map(paymentCalculator::harmoniseToAnnual)
                 .map(paymentCalculator::addPersonalDeduction)
                 .map(paymentCalculator::computeGrossPay)
                 .map(paymentCalculator::computeNonTaxableIncomeExempt)
-                .map(paymentCalculator::prorateEarnings)
                 .map(paymentCalculator::computePayeeTax)
                 .map(paymentCalculator::computeTotalDeduction)
                 .map(paymentCalculator::computeNetPay)
@@ -109,76 +110,26 @@ public class ComputeService {
         return  payInfos;
     }
 
-    private List<PaymentInfo> splitOutOffCycles(List<PaymentInfo> rawInfo) {
-        return rawInfo.stream()
-                .map(paymentCalculator::expandPaymentSettingsFromGrossAnnual)
-                .map(this::splitOffCyclePayments)
-                .flatMap(List::stream)
-                .toList();
-    }
-
-    public List<PaymentInfo> splitOffCyclePayments(PaymentInfo paymentInfo) {
-
-        List<PaymentSettingMetaData> settingsMetadata = paymentSettingMetadataRepo.findByEmployeeId(paymentInfo.getEmployeeID());
-
-        if (paymentInfo.isOffCycle() || paymentInfo.getPaymentSettings() == null) {
-            return List.of(paymentInfo);
+    private List<PaymentInfo> addPaymentSettings(List<PaymentInfo> rawInfo) {
+        for (PaymentInfo paymentInfo : rawInfo) {
+            List<PaymentSettingsResponse> settingsMetadata = paymentSettingMetadataRepo.findByEmployeeId(paymentInfo.getEmployeeID())
+                    .stream()
+                    .filter(Objects::nonNull)
+                    .filter(setting -> !setting.getStartDate().isAfter(LocalDate.parse(paymentInfo.getStartDate())) && !setting.getEndDate().isBefore(LocalDate.parse(paymentInfo.getStartDate())))
+                    .map(entry -> {
+                        return PaymentSettingsResponse.builder()
+                                .active(true)
+                                .employeeID(paymentInfo.getEmployeeID())
+                                .type(PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT)
+                                .salaryFrequency(PaymentFrequencyEnum.MONTHLY)
+                                .value(entry.getPaymentAmount())
+                                .name(entry.getPaymentName())
+                                .build();
+                    })
+                    .collect(Collectors.toList());
+            paymentInfo.getPaymentSettings().addAll(settingsMetadata);
         }
-
-        // Extract off-cycle settings
-        Set<PaymentSettingsResponse> offCycleSettings = paymentInfo.getPaymentSettings().stream()
-                .filter(setting -> setting.getType() == PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT)
-                .filter(setting -> isValid(setting, settingsMetadata, LocalDate.parse(paymentInfo.getStartDate())))
-                .collect(Collectors.toSet());
-
-        // ✅ If no off-cycle payments, just return the original as-is
-        if (offCycleSettings.isEmpty()) {
-            return List.of(paymentInfo);
-        }
-
-        // Extract regular settings
-        Set<PaymentSettingsResponse> regularSettings = paymentInfo.getPaymentSettings().stream()
-                .filter(setting -> setting.getType() != PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT)
-                .collect(Collectors.toSet());
-
-
-        // --- Original copy with off-cycle removed ---
-        PaymentInfo mainCopy = copyPaymentInfo(paymentInfo);
-        mainCopy.setPaymentSettings(regularSettings);
-        mainCopy.setOffCycle(false);
-
-        // --- New PaymentInfos for each off-cycle entry ---
-        List<PaymentInfo> offCycleCopies = offCycleSettings.stream()
-                .map(setting -> {
-
-                    int numberOfUnpaidAbsence = mainCopy.getNumberOfDaysOfUnpaidAbsence();
-
-                    if (!isProrated(setting, settingsMetadata)) {
-                        numberOfUnpaidAbsence = 0;
-                    }
-
-                    if (setting.getName().equalsIgnoreCase("Performance Bonus")) {
-//                        BigDecimal performanceBonus = ComputationUtils.prorate(mainCopy.getBasicSalary().multiply(setting.getValue().divide(BigDecimal.valueOf(100))),
-//                                numberOfUnpaidAbsence, PaymentFrequencyEnum.MONTHLY, paymentInfo.getStartDate());
-                        BigDecimal performanceBonus = setting.getValue();
-
-                        setting.setValue(performanceBonus);
-                    } else {
-                        setting.setValue(ComputationUtils.prorate(setting.getValue(), numberOfUnpaidAbsence, PaymentFrequencyEnum.YEARLY, paymentInfo.getStartDate()));
-                    }
-                    PaymentInfo offCycleCopy = copyPaymentInfo(paymentInfo);
-                    offCycleCopy.setPaymentSettings(Set.of(setting));
-                    offCycleCopy.setOffCycle(true);
-
-                    return offCycleCopy;
-                })
-                .toList();
-
-        // Combine original + new copies
-        List<PaymentInfo> result = new ArrayList<>();
-        result.add(mainCopy);
-        result.addAll(offCycleCopies);
-        return result;
+        return rawInfo;
     }
 
     public void validatePayrollIsNotCompleted (String startDate, String companyId) {
@@ -196,6 +147,7 @@ public class ComputeService {
     }
 
     public void ensurePayrollConfiguration(String companyId) {
+        System.out.println(" incomming company id: " + companyId);
         CompanyMetadata companyMetadata = companyMetaDataRepo.findByCompanyId(companyId).orElseThrow(() ->
                 new IncompleteEntitySetupException("Please update your payroll configuration in the Payroll Configuration page to continue."));
 
