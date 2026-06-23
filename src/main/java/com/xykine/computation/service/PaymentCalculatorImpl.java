@@ -261,7 +261,7 @@ public PaymentInfo computeNonTaxableIncomeExemptForMFBNewTaxLaw(PaymentInfo paym
             .add(customTaxReliefApplicable);
 
     BigDecimal chargeableIncome = annualGrossSalary.subtract(reliefAllowance);
-    BigDecimal callAllowance = paymentInfo.getGrossPay().getOrDefault("CALL ALLOWANCE", BigDecimal.ZERO);
+    BigDecimal callAllowance = paymentInfo.getGrossPay().getOrDefault("CALL/DATA ALLOWANCE", BigDecimal.ZERO);
     BigDecimal monthlyChargeable = chargeableIncome.divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP).subtract(callAllowance);
 
     nonTaxableIncomeExemptMap.put("ANNUAL EMPLOYEE PENSION @ 8%", annualEmployeePensionAtEightPercent);

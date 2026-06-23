@@ -17,9 +17,9 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 //@Component
-//@Profile({"dev"})
+//Profile({"dev"})
 @AllArgsConstructor
-public class LoadComputationConfig {
+public class LoadComputationConfig{
 
     private final TaxRepo taxRepo;
 	private final PensionFundRepo pensionFundRepo;
@@ -30,7 +30,7 @@ public class LoadComputationConfig {
     private final LoanRepo loanRepo;
     private final PaymentSettingMetadataRepo paymentSettingMetadataRepo;
 
-    @EventListener(ApplicationReadyEvent.class)
+   @EventListener(ApplicationReadyEvent.class)
     public void loadLegalEntityTestData() {
         String oldTaxRule = """
     [
@@ -215,6 +215,18 @@ public class LoadComputationConfig {
                 .isPensioned(true)
                 .build();
 
+       EmployeeMetadata omolereBabatunder = EmployeeMetadata.builder()
+               .employeeId("7654322")
+               .companyId("2234567")
+               .employeeType(EmployeeType.FULL_TIME)
+               .isNHFSubscribed(false)
+               .customTaxReliefApplicable(BigDecimal.ZERO)
+               .voluntaryPensionContribution(BigDecimal.valueOf(1000000L))
+               .rentAllowance(BigDecimal.ZERO)
+               .isPensioned(true)
+               .build();
+
+       employeeMetaDataRepo.save(omolereBabatunder);
         employeeMetaDataRepo.save(gbagi);
         employeeMetaDataRepo.save(intern);
         employeeMetaDataRepo.save(standardNotPensioned);
@@ -308,9 +320,10 @@ public class LoadComputationConfig {
                 .companyId("1234567")
                 .employeeId("7654321")
                 .paymentType("ALLOWANCE")
-                .paymentName("Call Allowance")
-                .startDate(LocalDate.parse("2025-01-01"))
-                .endDate(LocalDate.parse("2025-07-31"))
+                .paymentName("CALL/DATA ALLOWANCE")
+                .paymentAmount(BigDecimal.ZERO)
+                .startDate(LocalDate.parse("2026-01-01"))
+                .endDate(LocalDate.parse("2027-07-31"))
                 .prorated(false)
                 .taxable(true)
                 .build();
@@ -321,8 +334,9 @@ public class LoadComputationConfig {
                 .employeeId("7654321")
                 .paymentType("ALLOWANCE")
                 .paymentName("OVERTIME GROSS")
-                .startDate(LocalDate.parse("2025-01-01"))
-                .endDate(LocalDate.parse("2025-07-31"))
+                .paymentAmount(BigDecimal.ZERO)
+                .startDate(LocalDate.parse("2026-01-01"))
+                .endDate(LocalDate.parse("2027-07-31"))
                 .prorated(false)
                 .taxable(true)
                 .build();

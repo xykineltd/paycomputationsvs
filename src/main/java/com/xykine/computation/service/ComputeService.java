@@ -79,7 +79,7 @@ public class ComputeService {
 
         futures.addAll(
                 chunks.stream()
-                       .map(chunk -> addPaymentSettings(chunk))
+                       .map(chunk -> addAdditionalPaymentsIfApplicable(chunk))
                         .map(finalChunk -> CompletableFuture.supplyAsync(() -> processReport(finalChunk)))
                         .toList()
         );
@@ -110,24 +110,37 @@ public class ComputeService {
         return  payInfos;
     }
 
-    private List<PaymentInfo> addPaymentSettings(List<PaymentInfo> rawInfo) {
+    private List<PaymentInfo> addAdditionalPaymentsIfApplicable(List<PaymentInfo> rawInfo) {
         for (PaymentInfo paymentInfo : rawInfo) {
-            List<PaymentSettingsResponse> settingsMetadata = paymentSettingMetadataRepo.findByEmployeeId(paymentInfo.getEmployeeID())
-                    .stream()
-                    .filter(Objects::nonNull)
-                    .filter(setting -> !setting.getStartDate().isAfter(LocalDate.parse(paymentInfo.getStartDate())) && !setting.getEndDate().isBefore(LocalDate.parse(paymentInfo.getStartDate())))
-                    .map(entry -> {
-                        return PaymentSettingsResponse.builder()
-                                .active(true)
-                                .employeeID(paymentInfo.getEmployeeID())
-                                .type(PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT)
-                                .salaryFrequency(PaymentFrequencyEnum.MONTHLY)
-                                .value(entry.getPaymentAmount())
-                                .name(entry.getPaymentName())
-                                .build();
-                    })
-                    .collect(Collectors.toList());
-            paymentInfo.getPaymentSettings().addAll(settingsMetadata);
+
+            List<PaymentSettingsResponse> additionalSettings =
+                    paymentSettingMetadataRepo.findByEmployeeId(paymentInfo.getEmployeeID())
+                            .stream()
+                            .filter(Objects::nonNull)
+                            .filter(setting ->
+                                    !setting.getStartDate().isAfter(LocalDate.parse(paymentInfo.getStartDate())) &&
+                                            !setting.getEndDate().isBefore(LocalDate.parse(paymentInfo.getStartDate())))
+                            .filter(setting ->
+                                    setting.getPaymentAmount() != null
+                            //                && setting.getPaymentAmount().signum() > 0
+                            )
+                            .map(setting -> {
+                                // Override existing setting with same name
+                                paymentInfo.getPaymentSettings().removeIf(existing ->
+                                        existing.getName().equalsIgnoreCase(setting.getPaymentName()));
+
+                                return PaymentSettingsResponse.builder()
+                                        .active(true)
+                                        .employeeID(paymentInfo.getEmployeeID())
+                                        .type(PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT)
+                                        .salaryFrequency(PaymentFrequencyEnum.MONTHLY)
+                                        .value(setting.getPaymentAmount())
+                                        .name(setting.getPaymentName())
+                                        .build();
+                            })
+                            .collect(Collectors.toList());
+
+            paymentInfo.getPaymentSettings().addAll(additionalSettings);
         }
         return rawInfo;
     }
