@@ -16,22 +16,28 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-//@Component
+@Component
 //Profile({"dev"})
 @AllArgsConstructor
 public class LoadComputationConfig{
 
-    private final TaxRepo taxRepo;
-	private final PensionFundRepo pensionFundRepo;
-	private final ComputationConstantsRepo computationConstantsRepo;
-	private final DashboardCardRepo dashboardCardRepo;
-    private final EmployeeMetadataRepo employeeMetaDataRepo;
-    private final CompanyMetaDataRepo companyMetadataRepo;
-    private final LoanRepo loanRepo;
+//    private final TaxRepo taxRepo;
+//	private final PensionFundRepo pensionFundRepo;
+//	private final ComputationConstantsRepo computationConstantsRepo;
+//	private final DashboardCardRepo dashboardCardRepo;
+//    private final EmployeeMetadataRepo employeeMetaDataRepo;
+//    private final CompanyMetaDataRepo companyMetadataRepo;
+//    private final LoanRepo loanRepo;
     private final PaymentSettingMetadataRepo paymentSettingMetadataRepo;
+
+
 
    @EventListener(ApplicationReadyEvent.class)
     public void loadLegalEntityTestData() {
+
+       //TODO remove
+       paymentSettingMetadataRepo.deleteAll();
+
         String oldTaxRule = """
     [
       {"limit": 300000, "rate": 7},
@@ -66,10 +72,10 @@ public class LoadComputationConfig{
                 .active(true)
                 .build();
 
-        taxRepo.deleteAll();
-
-        taxRepo.save(nigeriaOldTaxRule);
-        taxRepo.save(nigeriaNewTaxRule);
+//        taxRepo.deleteAll();
+//
+//        taxRepo.save(nigeriaOldTaxRule);
+//        taxRepo.save(nigeriaNewTaxRule);
 
         ComputationConstants pensionFundPercent = ComputationConstants.builder()
                 .id("pensionFundPercent")
@@ -108,16 +114,16 @@ public class LoadComputationConfig{
                 .build();
 
         //Delete everything so that we dont keep adding duplicate data every time we restart
-        computationConstantsRepo.deleteAll();
-
-        //Recreate
-        computationConstantsRepo.save(pensionFundPercent);
-        computationConstantsRepo.save(nationalHousingFund);
-        computationConstantsRepo.save(craFraction);
-        computationConstantsRepo.save(craCutOff);
-        computationConstantsRepo.save(variableCRAFraction);
-        computationConstantsRepo.save(employerPensionContributionPercent);
-        computationConstantsRepo.save(withHoldingTax);
+//        computationConstantsRepo.deleteAll();
+//
+//        //Recreate
+//        computationConstantsRepo.save(pensionFundPercent);
+//        computationConstantsRepo.save(nationalHousingFund);
+//        computationConstantsRepo.save(craFraction);
+//        computationConstantsRepo.save(craCutOff);
+//        computationConstantsRepo.save(variableCRAFraction);
+//        computationConstantsRepo.save(employerPensionContributionPercent);
+//        computationConstantsRepo.save(withHoldingTax);
 
         DashboardCard dashboardCard = DashboardCard.builder()
                 .id(UUID.randomUUID().toString())
@@ -127,9 +133,9 @@ public class LoadComputationConfig{
                 .averageEmployeeCost(BigDecimal.ZERO)
                 .lastUpdatedAt(LocalDateTime.now())
                 .build();
-
-        if (dashboardCardRepo.findAll().size() == 0)
-            dashboardCardRepo.save(dashboardCard);
+//
+//        if (dashboardCardRepo.findAll().size() == 0)
+//            dashboardCardRepo.save(dashboardCard);
 
         EmployeeMetadata contractStaff = EmployeeMetadata.builder()
                 .employeeId("8e3b6e4952e8468a84fd84556f8fdf2a")
@@ -163,7 +169,7 @@ public class LoadComputationConfig{
                 .isPensioned(true)
                 .build();
 
-        employeeMetaDataRepo.deleteAll();
+//        employeeMetaDataRepo.deleteAll();
 
         EmployeeMetadata regularStaffWithCustomTaxReleif = EmployeeMetadata.builder()
                 .employeeId("8654321")
@@ -226,15 +232,15 @@ public class LoadComputationConfig{
                .isPensioned(true)
                .build();
 
-       employeeMetaDataRepo.save(omolereBabatunder);
-        employeeMetaDataRepo.save(gbagi);
-        employeeMetaDataRepo.save(intern);
-        employeeMetaDataRepo.save(standardNotPensioned);
-        employeeMetaDataRepo.save(regularStaffWithCustomTaxReleif);
-        employeeMetaDataRepo.save(contractStaff);
-        employeeMetaDataRepo.save(regularStaffWithNHF);
-        employeeMetaDataRepo.save(regularStaffNoNHF);
-        employeeMetaDataRepo.save(regularStaffWithCustomTaxReleifAndVoluntaryPensionContribution);
+//       employeeMetaDataRepo.save(omolereBabatunder);
+//        employeeMetaDataRepo.save(gbagi);
+//        employeeMetaDataRepo.save(intern);
+//        employeeMetaDataRepo.save(standardNotPensioned);
+//        employeeMetaDataRepo.save(regularStaffWithCustomTaxReleif);
+//        employeeMetaDataRepo.save(contractStaff);
+//        employeeMetaDataRepo.save(regularStaffWithNHF);
+//        employeeMetaDataRepo.save(regularStaffNoNHF);
+//        employeeMetaDataRepo.save(regularStaffWithCustomTaxReleifAndVoluntaryPensionContribution);
 
         String morufoye_international_payment_distribution = """
     [
@@ -282,11 +288,11 @@ public class LoadComputationConfig{
                 .companyName("MonieWorld")
                 .build();
 
-        companyMetadataRepo.deleteAll();
-        companyMetadataRepo.save(xykineCompanyMetadata);
-        companyMetadataRepo.save(xykineCompanyMetadata2);
-        companyMetadataRepo.save(morufoyeCompanyMetadata);
-        companyMetadataRepo.save(moniepointMfbCompanyMetadata);
+//        companyMetadataRepo.deleteAll();
+//        companyMetadataRepo.save(xykineCompanyMetadata);
+//        companyMetadataRepo.save(xykineCompanyMetadata2);
+//        companyMetadataRepo.save(morufoyeCompanyMetadata);
+//        companyMetadataRepo.save(moniepointMfbCompanyMetadata);
 
         Loan loan = Loan.builder()
                 .companyId("1234567")
@@ -313,8 +319,8 @@ public class LoadComputationConfig{
                 .endDate(LocalDate.parse("2099-07-31"))
                 .build();
 
-        loanRepo.save(staffLoan);
-        loanRepo.save(loan);
+//        loanRepo.save(staffLoan);
+//        loanRepo.save(loan);
 
         PaymentSettingMetaData callAllowance = PaymentSettingMetaData.builder()
                 .companyId("1234567")
@@ -363,10 +369,10 @@ public class LoadComputationConfig{
                 .taxable(false)
                 .build();
 
-        paymentSettingMetadataRepo.save(abasydoOffcycle);
-        paymentSettingMetadataRepo.save(abasydoOffcycle14);
-        paymentSettingMetadataRepo.save(overtime);
-        paymentSettingMetadataRepo.save(callAllowance);
+//        paymentSettingMetadataRepo.save(abasydoOffcycle);
+//        paymentSettingMetadataRepo.save(abasydoOffcycle14);
+//        paymentSettingMetadataRepo.save(overtime);
+//        paymentSettingMetadataRepo.save(callAllowance);
     }
 }
 
