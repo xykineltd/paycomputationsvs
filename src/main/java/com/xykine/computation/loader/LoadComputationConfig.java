@@ -16,7 +16,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Component
+//@Component
 //Profile({"dev"})
 @AllArgsConstructor
 public class LoadComputationConfig{
@@ -36,7 +36,7 @@ public class LoadComputationConfig{
     public void loadLegalEntityTestData() {
 
        //TODO remove
-       paymentSettingMetadataRepo.deleteAll();
+//       paymentSettingMetadataRepo.deleteAll();
 
         String oldTaxRule = """
     [
