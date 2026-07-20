@@ -128,8 +128,8 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         else if (description.contains("OFF CYCLE")) {
          //TODO review with moruff
 
-//            long customMultiplier = getMultiplier(setting.getSalaryFrequency());
-//            setting.setValue(ComputationUtils.harmoniseToAnnual(customMultiplier, setting.getValue()));
+            long customMultiplier = getMultiplier(setting.getSalaryFrequency());
+            setting.setValue(ComputationUtils.harmoniseToAnnual(customMultiplier, setting.getValue()));
             setting.setType(PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT);
             setting.setSalaryFrequency(PaymentFrequencyEnum.YEARLY);
         }
