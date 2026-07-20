@@ -113,19 +113,16 @@ public class ComputeService {
     private List<PaymentInfo> addAdditionalPaymentsIfApplicable(List<PaymentInfo> rawInfo) {
         for (PaymentInfo paymentInfo : rawInfo) {
 
+            LocalDate paymentStart = LocalDate.parse(paymentInfo.getStartDate());
+            LocalDate paymentEnd = LocalDate.parse(paymentInfo.getEndDate());
+
             List<PaymentSettingsResponse> additionalSettings =
-                    paymentSettingMetadataRepo.findByEmployeeId(paymentInfo.getEmployeeID())
+                    paymentSettingMetadataRepo.findByEmployeeIdAndCompanyId(paymentInfo.getEmployeeID(), paymentInfo.getCompanyID())
                             .stream()
                             .filter(Objects::nonNull)
-                            .filter(setting ->
-                                    !setting.getStartDate().isAfter(LocalDate.parse(paymentInfo.getStartDate())) &&
-                                            !setting.getEndDate().isBefore(LocalDate.parse(paymentInfo.getStartDate())))
-                            .filter(setting ->
-                                    setting.getPaymentAmount() != null
-                            //                && setting.getPaymentAmount().signum() > 0
-                            )
+                            .filter(setting -> !setting.getStartDate().isAfter(paymentStart) && !setting.getEndDate().isBefore(paymentEnd))
+                            .filter(setting -> setting.getPaymentAmount() != null)
                             .map(setting -> {
-                                // Override existing setting with same name
                                 paymentInfo.getPaymentSettings().removeIf(existing ->
                                         existing.getName().equalsIgnoreCase(setting.getPaymentName()));
 
