@@ -129,6 +129,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                     paymentRequest
             );
 
+            sessionCalculationObject.setOffCycleTaxable(paymentRequest.isOffCyleTaxable());
+
             if (paymentInfoList == null || paymentInfoList.isEmpty()) {
                 throw new PayrollValidationException("No payment information found for request");
             }
@@ -167,57 +169,56 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     }
 
 
-    //TODO review and rework to handle properly
-    @Override
-    @Async
-    public void computeOffCyclePayrollAsync(Consumer<JobStatusStore> progressCallback,
-                                    String jobId, String authorizationHeader,
-                                    PaymentInfoRequest paymentRequest) {
-        jobStatusStore.updateJob(jobId, "IN_PROGRESS", "Computation started", "");
-        progressCallback.accept(jobStatusStore);
-        try {
-            sessionCalculationObject = OperationUtils.doPreflight(
-                    sessionCalculationObject,
-                    computationConstantsRepo,
-                    employeeMetadataService,
-                    paymentRequest
-            );
-
-            List<PaymentInfo> paymentInfoList = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
-            if (paymentInfoList == null || paymentInfoList.isEmpty()) {
-                throw new PayrollValidationException("No payment information found for request");
-            }
-
-            LOGGER.info("PaymentInfo List size: {}", paymentInfoList.size());
-            PaymentComputeResponse computeResponse = computeService.computePayroll(paymentInfoList);
-            computeResponse = OperationUtils.refineResponse(computeResponse, sessionCalculationObject, paymentRequest);
-            ReportResponse reportResponse = serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
-
-            jobStatusStore.updateJob(jobId, "COMPLETED", "Payroll computation complete", reportResponse.getReportId());
-            progressCallback.accept(jobStatusStore);
-
-
-            PayrollReportSummary payrollReportSummary = payrollReportSummaryRepo.findPayrollReportSummaryById(UUID.fromString(String.valueOf(reportResponse.getReportId())));
-
-            StartWorkflowRequest startWorkflowRequest = new StartWorkflowRequest();
-            startWorkflowRequest.setEntity("PAYROLL");
-            startWorkflowRequest.setPayrollType("PAYROLL");
-            startWorkflowRequest.setPayrollId(payrollReportSummary.getId().toString());
-            startWorkflowRequest.setUserId(AuthUtility.getCurrentUser());
-            startWorkflowRequest.setCompanyId(paymentRequest.getCompanyId());
-            startWorkflowRequest.setPayrollType(payrollReportSummary.isOffCycle() ? "OffCycle" : "Regular");
-            startWorkflowRequest.setNumberOfPays(payrollReportDetailRepo.countBySummaryId(payrollReportSummary.getId().toString()));
-            startWorkflowRequest.setNumberOfEmployees(payrollReportSummary.getTotalNumberOfEmployees());
-            startWorkflowRequest.setNetPay(ReportUtils.transform(payrollReportSummary).getSummary().getSummary().get(MapKeys.TOTAL_GROSS_PAY));
-            workflowService.startWorkflow(startWorkflowRequest, authorizationHeader);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            LOGGER.error("Exception occurred while computing payroll for companyId: {}", paymentRequest.getCompanyId(), e);
-            jobStatusStore.updateJob(jobId, "FAILED", e.getMessage(), "");
-            progressCallback.accept(jobStatusStore);
-        }
-    }
+//    @Override
+//    @Async
+//    public void computeOffCyclePayrollAsync(Consumer<JobStatusStore> progressCallback,
+//                                    String jobId, String authorizationHeader,
+//                                    PaymentInfoRequest paymentRequest) {
+//        jobStatusStore.updateJob(jobId, "IN_PROGRESS", "Computation started", "");
+//        progressCallback.accept(jobStatusStore);
+//        try {
+//            sessionCalculationObject = OperationUtils.doPreflight(
+//                    sessionCalculationObject,
+//                    computationConstantsRepo,
+//                    employeeMetadataService,
+//                    paymentRequest
+//            );
+//
+//            List<PaymentInfo> paymentInfoList = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
+//            if (paymentInfoList == null || paymentInfoList.isEmpty()) {
+//                throw new PayrollValidationException("No payment information found for request");
+//            }
+//
+//            LOGGER.info("PaymentInfo List size: {}", paymentInfoList.size());
+//            PaymentComputeResponse computeResponse = computeService.computePayroll(paymentInfoList);
+//            computeResponse = OperationUtils.refineResponse(computeResponse, sessionCalculationObject, paymentRequest);
+//            ReportResponse reportResponse = serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
+//
+//            jobStatusStore.updateJob(jobId, "COMPLETED", "Payroll computation complete", reportResponse.getReportId());
+//            progressCallback.accept(jobStatusStore);
+//
+//
+//            PayrollReportSummary payrollReportSummary = payrollReportSummaryRepo.findPayrollReportSummaryById(UUID.fromString(String.valueOf(reportResponse.getReportId())));
+//
+//            StartWorkflowRequest startWorkflowRequest = new StartWorkflowRequest();
+//            startWorkflowRequest.setEntity("PAYROLL");
+//            startWorkflowRequest.setPayrollType("PAYROLL");
+//            startWorkflowRequest.setPayrollId(payrollReportSummary.getId().toString());
+//            startWorkflowRequest.setUserId(AuthUtility.getCurrentUser());
+//            startWorkflowRequest.setCompanyId(paymentRequest.getCompanyId());
+//            startWorkflowRequest.setPayrollType(payrollReportSummary.isOffCycle() ? "OffCycle" : "Regular");
+//            startWorkflowRequest.setNumberOfPays(payrollReportDetailRepo.countBySummaryId(payrollReportSummary.getId().toString()));
+//            startWorkflowRequest.setNumberOfEmployees(payrollReportSummary.getTotalNumberOfEmployees());
+//            startWorkflowRequest.setNetPay(ReportUtils.transform(payrollReportSummary).getSummary().getSummary().get(MapKeys.TOTAL_GROSS_PAY));
+//            workflowService.startWorkflow(startWorkflowRequest, authorizationHeader);
+//
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            LOGGER.error("Exception occurred while computing payroll for companyId: {}", paymentRequest.getCompanyId(), e);
+//            jobStatusStore.updateJob(jobId, "FAILED", e.getMessage(), "");
+//            progressCallback.accept(jobStatusStore);
+//        }
+//    }
 
     public Map<String, Map<String, BigDecimal>> getSummaryVarianceDetails(String reportId, List<String> employeeIds){
         PayrollVarianceDetailsCustomized payrollVarianceDetails = payrollVarianceDetailsCustomizedRepo.findById(UUID.fromString(reportId)).orElse(null);

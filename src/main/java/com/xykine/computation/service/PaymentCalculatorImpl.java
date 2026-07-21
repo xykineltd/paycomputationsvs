@@ -380,7 +380,7 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
                 return paymentInfo;
             }
 
-            if (!isTaxable(offCyclePayment, settingsMetadata)) {
+            if (!sessionCalculationObject.isOffCycleTaxable()) {
                 payeeTax.put(!paymentInfo.isOffCycle() ?  "PAYE" : "Paye Tax on " + getOffCyclePaymentDetails(paymentInfo).getName(), BigDecimal.ZERO);
                 paymentInfo.setPayeeTax(payeeTax);
                 return paymentInfo;

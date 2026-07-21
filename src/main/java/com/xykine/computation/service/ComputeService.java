@@ -79,7 +79,7 @@ public class ComputeService {
 
         futures.addAll(
                 chunks.stream()
-                       .map(chunk -> addAdditionalPaymentsIfApplicable(chunk))
+                        .map(chunk -> addAdditionalPaymentsIfApplicable(chunk))
                         .map(finalChunk -> CompletableFuture.supplyAsync(() -> processReport(finalChunk)))
                         .toList()
         );
@@ -113,14 +113,12 @@ public class ComputeService {
     private List<PaymentInfo> addAdditionalPaymentsIfApplicable(List<PaymentInfo> rawInfo) {
         for (PaymentInfo paymentInfo : rawInfo) {
 
-            LocalDate paymentStart = LocalDate.parse(paymentInfo.getStartDate());
-            LocalDate paymentEnd = LocalDate.parse(paymentInfo.getEndDate());
-
             List<PaymentSettingsResponse> additionalSettings =
                     paymentSettingMetadataRepo.findByEmployeeIdAndCompanyId(paymentInfo.getEmployeeID(), paymentInfo.getCompanyID())
                             .stream()
                             .filter(Objects::nonNull)
-                            .filter(setting -> !setting.getStartDate().isAfter(paymentStart) && !setting.getEndDate().isBefore(paymentEnd))
+                            .filter(setting -> !setting.getStartDate().isAfter(LocalDate.parse(paymentInfo.getStartDate()))
+                                    && !setting.getEndDate().isBefore(LocalDate.parse(paymentInfo.getEndDate())))
                             .filter(setting -> setting.getPaymentAmount() != null)
                             .map(setting -> {
                                 paymentInfo.getPaymentSettings().removeIf(existing ->
@@ -136,8 +134,9 @@ public class ComputeService {
                                         .build();
                             })
                             .collect(Collectors.toList());
-
-            paymentInfo.getPaymentSettings().addAll(additionalSettings);
+            if (!paymentInfo.isOffCycle()) {
+                paymentInfo.getPaymentSettings().addAll(additionalSettings);
+            }
         }
         return rawInfo;
     }
