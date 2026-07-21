@@ -263,7 +263,7 @@ public PaymentInfo computeNonTaxableIncomeExemptForMFBNewTaxLaw(PaymentInfo paym
     BigDecimal chargeableIncome = annualGrossSalary.subtract(reliefAllowance);
     BigDecimal callAllowance = paymentInfo.getGrossPay().getOrDefault("CALL/DATA ALLOWANCE", BigDecimal.ZERO);
     BigDecimal monthlyChargeable = chargeableIncome.divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP).subtract(callAllowance);
-    monthlyChargeable = monthlyChargeable.subtract(getTotalMonthlyAllowance(paymentInfo));
+    monthlyChargeable = monthlyChargeable.subtract(getTotalMonthlyTaxFreeAllowance(paymentInfo));
 
     nonTaxableIncomeExemptMap.put("ANNUAL EMPLOYEE PENSION @ 8%", annualEmployeePensionAtEightPercent);
     nonTaxableIncomeExemptMap.put("RENT RELIEF", rentAllowance);
@@ -658,12 +658,13 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
                 .orElse(PaymentFrequencyEnum.YEARLY);
     }
 
-    private BigDecimal getTotalMonthlyAllowance(PaymentInfo paymentInfo) {
+    private BigDecimal getTotalMonthlyTaxFreeAllowance(PaymentInfo paymentInfo) {
             return
                     paymentSettingMetadataRepo.findByEmployeeIdAndCompanyId(paymentInfo.getEmployeeID(), paymentInfo.getCompanyID())
                             .stream()
                             .filter(Objects::nonNull)
                             .filter(setting -> !setting.getStartDate().isAfter(LocalDate.parse(paymentInfo.getStartDate())) && !setting.getEndDate().isBefore(LocalDate.parse(paymentInfo.getEndDate())))
+                            .filter(setting -> "ALLOWANCE".equalsIgnoreCase(setting.getPaymentType()))
                             .filter(setting -> !setting.getTaxable())
                             .filter(setting -> setting.getPaymentAmount() != null)
                             .map(value -> value.getPaymentAmount())
