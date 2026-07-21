@@ -79,7 +79,7 @@ public class ComputeService {
 
         futures.addAll(
                 chunks.stream()
-                       .map(chunk -> addAdditionalPaymentsIfApplicable(chunk))
+                        .map(chunk -> addAdditionalPaymentsIfApplicable(chunk))
                         .map(finalChunk -> CompletableFuture.supplyAsync(() -> processReport(finalChunk)))
                         .toList()
         );
@@ -114,18 +114,13 @@ public class ComputeService {
         for (PaymentInfo paymentInfo : rawInfo) {
 
             List<PaymentSettingsResponse> additionalSettings =
-                    paymentSettingMetadataRepo.findByEmployeeId(paymentInfo.getEmployeeID())
+                    paymentSettingMetadataRepo.findByEmployeeIdAndCompanyId(paymentInfo.getEmployeeID(), paymentInfo.getCompanyID())
                             .stream()
                             .filter(Objects::nonNull)
-                            .filter(setting ->
-                                    !setting.getStartDate().isAfter(LocalDate.parse(paymentInfo.getStartDate())) &&
-                                            !setting.getEndDate().isBefore(LocalDate.parse(paymentInfo.getStartDate())))
-                            .filter(setting ->
-                                    setting.getPaymentAmount() != null
-                            //                && setting.getPaymentAmount().signum() > 0
-                            )
+                            .filter(setting -> !setting.getStartDate().isAfter(LocalDate.parse(paymentInfo.getStartDate()))
+                                    && !setting.getEndDate().isBefore(LocalDate.parse(paymentInfo.getEndDate())))
+                            .filter(setting -> setting.getPaymentAmount() != null)
                             .map(setting -> {
-                                // Override existing setting with same name
                                 paymentInfo.getPaymentSettings().removeIf(existing ->
                                         existing.getName().equalsIgnoreCase(setting.getPaymentName()));
 
@@ -139,8 +134,9 @@ public class ComputeService {
                                         .build();
                             })
                             .collect(Collectors.toList());
-
-            paymentInfo.getPaymentSettings().addAll(additionalSettings);
+            if (!paymentInfo.isOffCycle()) {
+                paymentInfo.getPaymentSettings().addAll(additionalSettings);
+            }
         }
         return rawInfo;
     }

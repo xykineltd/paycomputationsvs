@@ -20,5 +20,6 @@ public class SessionCalculationObject {
     private  ConcurrentHashMap<String, BigDecimal> computationConstants = new ConcurrentHashMap<>();
     private  Map<String, ConcurrentHashMap<String, BigDecimal>> costCenterSummary = new ConcurrentHashMap<>();
     private Map<String, List<String>> costCenters = new HashMap<>();
+    private boolean isOffCycleTaxable  = true;
 
 }
