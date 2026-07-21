@@ -195,10 +195,9 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 sessionCalculationObject.getComputationConstants().get("pensionFundPercent")
                         .multiply(pensionFund)) : BigDecimal.ZERO;
 
-        nonTaxableIncomeExemptMap.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION,
-                ComputationUtils.prorate(employeePension, unpaidDays, salaryFrequency, paymentInfo.getStartDate()));
-        pension.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION,
-                ComputationUtils.prorate(employeePension, unpaidDays, PaymentFrequencyEnum.YEARLY, paymentInfo.getStartDate()));
+        nonTaxableIncomeExemptMap.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION, employeePension);
+        pension.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION, employeePension);
+
         BigDecimal voluntaryPensionContribution =  getEmployeeMetaData(paymentInfo).getVoluntaryPensionContribution();
         pension.put("Voluntary Pension Contribution", voluntaryPensionContribution);
 
@@ -206,13 +205,11 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                 sessionCalculationObject.getComputationConstants().get("employerPensionContributionPercent")
                         .multiply(pensionFund));
 
-        pension.put(MapKeys.EMPLOYER_PENSION_CONTRIBUTION,
-                ComputationUtils.prorate(employerPensionContribution, unpaidDays, PaymentFrequencyEnum.YEARLY, paymentInfo.getStartDate()));
+        pension.put(MapKeys.EMPLOYER_PENSION_CONTRIBUTION, employerPensionContribution);
         pension.put(MapKeys.TOTAL_PENSION_FOR_EMPLOYEE, getTotal(pension));
 
         ComputationUtils.updateReportSummary(paymentInfo, sessionCalculationObject,
-                MapKeys.TOTAL_EMPLOYER_PENSION_CONTRIBUTION,
-                ComputationUtils.prorate(employerPensionContribution, unpaidDays, salaryFrequency, paymentInfo.getStartDate()));
+                MapKeys.TOTAL_EMPLOYER_PENSION_CONTRIBUTION, employerPensionContribution);
 
         // === NHF ===
         BigDecimal nationalHousingFund = isNHFSubscribed(paymentInfo)
@@ -250,8 +247,9 @@ public PaymentInfo computeNonTaxableIncomeExemptForMFBNewTaxLaw(PaymentInfo paym
     BigDecimal rentAllowance = getEmployeeMetaData(paymentInfo).getRentAllowance();
 
     BigDecimal annualEmployeePensionAtEightPercent = isIntern(paymentInfo) ? BigDecimal.ZERO : ComputationUtils.roundToTwoDecimalPlaces(
-            sessionCalculationObject.getComputationConstants().get("pensionFundPercent")
-                    .multiply(paymentInfo.getBasicSalary()));
+            ComputationUtils.prorate(sessionCalculationObject.getComputationConstants().get("pensionFundPercent").multiply(paymentInfo.getBasicSalary()),
+                    paymentInfo.getNumberOfDaysOfUnpaidAbsence(), PaymentFrequencyEnum.YEARLY, paymentInfo.getStartDate())
+    );
 
     annualEmployeePensionAtEightPercent = isIntern(paymentInfo) || !isPensionable(paymentInfo) ? BigDecimal.ZERO : ComputationUtils.roundToTwoDecimalPlaces(annualEmployeePensionAtEightPercent.multiply(BigDecimal.valueOf(0.3292)));
     BigDecimal reliefAllowance = nationalHousingFund
@@ -261,7 +259,7 @@ public PaymentInfo computeNonTaxableIncomeExemptForMFBNewTaxLaw(PaymentInfo paym
             .add(customTaxReliefApplicable);
 
     BigDecimal chargeableIncome = annualGrossSalary.subtract(reliefAllowance);
-    BigDecimal callAllowance = paymentInfo.getGrossPay().getOrDefault("CALL/DATA ALLOWANCE", BigDecimal.ZERO);
+    BigDecimal callAllowance = paymentInfo.getGrossPay().getOrDefault("Call/Data Allowance", BigDecimal.ZERO);
     BigDecimal monthlyChargeable = chargeableIncome.divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP).subtract(callAllowance);
     monthlyChargeable = monthlyChargeable.subtract(getTotalMonthlyTaxFreeAllowance(paymentInfo));
 
@@ -393,7 +391,8 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
         BigDecimal chargeableIncome = paymentInfo.getTaxRelief().get("MONTHLY CHARGEABLE INCOME").multiply(BigDecimal.valueOf(12L));
         payeeTax.put(MapKeys.TAXABLE_INCOME, chargeableIncome);
         BigDecimal monthlyPayeeTax = !paymentInfo.isOffCycle() ?
-                ComputationUtils.prorate(ComputationUtils.getAnnualTaxAmount(chargeableIncome, taxInfo), paymentInfo.getNumberOfDaysOfUnpaidAbsence(), salaryFrequency, paymentInfo.getStartDate())
+                //ComputationUtils.getAnnualTaxAmount(chargeableIncome, taxInfo)
+                ComputationUtils.prorate(ComputationUtils.getAnnualTaxAmount(chargeableIncome, taxInfo), 0, salaryFrequency, paymentInfo.getStartDate())
                 :  ComputationUtils.getTaxAmount(paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY), taxInfo);
 
         if (!paymentInfo.isOffCycle()) {
