@@ -215,10 +215,10 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         BigDecimal nationalHousingFund = isNHFSubscribed(paymentInfo)
                 ? ComputationUtils.roundToTwoDecimalPlaces(
                 sessionCalculationObject.getComputationConstants().get("nationalHousingFundPercent")
-                        .multiply(grossPay))
+                        .multiply(paymentInfo.getBasicSalary()))
                 : BigDecimal.ZERO;
 
-        BigDecimal nhfValue = ComputationUtils.prorate(nationalHousingFund, unpaidDays, salaryFrequency, paymentInfo.getStartDate());
+        BigDecimal nhfValue = ComputationUtils.prorate(nationalHousingFund, 0, salaryFrequency, paymentInfo.getStartDate());
         nonTaxableIncomeExemptMap.put(MapKeys.NATIONAL_HOUSING_FUND, nhfValue);
         nhf.put(MapKeys.NATIONAL_HOUSING_FUND, nhfValue);
         paymentInfo.setNhf(nhf);
