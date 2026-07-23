@@ -237,7 +237,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 public PaymentInfo computeNonTaxableIncomeExemptForMFBNewTaxLaw(PaymentInfo paymentInfo, BigDecimal nationalHousingFund) {
 
     Map<String, BigDecimal> nonTaxableMonthly = new HashMap<>();
-    nonTaxableMonthly.put("91b7c124ada597551264f6a", BigDecimal.valueOf(64248.83));
+    nonTaxableMonthly.put("691b7c124ada597551264f6a", BigDecimal.valueOf(64248.83));
     nonTaxableMonthly.put("691b7c124ada597551264f9b", BigDecimal.valueOf(23677.36));
 
     Map<String, BigDecimal> nonTaxableIncomeExemptMap = new HashMap<>();
