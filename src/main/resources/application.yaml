@@ -18,8 +18,19 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-#            issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:https://auth.acedpaydev.com/realms/localdev}
+            issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:https://auth.acedpaydev.com/realms/localdev}
             jwk-set-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI:https://auth.acedpaydev.com/realms/localdev/protocol/openid-connect/certs}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when_authorized
 
   data:
     redis:
@@ -64,3 +75,7 @@ workflow:
 
 xykine:
   spa-uri: ${SPA_URL:http://localhost:3000}
+  security:
+    enforce-company-access: ${ENFORCE_COMPANY_ACCESS:true}
+  job-status:
+    ttl-hours: 24

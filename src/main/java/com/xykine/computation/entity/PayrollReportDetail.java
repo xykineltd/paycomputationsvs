@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.xykine.payroll.model.ExchangeInfo;
 
@@ -16,6 +18,10 @@ import java.time.LocalDateTime;
 @Builder
 @Data
 @Document
+@CompoundIndexes({
+        @CompoundIndex(name = "summary_company_idx", def = "{'summaryId': 1, 'companyId': 1}"),
+        @CompoundIndex(name = "company_employee_start_idx", def = "{'companyId': 1, 'employeeId': 1, 'startDate': 1}")
+})
 public class PayrollReportDetail {
     @Id
     private String id;

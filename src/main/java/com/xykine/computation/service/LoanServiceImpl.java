@@ -58,6 +58,11 @@ public class LoanServiceImpl implements LoanService {
     }
 
     @Override
+    public Loan getLoan(String loanId) {
+        return loanRepo.findById(loanId).orElseThrow(() -> new IllegalArgumentException("Loan not found"));
+    }
+
+    @Override
     public Page<Loan> getLoans(LoanFilter filter, LocalDate startDate, Pageable pageable) {
         if (filter.getCompanyId() == null) {
             throw new IllegalArgumentException("CompanyId must be set");

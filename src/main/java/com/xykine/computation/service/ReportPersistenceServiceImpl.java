@@ -6,12 +6,12 @@ import com.xykine.computation.repo.*;
 import com.xykine.computation.request.*;
 import com.xykine.computation.response.*;
 
+import com.xykine.computation.session.PayrollSessionHolder;
 import com.xykine.computation.session.SessionCalculationObject;
 import com.xykine.computation.utils.*;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -39,7 +39,7 @@ import com.xykine.computation.exceptions.PayrollUnmodifiableException;
 @RequiredArgsConstructor
 public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(PaymentCalculatorImpl.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ReportPersistenceServiceImpl.class);
 
     private final AuditTrailService auditTrailService;
     private final PayrollReportSummaryRepo payrollReportSummaryRepo;
@@ -57,10 +57,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     private final WorkflowService workflowService;
     private final PayrollReportDetailStatusService payrollReportDetailStatusService;
     private final PayrollReportSummaryCustomFilter payrollReportSummaryCustomFilter;
+    private final PayrollPeriodCleanupService payrollPeriodCleanupService;
 //    private final PayrollReportHydrateRepo payrollReportSearchRepo;
-
-    @Autowired
-    private SessionCalculationObject sessionCalculationObject;
 
     @Override
     @Async
@@ -71,7 +69,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
         jobStatusStore.updateJob(jobId, "IN_PROGRESS", "Computation started", "");
         progressCallback.accept(jobStatusStore);
-        int totalNumberOfPay;
+        SessionCalculationObject sessionCalculationObject = new SessionCalculationObject();
+        PayrollSessionHolder.set(sessionCalculationObject);
         try {
 
             List<PaymentInfo> paymentInfoList = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
@@ -83,36 +82,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             LOGGER.info("PaymentInfoList size: {}", paymentInfoList.size());
             PayrollReportSummary simulatedSummary = payrollReportSummaryRepo
                     .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(String.valueOf(paymentRequest.getStart()), paymentRequest.getCompanyId(), true);
-            if (simulatedSummary != null && !paymentRequest.isPayrollSimulation()) {
-                jobStatusStore.updateJob(jobId, "COMPLETED", "Payroll computation complete", String.valueOf(simulatedSummary.getId()));
-                progressCallback.accept(jobStatusStore);
-                PayrollReportSummary payrollReportSummary = payrollReportSummaryRepo.findPayrollReportSummaryById(UUID.fromString(String.valueOf(simulatedSummary.getId())));
-                payrollReportSummary.setPayrollSimulation(false);
-                payrollReportSummary.setPayrollStatus(PayrollStatus.PENDING);
-                payrollReportSummaryRepo.save(payrollReportSummary);
-
-                payrollAsyncService.updateDetailStatusToPendingAsync(String.valueOf(simulatedSummary.getId()));
-
-                StartWorkflowRequest startWorkflowRequest = new StartWorkflowRequest();
-                startWorkflowRequest.setEntity("PAYROLL");
-                startWorkflowRequest.setPayrollType("PAYROLL");
-                startWorkflowRequest.setPayPeriod(formatToMonthYear(payrollReportSummary.getStartDate()));
-                startWorkflowRequest.setPayrollId(payrollReportSummary.getId().toString());
-                startWorkflowRequest.setUserId(AuthUtility.getCurrentUser());
-                startWorkflowRequest.setCompanyId(paymentRequest.getCompanyId());
-                startWorkflowRequest.setPayrollType(payrollReportSummary.isOffCycle() ? "OffCycle" : "Regular");
-                startWorkflowRequest.setNumberOfPays(paymentInfoList.size());
-                startWorkflowRequest.setNumberOfEmployees(payrollReportSummary.getTotalNumberOfEmployees());
-                //This is intentional to display the total gross on the payroll card instead of the net pay, so we are setting TOTAL_GROSS_PAY
-                startWorkflowRequest.setNetPay(ReportUtils.transform(payrollReportSummary).getSummary().getSummary().get(MapKeys.TOTAL_GROSS_PAY));
-                startWorkflowRequest.setCreatedBy(payrollReportSummary.getCreatedBy());
-
-                workflowService.startWorkflow(startWorkflowRequest, authorizationHeader);
-
-                return;
-            }
-
-            if (simulatedSummary != null && paymentRequest.isPayrollSimulation()) {
+            // Prefer recalculation over promoting a stale simulation blob when going live
+            if (simulatedSummary != null) {
                 payrollReportSummaryRepo.deleteById(simulatedSummary.getId());
                 payrollReportDetailRepo.deleteAllBySummaryId(simulatedSummary.getId().toString());
             }
@@ -128,16 +99,13 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                     employeeMetadataService,
                     paymentRequest
             );
+            PayrollSessionHolder.set(sessionCalculationObject);
 
             sessionCalculationObject.setOffCycleTaxable(paymentRequest.isOffCyleTaxable());
 
-            if (paymentInfoList == null || paymentInfoList.isEmpty()) {
-                throw new PayrollValidationException("No payment information found for request");
-            }
-
             long startTimeC = System.currentTimeMillis();
 
-            PaymentComputeResponse computeResponse = computeService.computePayroll(paymentInfoList);
+            PaymentComputeResponse computeResponse = computeService.computePayroll(paymentInfoList, sessionCalculationObject);
             long endTimeC = System.currentTimeMillis();
 
             LOGGER.info("Total computePayroll processing time--------> {} ms", endTimeC - startTimeC);
@@ -151,10 +119,11 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             LOGGER.info("Total computation processing time {} ms", endTime - startTime);
 
         } catch (Exception e) {
-            e.printStackTrace();
             LOGGER.error("Exception occurred while computing payroll for companyId: {}", paymentRequest.getCompanyId(), e);
-            jobStatusStore.updateJob(jobId, "FAILED", e.getMessage(), "");
+            jobStatusStore.updateJob(jobId, "FAILED", "Payroll computation failed", "");
             progressCallback.accept(jobStatusStore);
+        } finally {
+            PayrollSessionHolder.clear();
         }
     }
 
@@ -351,23 +320,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         long startTime = System.currentTimeMillis();
         ReportResponse reportResponse;
         try {
-            deleteReportByDate(
-//                    paymentComputeResponse.getStart(),
-//                    companyId,
-//                    paymentComputeResponse.isOffCycle(),
-//                    false,
-//                    paymentComputeResponse.getOffCycleId(),
-//                    //TODO validate this to make sure is the reportId
-//                    String.valueOf(paymentComputeResponse.getId())
-                    UpdateReportRequest.builder()
-                            .reportId(String.valueOf(paymentComputeResponse.getId()))
-                            .companyId(companyId)
-                            .offCycle(paymentComputeResponse.isOffCycle())
-                            .cancelPayroll(false)
-                            .offCycleId(paymentComputeResponse.getOffCycleId())
-                            .build());
+            payrollPeriodCleanupService.deletePriorReportsForPeriod(companyId, paymentComputeResponse.getStart(), paymentComputeResponse.isOffCycle(), paymentComputeResponse.getOffCycleId());
             reportResponse = getReportResponse(paymentComputeResponse, companyId);
-            //  }
         } catch (RuntimeException e) {
             LOGGER.info(" exception {} ", e.toString());
             throw e;
@@ -377,6 +331,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         logGenerateReportEvent(companyId, reportResponse);
         return reportResponse;
     }
+
 
     private ReportResponse getReportResponse(PaymentComputeResponse paymentComputeResponse, String companyId) {
         PayrollReportSummary previousReportSummary = payrollReportSummaryRepo.findTopByCompanyIdAndPayrollStatusAndOffCycleFalseOrderByEndDateDesc(companyId, PayrollStatus.COMPLETED).orElse(null);
@@ -421,7 +376,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
         payrollVarianceDetailsRepo.save(payrollVarianceDetails);
         payrollReportSummaryRepo.save(payrollReportSummary);
-        payrollAsyncService.saveReportDetails(paymentComputeResponse, companyId, previousReportSummaryId);
+        // Persist details synchronously so job COMPLETED means summary+details are available
+        payrollAsyncService.saveReportDetailsSync(paymentComputeResponse, companyId, previousReportSummaryId);
 
         return getPayRollReport(paymentComputeResponse.getId());
     }

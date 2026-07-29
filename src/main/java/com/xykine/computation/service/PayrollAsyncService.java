@@ -16,6 +16,7 @@ import com.xykine.computation.response.PayComputeDetailResponse;
 import com.xykine.computation.response.PaymentComputeResponse;
 import com.xykine.computation.response.ReportResponse;
 import com.xykine.computation.utils.PayrollMetrics;
+import com.xykine.computation.utils.PayrollMapKeys;
 import com.xykine.computation.utils.ReportUtils;
 import lombok.RequiredArgsConstructor;
 
@@ -87,6 +88,13 @@ public class PayrollAsyncService {
 
     @Async
     public void saveReportDetails(PaymentComputeResponse paymentComputeResponse, String companyId, String previousSummaryId) {
+        saveReportDetailsSync(paymentComputeResponse, companyId, previousSummaryId);
+    }
+
+    /**
+     * Synchronous detail persistence used when job completion must wait for details.
+     */
+    public void saveReportDetailsSync(PaymentComputeResponse paymentComputeResponse, String companyId, String previousSummaryId) {
         List<PaymentInfo> paymentInfoList = Optional.ofNullable(paymentComputeResponse.getReport())
                 .orElse(Collections.emptyList());
 
@@ -183,7 +191,7 @@ public class PayrollAsyncService {
 
                         Map<String, BigDecimal> deduction = x.getDetail().getReport().getDeduction();
                         newValuesForEmployee.put(MapKeys.NATIONAL_HOUSING_FUND, deduction.get(MapKeys.NATIONAL_HOUSING_FUND) != null ? deduction.get(MapKeys.NATIONAL_HOUSING_FUND) : BigDecimal.ZERO);
-                        newValuesForEmployee.put("PAYE TAX", deduction.get("PAYE TAX") != null ? deduction.get("PAYE TAX") : BigDecimal.ZERO);
+                        newValuesForEmployee.put(PayrollMapKeys.PAYE, firstNonNull(deduction, PayrollMapKeys.PAYE, "PAYE TAX"));
                         newValuesForEmployee.put("WHT", deduction.get("WHT") != null ? deduction.get("WHT") : BigDecimal.ZERO);
 
                         for (String k : deduction.keySet()) {
@@ -221,9 +229,9 @@ public class PayrollAsyncService {
                         ytdReport.setGrossPay(ytdReport.getGrossPay().add(y.get(MapKeys.GROSS_PAY)));
                         ytdReport.setNetPay(ytdReport.getNetPay().add(y.get(MapKeys.NET_PAY)));
                         ytdReport.setNhf(ytdReport.getNhf().add(y.get(MapKeys.NATIONAL_HOUSING_FUND)));
-                        ytdReport.setPayeeTax(ytdReport.getPayeeTax().add(y.get("PAYE TAX")));
-                        ytdReport.setEmployerPension(y.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION));
-                        ytdReport.setEmployeePension(y.get(MapKeys.EMPLOYER_PENSION_CONTRIBUTION));
+                        ytdReport.setPayeeTax(ytdReport.getPayeeTax().add(y.getOrDefault(PayrollMapKeys.PAYE, BigDecimal.ZERO)));
+                        ytdReport.setEmployerPension(y.get(MapKeys.EMPLOYER_PENSION_CONTRIBUTION));
+                        ytdReport.setEmployeePension(y.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION));
                         ytdReport.setVoluntarPensionContribution(y.get("Voluntary Pension Contribution"));
                         ytdReport.setPension(ytdReport.getPension().add(y.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION))
                                 .add(y.get(MapKeys.EMPLOYER_PENSION_CONTRIBUTION))
@@ -236,9 +244,9 @@ public class PayrollAsyncService {
                         ytdReport.setGrossPay(ytdReport.getGrossPay().subtract(y.get(MapKeys.GROSS_PAY)));
                         ytdReport.setNetPay(ytdReport.getNetPay().subtract(y.get(MapKeys.NET_PAY)));
                         ytdReport.setNhf(ytdReport.getNhf().subtract(y.get(MapKeys.NATIONAL_HOUSING_FUND)));
-                        ytdReport.setPayeeTax(ytdReport.getPayeeTax().subtract(y.get("PAYE TAX")));
-                        ytdReport.setEmployerPension(y.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION));
-                        ytdReport.setEmployeePension(y.get(MapKeys.EMPLOYER_PENSION_CONTRIBUTION));
+                        ytdReport.setPayeeTax(ytdReport.getPayeeTax().subtract(y.getOrDefault(PayrollMapKeys.PAYE, BigDecimal.ZERO)));
+                        ytdReport.setEmployerPension(y.get(MapKeys.EMPLOYER_PENSION_CONTRIBUTION));
+                        ytdReport.setEmployeePension(y.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION));
                         ytdReport.setVoluntarPensionContribution(y.get("Voluntary Pension Contribution"));
                         ytdReport.setPension(ytdReport.getPension().subtract(y.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION))
                                 .add(y.get(MapKeys.EMPLOYER_PENSION_CONTRIBUTION))
@@ -265,7 +273,7 @@ public class PayrollAsyncService {
                             ytdReportMap.put(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION, ytdReport.getEmployeePension());
                             ytdReportMap.put(MapKeys.EMPLOYER_PENSION_CONTRIBUTION, ytdReport.getEmployerPension());
                             ytdReportMap.put("Voluntary Pension Contribution", ytdReport.getVoluntarPensionContribution());
-                            ytdReportMap.put("PAYE TAX", ytdReport.getPayeeTax());
+                            ytdReportMap.put(PayrollMapKeys.PAYE, ytdReport.getPayeeTax());
                             ytdReportMap.put("Pension", ytdReport.getPension());
                             ytdReportMap.put("Taxable Income", ytdReport.getTaxableIncome());
                             ytdReportMap.put("WHT", ytdReport.getWht());
@@ -297,7 +305,7 @@ public class PayrollAsyncService {
                 .grossPay(currentValues.get(MapKeys.GROSS_PAY))
                 .netPay(currentValues.get(MapKeys.NET_PAY))
                 .nhf(currentValues.get(MapKeys.NATIONAL_HOUSING_FUND))
-                .payeeTax(currentValues.get("PAYE TAX"))
+                .payeeTax(currentValues.getOrDefault(PayrollMapKeys.PAYE, currentValues.get("PAYE TAX")))
                 .employeePension(currentValues.get(MapKeys.EMPLOYEE_PENSION_CONTRIBUTION))
                 .employerPension(currentValues.get(MapKeys.EMPLOYER_PENSION_CONTRIBUTION))
                 .voluntarPensionContribution(currentValues.get("Voluntary Pension Contribution"))
@@ -422,7 +430,7 @@ public class PayrollAsyncService {
                             defaultZero(report.getNhf().get("National Housing Fund")));
 
                     values.put(PayrollMetrics.PAYE,
-                            defaultZero(report.getPayeeTax().get("Monthly Paye")));
+                            defaultZero(firstNonNull(report.getPayeeTax(), PayrollMapKeys.PAYE, "Monthly Paye")));
 
                     values.put(PayrollMetrics.PERFORMANCE_BONUS,
                             defaultZero(report.getGrossPay().get("Monthly Performance Bonus")));
@@ -437,5 +445,18 @@ public class PayrollAsyncService {
                 });
 
         return extractedValues;
+    }
+
+    private BigDecimal firstNonNull(Map<String, BigDecimal> map, String... keys) {
+        if (map == null) {
+            return BigDecimal.ZERO;
+        }
+        for (String key : keys) {
+            BigDecimal value = map.get(key);
+            if (value != null) {
+                return value;
+            }
+        }
+        return BigDecimal.ZERO;
     }
 }

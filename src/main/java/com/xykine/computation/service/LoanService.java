@@ -17,6 +17,7 @@ import java.time.LocalDate;
 
 public interface LoanService {
     Loan createLoan(CreateLoanRequest req);
+    Loan getLoan(String loanId);
     Page<Repayment> getEmployeeRepayments(String companyId, String employeeId, Pageable pageable);
     Page<Repayment> getLoanRepayments(String loanId, Pageable pageable);
     Loan updateLoan(String loanId, UpdateLoanRequest req);

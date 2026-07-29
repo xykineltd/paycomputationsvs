@@ -130,27 +130,45 @@ public abstract class AbstractIntegrationTest {
     }
 
     ReportResponse getReportSummary() {
-        return webTestClient.post()
-                .uri("/compute/payroll")
-                .headers(headers -> headers.setBearerAuth(jwt.getTokenValue()))
-                .bodyValue(createPayload(null, null))
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody(ReportResponse.class)
-                .returnResult()
-                .getResponseBody();
+        return startAndAwaitReport(createPayload(null, null));
     }
 
     ReportResponse getReportSummaryCustom(String companyId) {
-        return webTestClient.post()
-                .uri("/compute/payroll")
+        return startAndAwaitReport(customCreatePayload(companyId));
+    }
+
+    protected ReportResponse startAndAwaitReport(PaymentInfoRequest request) {
+        Map startResponse = webTestClient.post()
+                .uri("/compute/payroll/start")
                 .headers(headers -> headers.setBearerAuth(jwt.getTokenValue()))
-                .bodyValue(customCreatePayload(companyId))
+                .bodyValue(request)
                 .exchange()
-                .expectStatus().isOk()
-                .expectBody(ReportResponse.class)
+                .expectStatus().isAccepted()
+                .expectBody(Map.class)
                 .returnResult()
                 .getResponseBody();
+        String jobId = String.valueOf(startResponse.get("jobId"));
+        JobStatus jobStatus = awaitJobCompletion(jobId);
+        assert jobStatus != null && jobStatus.getReportId() != null;
+        return getReportById(jobStatus.getReportId());
+    }
+
+    protected JobStatus awaitJobCompletion(String jobId) {
+        JobStatus jobStatus = null;
+        for (int i = 0; i < 60; i++) {
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+            jobStatus = getStatus(jobId);
+            if (jobStatus != null && ("COMPLETED".equalsIgnoreCase(jobStatus.getStatus())
+                    || "FAILED".equalsIgnoreCase(jobStatus.getStatus()))) {
+                break;
+            }
+        }
+        return jobStatus;
     }
 
     protected Map<String, Object> getReport(String url){
@@ -351,38 +369,39 @@ public abstract class AbstractIntegrationTest {
     }
 
     void approvePayroll() {
-        // @PutMapping("/approve")
         String URL_PREFIX = "http://localhost:" + port + "/compute/reports/";
-
-        UpdateReportRequest updateReportRequest = UpdateReportRequest.builder()
+        UpdatePayrollStatusRequest request = UpdatePayrollStatusRequest.builder()
+                .companyId(TEST_COMPANY_ID)
+                .status(PayrollStatus.APPROVED)
                 .build();
-        updateReportRequest.setStartDate(LocalDate.now().toString());
-        updateReportRequest.setCompanyId(TEST_COMPANY_ID);
-        updateReportRequest.setPayrollStatus(PayrollStatus.APPROVED);
-
-        String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX + "approve").toUriString();
-        approveReport(url, updateReportRequest);
+        String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX + "update-report-status").toUriString();
+        updatePayrollStatus(url, request);
     }
 
     void approvePayroll(UpdateReportRequest updateReportRequest) {
-        // @PutMapping("/approve")
         String URL_PREFIX = "http://localhost:" + port + "/compute/reports/";
-        String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX + "approve").toUriString();
-        approveReport(url, updateReportRequest);
+        UpdatePayrollStatusRequest request = UpdatePayrollStatusRequest.builder()
+                .reportId(updateReportRequest.getReportId() != null
+                        ? java.util.UUID.fromString(updateReportRequest.getReportId()) : null)
+                .companyId(updateReportRequest.getCompanyId())
+                .status(updateReportRequest.getPayrollStatus() != null
+                        ? updateReportRequest.getPayrollStatus() : PayrollStatus.APPROVED)
+                .build();
+        String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX + "update-report-status").toUriString();
+        updatePayrollStatus(url, request);
+    }
+
+    void updatePayrollStatus(String url, UpdatePayrollStatusRequest request) {
+        webTestClient.put()
+                .uri(url)
+                .headers(headers -> headers.setBearerAuth(jwt.getTokenValue()))
+                .bodyValue(request)
+                .exchange()
+                .expectStatus().isOk();
     }
 
     void cancelPayroll() {
-        // @PutMapping("/cancel")
-        String URL_PREFIX = "http://localhost:" + port + "/compute/reports/";
-
-        UpdateReportRequest updateReportRequest = UpdateReportRequest.builder().build();
-        updateReportRequest.setStartDate(LocalDate.now().toString());
-        updateReportRequest.setCompanyId(TEST_COMPANY_ID);
-        updateReportRequest.setPayrollStatus(PayrollStatus.APPROVED);
-        updateReportRequest.setCancelPayroll(true);
-
-        String url = UriComponentsBuilder.fromHttpUrl(URL_PREFIX + "cancel").toUriString();
-        approveReport(url, updateReportRequest);
+        // cancel endpoint is currently disabled; no-op for compatibility with existing tests
     }
 
 

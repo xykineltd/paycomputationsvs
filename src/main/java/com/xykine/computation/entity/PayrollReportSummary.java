@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.xykine.payroll.model.PaymentFrequencyEnum;
 
@@ -17,6 +19,10 @@ import java.util.UUID;
 @Builder
 @Data
 @Document
+@CompoundIndexes({
+        @CompoundIndex(name = "company_start_offcycle_idx", def = "{'companyId': 1, 'startDate': 1, 'offCycle': 1}"),
+        @CompoundIndex(name = "company_status_idx", def = "{'companyId': 1, 'payrollStatus': 1}")
+})
 public class PayrollReportSummary {
     @Id
     private UUID id;

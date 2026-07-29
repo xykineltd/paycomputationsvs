@@ -8,6 +8,7 @@ import com.xykine.computation.response.*;
 import com.xykine.computation.service.AdminService;
 import com.xykine.computation.service.ReportGeneratorService;
 import com.xykine.computation.service.ReportPersistenceService;
+import com.xykine.computation.utils.CompanyAccessGuard;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +29,7 @@ public class Report {
     private final ReportPersistenceService reportPersistenceService;
     private final ReportGeneratorService reportGeneratorService;
     private final AdminService adminService;
+    private final CompanyAccessGuard companyAccessGuard;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Report.class);
 
@@ -44,16 +46,23 @@ public class Report {
 
     @GetMapping("/{companyId}/status/{status}")
     public List<ReportResponse> getReportsByStatus(@PathVariable String companyId, @PathVariable String status) {
+        companyAccessGuard.requireCompanyAccess(companyId);
         return reportPersistenceService.getPayRollReportsByStatus(companyId, status);
     }
 
     @PostMapping("/by-reportId")
     public ReportResponse getReport( @RequestBody RetrieveSummaryElementRequest request) {
-        return reportPersistenceService.getPayRollReport(UUID.fromString(request.getReportId()));
+        if (request.getCompanyId() != null) {
+            companyAccessGuard.requireCompanyAccess(request.getCompanyId());
+        }
+        ReportResponse report = reportPersistenceService.getPayRollReport(UUID.fromString(request.getReportId()));
+        requireReportCompanyAccess(report);
+        return report;
     }
 
     @PostMapping("/report-summary-by-filter")
     public PaginatedReportSummaryResponse getReportSummaryByFilter(@RequestBody ReportFilterRequest request) {
+        companyAccessGuard.requireCompanyAccess(request.getCompanyId());
         return reportPersistenceService.getReportSummaryByFilter(request);
     }
 
@@ -64,6 +73,7 @@ public class Report {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "3") int size
     ) {
+        companyAccessGuard.requireCompanyAccess(companyId);
         Map<String, Object> response =  reportPersistenceService.getReportByEmployeeID(companyId,  employeeId, page, size);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -73,6 +83,7 @@ public class Report {
             @RequestBody EmployeeFilterRequest employeeFilterRequest,
             @RequestHeader("Authorization") String authorizationHeader) {
 
+        companyAccessGuard.requireCompanyAccess(employeeFilterRequest.getCompanyID());
         PaginatedSelectedEmployeeField selectedEmployeeField;
 
         // we need to always call admin so that we can pull the hire date and employeeCode
@@ -93,6 +104,7 @@ public class Report {
     public ResponseEntity<?> getDetailsReportByFilter(
             @RequestBody EmployeeFilterRequest employeeFilterRequest) {
 
+        companyAccessGuard.requireCompanyAccess(employeeFilterRequest.getCompanyID());
         Map<String, Object> response =  reportPersistenceService.getReportByEmployeeIDList(employeeFilterRequest.getCompanyID(),
                 employeeFilterRequest.getEmployeeIds(), employeeFilterRequest.getReportId(), null,
                 employeeFilterRequest.getPage(), employeeFilterRequest.getSize());
@@ -105,11 +117,13 @@ public class Report {
                                                      @RequestParam(defaultValue = "0") int page,
                                                      @RequestParam(defaultValue = "12") int size
     ) {
+        companyAccessGuard.requireCompanyAccess(companyId);
         return reportPersistenceService.getReportAnalytics(companyId, page, size);
     }
 
     @GetMapping("/get-by-start-date/{companyId}/{startDate}")
     public ReportResponse getReport(@PathVariable String startDate, @PathVariable String companyId) {
+        companyAccessGuard.requireCompanyAccess(companyId);
         return reportPersistenceService.getPayRollReport(startDate, companyId);
     }
 
@@ -119,6 +133,7 @@ public class Report {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
+        companyAccessGuard.requireCompanyAccess(request.getCompanyId());
         return reportPersistenceService.getPayRollReportByType(request, page, size);
     }
 
@@ -127,6 +142,7 @@ public class Report {
             @RequestBody ReportByTypeRequest request,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+        companyAccessGuard.requireCompanyAccess(request.getCompanyId());
         return reportPersistenceService.getPayRollReportDetailByType(request, page, size);
     }
 
@@ -138,6 +154,7 @@ public class Report {
 
     @PutMapping("/update-report-status")
     public void updateStatus(@RequestBody UpdatePayrollStatusRequest request) {
+        companyAccessGuard.requireCompanyAccess(request.getCompanyId());
         try {
             LOGGER.info("Updating report status to {}", request.getStatus());
             reportPersistenceService.updateReportStatus(request);
@@ -166,6 +183,7 @@ public class Report {
             @RequestParam(defaultValue = "") String fullName,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "3") int size) {
+        companyAccessGuard.requireCompanyAccess(companyId);
         Map<String, Object> response = reportPersistenceService.getPaymentDetails(id, companyId, fullName, page, size);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -178,6 +196,7 @@ public class Report {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "3") int size
     ) {
+        companyAccessGuard.requireCompanyAccess(companyId);
         Map<String, Object> response  = reportPersistenceService
                 .getPaymentDetailForDates(employeeId, companyId, endDates, page, size);
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -189,6 +208,7 @@ public class Report {
             @RequestParam() String startDate,
             @RequestParam() String employeeId
     ) {
+        companyAccessGuard.requireCompanyAccess(companyId);
         ReportResponse response = reportPersistenceService
                 .getPaymentDetailsByEmployee(employeeId, startDate, companyId);
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -199,6 +219,7 @@ public class Report {
             @RequestParam() String employeeId,
             @RequestParam() String companyId
     ) {
+        companyAccessGuard.requireCompanyAccess(companyId);
         YTDReport response = reportPersistenceService.getYTDReport(employeeId, companyId);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -207,6 +228,7 @@ public class Report {
     public ResponseEntity<?> getYtdReportsByEmployeeIds(
             @RequestBody() YtdRequest request
     ) {
+        companyAccessGuard.requireCompanyAccess(request.getCompanyId());
         List<YTDReport> response = reportPersistenceService.getYTDReports(request);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -253,6 +275,7 @@ public class Report {
                                                @RequestHeader("Authorization") String authorizationHeader
     ) throws IOException {
 
+        companyAccessGuard.requireCompanyAccess(payload.getCompanyID());
         byte[] excelFile = reportGeneratorService.generateReport(payload, authorizationHeader);
                // 🔹 Store file locally
 //        Path folder = Paths.get("./exports");  // relative folder inside Spring Boot run dir
@@ -299,11 +322,15 @@ public class Report {
 
     @GetMapping("/payment-header-options/company-id/{companyID}/report-id/{reportId}")
     public Set<String> getAllHeadersForReport(@PathVariable String companyID, @PathVariable String reportId) {
+        companyAccessGuard.requireCompanyAccess(companyID);
         return reportGeneratorService.getHeadersForReport(companyID, reportId);
     }
 
     @PostMapping("/total-netpay-by-report-id")
     public Map<String, Object> getTotalNetPayByReportId(@RequestBody RetrieveSummaryElementRequest request){
+        if (request.getCompanyId() != null) {
+            companyAccessGuard.requireCompanyAccess(request.getCompanyId());
+        }
         return reportGeneratorService.extractDataFromSummary(request);
     }
 
@@ -311,6 +338,7 @@ public class Report {
     public ResponseEntity<?> getVarianceDetails(
             @RequestBody EmployeeFilterRequest employeeFilterRequest,
             @RequestHeader("Authorization") String authorizationHeader) {
+        companyAccessGuard.requireCompanyAccess(employeeFilterRequest.getCompanyID());
         employeeFilterRequest.setSize(5000);
         PaginatedSelectedEmployeeField selectedEmployeeField = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
 
@@ -327,6 +355,7 @@ public class Report {
     public ResponseEntity<?> getVarianceDetailsByEmployeeId(
             @RequestBody EmployeeFilterRequest employeeFilterRequest,
             @RequestHeader("Authorization") String authorizationHeader) {
+        companyAccessGuard.requireCompanyAccess(employeeFilterRequest.getCompanyID());
 //        PaginatedSelectedEmployeeField selectedEmployeeField = adminService.getEmployeeIdListForFilter(employeeFilterRequest, authorizationHeader);
 
 //        List<String> filteredList = selectedEmployeeField.getSelectedEmployeeFields().stream().map(SelectedEmployeeField::getEmployeeID).toList();
@@ -346,8 +375,16 @@ public class Report {
     @PostMapping("/variance-details-customized")
     public ResponseEntity<?> getVarianceDetailsCustomized(
             @RequestBody CustomizedVarianceRequest request) {
+        // company scoped via report lookup inside service; employeeIds-only request still needs auth company when provided
         Map<String, Map<String, BigDecimal>> response = reportPersistenceService.getSummaryVarianceDetails(request.getReportId(), request.getEmployeeIds());
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+
+    private void requireReportCompanyAccess(ReportResponse report) {
+        if (report != null && report.getCompanyId() != null) {
+            companyAccessGuard.requireCompanyAccess(report.getCompanyId());
+        }
     }
 
 }

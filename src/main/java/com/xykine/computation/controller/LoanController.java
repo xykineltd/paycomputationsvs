@@ -11,6 +11,7 @@ import com.xykine.computation.request.CreateLoanRequest;
 import com.xykine.computation.request.RepaymentRequest;
 import com.xykine.computation.request.UpdateLoanRequest;
 import com.xykine.computation.service.LoanService;
+import com.xykine.computation.utils.CompanyAccessGuard;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
@@ -25,10 +26,12 @@ import java.time.Instant;
 public class LoanController {
 
     private final LoanService loanService;
+    private final CompanyAccessGuard companyAccessGuard;
 
     // Create loan (optional but handy)
     @PostMapping("/loans")
     public Loan createLoan(@Valid @RequestBody CreateLoanRequest req) {
+        companyAccessGuard.requireCompanyAccess(req.getCompanyId());
         return loanService.createLoan(req);
     }
 
@@ -44,6 +47,7 @@ public class LoanController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdAt,desc") String sort
     ) {
+        companyAccessGuard.requireCompanyAccess(companyId);
         String[] sortParts = sort.split(",", 2);
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.fromString(sortParts.length>1?sortParts[1]:"desc"), sortParts[0]));
         LoanFilter f = new LoanFilter();
@@ -64,6 +68,7 @@ public class LoanController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "paidAt,desc") String sort
     ) {
+        companyAccessGuard.requireCompanyAccess(companyId);
         String[] sortParts = sort.split(",", 2);
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.fromString(sortParts.length>1?sortParts[1]:"desc"), sortParts[0]));
         return loanService.getEmployeeRepayments(companyId, employeeId, pageable);
@@ -77,6 +82,8 @@ public class LoanController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "paidAt,desc") String sort
     ) {
+        Loan existing = loanService.getLoan(loanId);
+        companyAccessGuard.requireCompanyAccess(existing.getCompanyId());
         String[] sortParts = sort.split(",", 2);
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.fromString(sortParts.length>1?sortParts[1]:"desc"), sortParts[0]));
         return loanService.getLoanRepayments(loanId, pageable);
@@ -88,6 +95,8 @@ public class LoanController {
             @PathVariable String loanId,
             @Valid @RequestBody UpdateLoanRequest req
     ) {
+        Loan existing = loanService.getLoan(loanId);
+        companyAccessGuard.requireCompanyAccess(existing.getCompanyId());
         return loanService.updateLoan(loanId, req);
     }
 
@@ -97,6 +106,8 @@ public class LoanController {
             @PathVariable String loanId,
             @Valid @RequestBody RepaymentRequest req
     ) {
+        Loan existing = loanService.getLoan(loanId);
+        companyAccessGuard.requireCompanyAccess(existing.getCompanyId());
         return loanService.recordRepayment(loanId, req);
     }
 
@@ -106,6 +117,8 @@ public class LoanController {
             @PathVariable String loanId,
             @Valid @RequestBody AdjustLoanRequest req
     ) {
+        Loan existing = loanService.getLoan(loanId);
+        companyAccessGuard.requireCompanyAccess(existing.getCompanyId());
         return loanService.createAdjustment(loanId, req);
     }
 
@@ -117,6 +130,8 @@ public class LoanController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdAt,desc") String sort
     ) {
+        Loan existing = loanService.getLoan(loanId);
+        companyAccessGuard.requireCompanyAccess(existing.getCompanyId());
         String[] sortParts = sort.split(",", 2);
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.fromString(sortParts.length>1?sortParts[1]:"desc"), sortParts[0]));
         return loanService.getAdjustmentsForLoan(loanId, pageable);

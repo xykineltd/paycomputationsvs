@@ -38,3 +38,5 @@ admin:
 
 xykine:
   spa-uri: ${SPA_URL:http://localhost:3000}
+  security:
+    enforce-company-access: false

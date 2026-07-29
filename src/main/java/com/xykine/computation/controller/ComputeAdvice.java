@@ -13,6 +13,13 @@ import java.time.LocalDateTime;
 @RestControllerAdvice
 public class ComputeAdvice {
 
+    @ExceptionHandler(CompanyAccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ResponseEntity<ApiError> handleCompanyAccessDenied(CompanyAccessDeniedException ex) {
+        ApiError error = new ApiError(HttpStatus.FORBIDDEN.value(), ex.getMessage(), LocalDateTime.now());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
+
     @ExceptionHandler(PayrollUnmodifiableException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ResponseEntity<ApiError> handleRuntimeException(PayrollUnmodifiableException ex) {
@@ -32,17 +39,34 @@ public class ComputeAdvice {
     }
 
     @ExceptionHandler(PayrollValidationException.class)
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ResponseEntity<ApiError> handleRuntimeException(PayrollValidationException ex) {
-        ApiError error = new ApiError(HttpStatus.INTERNAL_SERVER_ERROR.value(), ex.getMessage(), LocalDateTime.now());
+        ApiError error = new ApiError(HttpStatus.BAD_REQUEST.value(), ex.getMessage(), LocalDateTime.now());
         return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .status(HttpStatus.BAD_REQUEST)
                 .body(error);
     }
 
     @ExceptionHandler(PayrollInternalServerError.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    String PayrollInternalServerErrorHandler(PayrollInternalServerError ex) {
-        return ex.getMessage();
+    public ResponseEntity<ApiError> payrollInternalServerErrorHandler(PayrollInternalServerError ex) {
+        ApiError error = new ApiError(HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "An internal error occurred while processing payroll", LocalDateTime.now());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
+
+    @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<ApiError> handleBadRequest(RuntimeException ex) {
+        ApiError error = new ApiError(HttpStatus.BAD_REQUEST.value(), ex.getMessage(), LocalDateTime.now());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(Exception.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ResponseEntity<ApiError> handleGeneric(Exception ex) {
+        ApiError error = new ApiError(HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "An unexpected error occurred", LocalDateTime.now());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
 }

@@ -552,9 +552,9 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         });
         PaymentInfo paymentInfo = reportResponses.get(0).getDetail().getReport();
         assertThat(paymentInfo.getYtdReport()).isNotNull().satisfies((x) -> {
-            assertThat(x.get("WHT").compareTo(BigDecimal.valueOf(7500)));
-            assertThat(x.get("Net Pay").compareTo(BigDecimal.valueOf(142500)));
-            assertThat(x.get("Taxable Income").compareTo(BigDecimal.valueOf(150000)));
+            assertThat(x.get("WHT")).isEqualByComparingTo(BigDecimal.valueOf(7500));
+            assertThat(x.get("Net Pay")).isEqualByComparingTo(BigDecimal.valueOf(142500));
+            assertThat(x.get("Taxable Income")).isEqualByComparingTo(BigDecimal.valueOf(150000));
         });
 
         startJobResponse =  startReportSummary("2025-06-01", "2025-06-30", false);
@@ -577,9 +577,9 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         });
          paymentInfo = reportResponses.get(0).getDetail().getReport();
         assertThat(paymentInfo.getYtdReport()).isNotNull().satisfies((x) -> {
-            assertThat(x.get("WHT").compareTo(BigDecimal.valueOf(7500)));
-            assertThat(x.get("Net Pay").compareTo(BigDecimal.valueOf(142500)));
-            assertThat(x.get("Taxable Income").compareTo(BigDecimal.valueOf(150000)));
+            assertThat(x.get("WHT")).isEqualByComparingTo(BigDecimal.valueOf(7500));
+            assertThat(x.get("Net Pay")).isEqualByComparingTo(BigDecimal.valueOf(142500));
+            assertThat(x.get("Taxable Income")).isEqualByComparingTo(BigDecimal.valueOf(150000));
         });
 
         when(adminService.getEmployeeIdListForFilter(any(), anyString())).thenReturn((PaginatedSelectedEmployeeField) List.of("8e3b6e4952e8468a84fd84556f8fdf2a"));
@@ -610,8 +610,8 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         ReportResponse reportSummary = getReportSummary();
         assertThat(reportSummary).isNotNull().satisfies(x -> {
          assertThat(x.getSummary()).isNotNull().satisfies(y -> {
-             y.getCostCenterSummary().get("costCenterA").get("Total Net Pay").compareTo(BigDecimal.valueOf(2100000.15));
-             y.getCostCenterSummary().get("costCenterB").get("Total Net Pay").compareTo(BigDecimal.valueOf(4900000.35));
+             assertThat(y.getCostCenterSummary().get("costCenterA").get("Total Net Pay")).isEqualByComparingTo(BigDecimal.valueOf(2100000.15));
+             assertThat(y.getCostCenterSummary().get("costCenterB").get("Total Net Pay")).isEqualByComparingTo(BigDecimal.valueOf(4900000.35));
          });
         });
     }
@@ -622,7 +622,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
     void testGetReportByCompanyIdAndStatusAndVerifyApproveStatusIsFalse() {
         assertThat(getReportByCompanyIdAndStatus()).isNotNull().satisfies(reportResponses -> {
             assertThat(reportResponses.size()).isEqualTo(1);
-            assertThat(reportResponses.get(0).getPayrollStatus().compareTo(PayrollStatus.APPROVED) != 0);
+            assertThat(reportResponses.get(0).getPayrollStatus()).isNotEqualTo(PayrollStatus.APPROVED);
         });
     }
 
@@ -668,7 +668,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         // Assert approved status was pending initially
         assertThat(getReportByCompanyId()).isNotNull().satisfies(reportResponses -> {
             assertThat(reportResponses.size()).isEqualTo(1);
-            assertThat(reportResponses.get(0).getPayrollStatus().compareTo(PayrollStatus.PENDING) == 0);
+            assertThat(reportResponses.get(0).getPayrollStatus()).isEqualTo(PayrollStatus.PENDING);
         });
 
         // Approve
@@ -677,7 +677,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         // Assert approved status is now true
         assertThat(getReportByCompanyId()).isNotNull().satisfies(reportResponses -> {
             assertThat(reportResponses.size()).isEqualTo(1);
-            assertThat(reportResponses.get(0).getPayrollStatus().compareTo(PayrollStatus.APPROVED) == 0);
+            assertThat(reportResponses.get(0).getPayrollStatus()).isEqualTo(PayrollStatus.APPROVED);
         });
     }
 
@@ -778,7 +778,7 @@ public class ControllerIntegrationTest extends AbstractIntegrationTest {
         // Assert approved status was pending initially
         assertThat(getReportByCompanyId()).isNotNull().satisfies(reportResponses -> {
             assertThat(reportResponses.size()).isEqualTo(1);
-            assertThat(reportResponses.get(0).getPayrollStatus().compareTo(PayrollStatus.PENDING) == 0);
+            assertThat(reportResponses.get(0).getPayrollStatus()).isEqualTo(PayrollStatus.PENDING);
         });
 
         // Approve

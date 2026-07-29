@@ -79,10 +79,13 @@ public class ComputationUtils {
                     break;
                 }
             }
-            Map<String, ConcurrentHashMap<String, BigDecimal>> costCenterSummaryMap = sessionCalculationObject.getCostCenterSummary();
-            ConcurrentHashMap<String, BigDecimal> costCenterSummary = costCenterSummaryMap.get(employeeCostCenter);
-                costCenterSummaryMap.put(employeeCostCenter, costCenterSummary);
-                sessionCalculationObject.setCostCenterSummary(costCenterSummaryMap);
+            if (employeeCostCenter != null && !employeeCostCenter.isBlank()) {
+                Map<String, ConcurrentHashMap<String, BigDecimal>> costCenterSummaryMap =
+                        sessionCalculationObject.getCostCenterSummary();
+                ConcurrentHashMap<String, BigDecimal> costCenterSummary =
+                        costCenterSummaryMap.computeIfAbsent(employeeCostCenter, k -> new ConcurrentHashMap<>());
+                costCenterSummary.merge(key, value, BigDecimal::add);
+            }
         }
 
         // Thread-safe update of summaryDetails

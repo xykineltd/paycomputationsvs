@@ -11,7 +11,8 @@ import com.xykine.computation.exceptions.PayrollUnmodifiableException;
 import com.xykine.computation.repo.CompanyMetaDataRepo;
 import com.xykine.computation.repo.PaymentSettingMetadataRepo;
 import com.xykine.computation.repo.PayrollReportSummaryRepo;
-import com.xykine.computation.utils.ComputationUtils;
+import com.xykine.computation.session.PayrollSessionHolder;
+import com.xykine.computation.session.SessionCalculationObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,15 +49,14 @@ public class ComputeService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ComputeService.class);
 
-    public PaymentComputeResponse computePayroll(List<PaymentInfo> rawInfo) {
-
+    public PaymentComputeResponse computePayroll(List<PaymentInfo> rawInfo, SessionCalculationObject session) {
         if(!rawInfo.isEmpty()) {
             LOGGER.debug("First data received {} ", rawInfo.get(0));
         }
-            ObjectMapper mapper = new ObjectMapper();
-            List<PaymentInfo> paymentInfoList = mapper.convertValue(rawInfo, new TypeReference<List<PaymentInfo>>() {});
+        ObjectMapper mapper = new ObjectMapper();
+        List<PaymentInfo> paymentInfoList = mapper.convertValue(rawInfo, new TypeReference<List<PaymentInfo>>() {});
 
-        List<PaymentInfo> paymentReport = generateReport(paymentInfoList);
+        List<PaymentInfo> paymentReport = generateReport(paymentInfoList, session);
         return  PaymentComputeResponse.builder()
                 .message("")
                 .success(true)
@@ -64,7 +64,7 @@ public class ComputeService {
                 .build();
     }
 
-    private List<PaymentInfo> generateReport(List<PaymentInfo> rawInfo) {
+    private List<PaymentInfo> generateReport(List<PaymentInfo> rawInfo, SessionCalculationObject session) {
         int cores = Runtime.getRuntime().availableProcessors();
         int size = rawInfo.size();
         int chunkSize = (size + cores - 1) / cores;
@@ -75,14 +75,10 @@ public class ComputeService {
             chunks.add(rawInfo.subList(i, end));
         }
 
-        List<CompletableFuture<List<PaymentInfo>>> futures = new ArrayList<>();
-
-        futures.addAll(
-                chunks.stream()
-                        .map(chunk -> addAdditionalPaymentsIfApplicable(chunk))
-                        .map(finalChunk -> CompletableFuture.supplyAsync(() -> processReport(finalChunk)))
-                        .toList()
-        );
+        List<CompletableFuture<List<PaymentInfo>>> futures = chunks.stream()
+                .map(this::addAdditionalPaymentsIfApplicable)
+                .map(finalChunk -> CompletableFuture.supplyAsync(() -> processReport(finalChunk, session)))
+                .toList();
 
         CompletableFuture<Void> allDone = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
 
@@ -94,20 +90,25 @@ public class ComputeService {
                 .join();
     }
 
-    private List<PaymentInfo> processReport(List<PaymentInfo> job){
-        var payInfos =  job.stream()
-                .map(paymentCalculator::expandPaymentSettingsFromGrossAnnual)
-                .map(paymentCalculator::applyExchange)
-                .map(paymentCalculator::harmoniseToAnnual)
-                .map(paymentCalculator::addPersonalDeduction)
-                .map(paymentCalculator::computeGrossPay)
-                .map(paymentCalculator::computeNonTaxableIncomeExempt)
-                .map(paymentCalculator::computePayeeTax)
-                .map(paymentCalculator::computeTotalDeduction)
-                .map(paymentCalculator::computeNetPay)
-                .map(paymentCalculator::computeTotalNHF)
-                .collect(Collectors.toList());
-        return  payInfos;
+    private List<PaymentInfo> processReport(List<PaymentInfo> job, SessionCalculationObject session) {
+        // Bind the shared job-scoped session onto this worker thread
+        PayrollSessionHolder.set(session);
+        try {
+            return job.stream()
+                    .map(paymentCalculator::expandPaymentSettingsFromGrossAnnual)
+                    .map(paymentCalculator::applyExchange)
+                    .map(paymentCalculator::harmoniseToAnnual)
+                    .map(paymentCalculator::addPersonalDeduction)
+                    .map(paymentCalculator::computeGrossPay)
+                    .map(paymentCalculator::computeNonTaxableIncomeExempt)
+                    .map(paymentCalculator::computePayeeTax)
+                    .map(paymentCalculator::computeTotalDeduction)
+                    .map(paymentCalculator::computeNetPay)
+                    .map(paymentCalculator::computeTotalNHF)
+                    .collect(Collectors.toList());
+        } finally {
+            PayrollSessionHolder.clear();
+        }
     }
 
     private List<PaymentInfo> addAdditionalPaymentsIfApplicable(List<PaymentInfo> rawInfo) {
@@ -147,7 +148,14 @@ public class ComputeService {
                 .findAllyByStartDateAndCompanyIdAndOffCycle(startDate, companyId, false);
 
         payroll.forEach(p -> {
-                    if (p != null && (p.getPayrollStatus().compareTo(PayrollStatus.COMPLETED) == 0)) {
+                    if (p == null) {
+                        return;
+                    }
+                    PayrollStatus status = p.getPayrollStatus();
+                    if (status == PayrollStatus.COMPLETED
+                            || status == PayrollStatus.DISBURSED
+                            || status == PayrollStatus.APPROVED
+                            || status == PayrollStatus.APPROVED_AUDIT) {
                         throw new PayrollUnmodifiableException(startDate);
                     }
                 }

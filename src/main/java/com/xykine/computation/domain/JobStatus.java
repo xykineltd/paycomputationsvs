@@ -14,5 +14,5 @@ public class JobStatus {
     private String status; // QUEUED, IN_PROGRESS, COMPLETED, FAILED
     private String message;
     private String reportId;
+    private String companyId;
 }
-

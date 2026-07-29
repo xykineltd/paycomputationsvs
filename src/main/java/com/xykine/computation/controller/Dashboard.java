@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.xykine.computation.service.DashboardDataService;
+import com.xykine.computation.utils.CompanyAccessGuard;
 import org.xykine.payroll.model.PaymentFrequencyEnum;
 
 import java.util.Map;
@@ -21,11 +22,13 @@ import java.util.Map;
 public class Dashboard {
 
     private final DashboardDataService dashboardDataService;
+    private final CompanyAccessGuard companyAccessGuard;
 
     @GetMapping("/card")
     public ResponseEntity<?> getDashboardCard(
             @RequestParam String companyId
     ) {
+        companyAccessGuard.requireCompanyAccess(companyId);
         DashboardCardResponse response = dashboardDataService.retrieveDashboardCardData(companyId);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -36,6 +39,7 @@ public class Dashboard {
             @RequestParam(defaultValue = "") PaymentFrequencyEnum paymentFrequency,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size) {
+        companyAccessGuard.requireCompanyAccess(companyId);
         Map<String, Object> response = dashboardDataService.getDashboardGraph(paymentFrequency, companyId, page, size);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

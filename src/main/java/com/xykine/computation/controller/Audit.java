@@ -3,6 +3,7 @@ package com.xykine.computation.controller;
 import lombok.RequiredArgsConstructor;
 
 import com.xykine.computation.service.AuditTrailService;
+import com.xykine.computation.utils.CompanyAccessGuard;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +21,7 @@ import java.util.Map;
 public class Audit {
 
     private final AuditTrailService auditTrailService;
+    private final CompanyAccessGuard companyAccessGuard;
 
 //    @GetMapping("/user-trail")
 //    public ResponseEntity<?> getUserTrail(
@@ -39,11 +41,10 @@ public class Audit {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "2") int size) {
 
-        // Set default startDate to a very early date (or the earliest date in your data range)
-        LocalDate startLocalDate = (startDate != null && !startDate.isBlank()) ? LocalDate.parse(startDate) : LocalDate.of(1900, 1, 1);
+        companyAccessGuard.requireCompanyAccess(companyId);
 
-        // Set default endDate to the current date
-        LocalDate endLocalDate = (startDate != null && !startDate.isBlank()) ? LocalDate.parse(endDate) : LocalDate.now();
+        LocalDate startLocalDate = (startDate != null && !startDate.isBlank()) ? LocalDate.parse(startDate) : LocalDate.of(1900, 1, 1);
+        LocalDate endLocalDate = (endDate != null && !endDate.isBlank()) ? LocalDate.parse(endDate) : LocalDate.now();
 
         Map<String, Object> response = auditTrailService.getUserEvents(employeeId, startLocalDate, endLocalDate, companyId, page, size);
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -54,6 +55,7 @@ public class Audit {
             @RequestParam() String companyId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "3") int size) {
+        companyAccessGuard.requireCompanyAccess(companyId);
         Map<String, Object> response = auditTrailService.getAllEvents(companyId, page, size);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
