@@ -11,6 +11,8 @@ import com.xykine.computation.exceptions.PayrollUnmodifiableException;
 import com.xykine.computation.repo.CompanyMetaDataRepo;
 import com.xykine.computation.repo.PaymentSettingMetadataRepo;
 import com.xykine.computation.repo.PayrollReportSummaryRepo;
+import com.xykine.computation.session.PayrollCalculationContext;
+import com.xykine.computation.session.PayrollCalculationContextHolder;
 import com.xykine.computation.session.PayrollSessionHolder;
 import com.xykine.computation.session.SessionCalculationObject;
 import org.slf4j.Logger;
@@ -46,6 +48,7 @@ public class ComputeService {
     private final PayrollReportSummaryRepo payrollReportSummaryRepo;
     private final CompanyMetaDataRepo companyMetaDataRepo;
     private final PaymentSettingMetadataRepo paymentSettingMetadataRepo;
+    private final PayrollCalculationContextFactory calculationContextFactory;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ComputeService.class);
 
@@ -56,7 +59,12 @@ public class ComputeService {
         ObjectMapper mapper = new ObjectMapper();
         List<PaymentInfo> paymentInfoList = mapper.convertValue(rawInfo, new TypeReference<List<PaymentInfo>>() {});
 
-        List<PaymentInfo> paymentReport = generateReport(paymentInfoList, session);
+        String companyId = paymentInfoList.isEmpty() ? null : paymentInfoList.get(0).getCompanyID();
+        PayrollCalculationContext calcContext = companyId != null
+                ? calculationContextFactory.build(companyId, paymentInfoList)
+                : null;
+
+        List<PaymentInfo> paymentReport = generateReport(paymentInfoList, session, calcContext);
         return  PaymentComputeResponse.builder()
                 .message("")
                 .success(true)
@@ -64,10 +72,13 @@ public class ComputeService {
                 .build();
     }
 
-    private List<PaymentInfo> generateReport(List<PaymentInfo> rawInfo, SessionCalculationObject session) {
+    private List<PaymentInfo> generateReport(
+            List<PaymentInfo> rawInfo,
+            SessionCalculationObject session,
+            PayrollCalculationContext calcContext) {
         int cores = Runtime.getRuntime().availableProcessors();
         int size = rawInfo.size();
-        int chunkSize = (size + cores - 1) / cores;
+        int chunkSize = Math.max(1, (size + cores - 1) / cores);
         List<List<PaymentInfo>> chunks = new ArrayList<>();
 
         for (int i = 0; i < size; i += chunkSize) {
@@ -77,7 +88,8 @@ public class ComputeService {
 
         List<CompletableFuture<List<PaymentInfo>>> futures = chunks.stream()
                 .map(this::addAdditionalPaymentsIfApplicable)
-                .map(finalChunk -> CompletableFuture.supplyAsync(() -> processReport(finalChunk, session)))
+                .map(finalChunk -> CompletableFuture.supplyAsync(
+                        () -> processReport(finalChunk, session, calcContext)))
                 .toList();
 
         CompletableFuture<Void> allDone = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
@@ -90,9 +102,14 @@ public class ComputeService {
                 .join();
     }
 
-    private List<PaymentInfo> processReport(List<PaymentInfo> job, SessionCalculationObject session) {
-        // Bind the shared job-scoped session onto this worker thread
+    private List<PaymentInfo> processReport(
+            List<PaymentInfo> job,
+            SessionCalculationObject session,
+            PayrollCalculationContext calcContext) {
         PayrollSessionHolder.set(session);
+        if (calcContext != null) {
+            PayrollCalculationContextHolder.set(calcContext);
+        }
         try {
             return job.stream()
                     .map(paymentCalculator::expandPaymentSettingsFromGrossAnnual)
@@ -107,6 +124,7 @@ public class ComputeService {
                     .map(paymentCalculator::computeTotalNHF)
                     .collect(Collectors.toList());
         } finally {
+            PayrollCalculationContextHolder.clear();
             PayrollSessionHolder.clear();
         }
     }

@@ -143,37 +143,56 @@ public class ComputationUtils {
     }
 
     public static BigDecimal getAnnualTaxAmountBynewTaxRule(BigDecimal principal) {
-        double tax = 0.0;
-        Double income = principal.doubleValue();
-        if (income <= 800_000) {
-            tax = 0.0;
-
-        } else if (income <= 3_000_000) {
-            tax = (income - 800_000) * 0.15;
-
-        } else if (income <= 12_000_000) {
-            tax = (2_200_000 * 0.15)
-                    + (income - 3_000_000) * 0.18;
-
-        } else if (income <= 25_000_000) {
-            tax = (2_200_000 * 0.15)
-                    + (9_000_000 * 0.18)
-                    + (income - 12_000_000) * 0.21;
-
-        } else if (income <= 50_000_000) {
-            tax = (2_200_000 * 0.15)
-                    + (9_000_000 * 0.18)
-                    + (13_000_000 * 0.21)
-                    + (income - 25_000_000) * 0.23;
-
-        } else {
-            tax = (2_200_000 * 0.15)
-                    + (9_000_000 * 0.18)
-                    + (13_000_000 * 0.21)
-                    + (25_000_000 * 0.23)
-                    + (income - 50_000_000) * 0.25;
+        if (principal == null) {
+            return BigDecimal.ZERO;
         }
-        return BigDecimal.valueOf(tax);
+        BigDecimal income = principal;
+        BigDecimal tax = BigDecimal.ZERO;
+
+        if (income.compareTo(BigDecimal.valueOf(800_000)) <= 0) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+
+        // Progressive bands (annual)
+        BigDecimal remaining = income;
+        // 0 – 800k @ 0%
+        remaining = remaining.subtract(BigDecimal.valueOf(800_000));
+
+        // 800k – 3M @ 15% on up to 2.2M
+        BigDecimal band1 = remaining.min(BigDecimal.valueOf(2_200_000));
+        tax = tax.add(band1.multiply(new BigDecimal("0.15")));
+        remaining = remaining.subtract(band1);
+        if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
+            return tax.setScale(2, RoundingMode.HALF_UP);
+        }
+
+        // 3M – 12M @ 18% on up to 9M
+        BigDecimal band2 = remaining.min(BigDecimal.valueOf(9_000_000));
+        tax = tax.add(band2.multiply(new BigDecimal("0.18")));
+        remaining = remaining.subtract(band2);
+        if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
+            return tax.setScale(2, RoundingMode.HALF_UP);
+        }
+
+        // 12M – 25M @ 21% on up to 13M
+        BigDecimal band3 = remaining.min(BigDecimal.valueOf(13_000_000));
+        tax = tax.add(band3.multiply(new BigDecimal("0.21")));
+        remaining = remaining.subtract(band3);
+        if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
+            return tax.setScale(2, RoundingMode.HALF_UP);
+        }
+
+        // 25M – 50M @ 23% on up to 25M
+        BigDecimal band4 = remaining.min(BigDecimal.valueOf(25_000_000));
+        tax = tax.add(band4.multiply(new BigDecimal("0.23")));
+        remaining = remaining.subtract(band4);
+        if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
+            return tax.setScale(2, RoundingMode.HALF_UP);
+        }
+
+        // Above 50M @ 25%
+        tax = tax.add(remaining.multiply(new BigDecimal("0.25")));
+        return tax.setScale(2, RoundingMode.HALF_UP);
     }
 
     public static BigDecimal getMonthlyTaxAmountBynewTaxRule(BigDecimal principal) {
