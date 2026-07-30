@@ -21,6 +21,17 @@ spring:
             issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:https://auth.acedpaydev.com/realms/local}
             jwk-set-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI:https://auth.acedpaydev.com/realms/local/protocol/openid-connect/certs}
 
+  data:
+    redis:
+      connect-timeout: 2s
+      host: ${SPRING_REDIS_HOST:localhost}
+      port: 6379
+      timeout: 1s
+
+    mongodb:
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://root:rootpassword@localhost:27017/dev_db?authSource=admin&connectTimeoutMS=30000&serverSelectionTimeoutMS=30000&socketTimeoutMS=90000&directConnection=true}
+      database: ${MONGO_DB_NAME:dev_db}
+
 management:
   endpoints:
     web:
@@ -31,22 +42,6 @@ management:
       probes:
         enabled: true
       show-details: when_authorized
-
-  data:
-    redis:
-      connect-timeout: 2s
-      host: ${SPRING_REDIS_HOST:localhost}
-
-      port: 6379
-      timeout: 1s
-
-    mongodb:
-      uri: ${SPRING_DATA_MONGODB_URI:mongodb://root:rootpassword@localhost:27017/dev_db?authSource=admin&connectTimeoutMS=30000&serverSelectionTimeoutMS=30000&socketTimeoutMS=90000&directConnection=true}
-#      uri: mongodb://root:rootpassword@localhost:27017/dev_db?authSource=admin&connectTimeoutMS=30000&serverSelectionTimeoutMS=30000&socketTimeoutMS=90000&directConnection=true
-      database: ${MONGO_DB_NAME:dev_db}
-#      uri: mongodb://root:rootpassword@localhost:27017/dev_db?authSource=admin&connectTimeoutMS=30000&serverSelectionTimeoutMS=30000&socketTimeoutMS=90000&directConnection=true
-#            database: ${MONGO_DB_NAME:dev_db}
-#      database: dev_db
 
 mongodb:
   pool:
@@ -64,14 +59,11 @@ mongodb:
 admin:
   service:
     url: ${ADMIN_SERVICE_URL:http://localhost:9001/}
-#    url: http://xykinehrs.com/
     maxBufferSize: ${ADMIN_SERVICE_MAXBUFFERSIZE:500000}
-
 
 workflow:
   service:
     url: ${WORKFLOW_SERVICE_URL:http://localhost:9004/}
-
 
 xykine:
   spa-uri: ${SPA_URL:http://localhost:3000}

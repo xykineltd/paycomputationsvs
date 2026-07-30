@@ -31,10 +31,11 @@ public class CustomJwtAuthenticationConverter implements Converter<Jwt, Abstract
 
         // Keep only claims needed by AuthUtility — avoid attaching the full JWT claim set
         Map<String, Object> customAttributes = new HashMap<>();
-        customAttributes.put("CompanyID", jwt.getClaimAsString("CompanyID"));
-        customAttributes.put("EmployeeID", jwt.getClaimAsString("EmployeeID"));
-        if (jwt.getClaimAsString("TENANTID") != null) {
-            customAttributes.put("TenantID", jwt.getClaimAsString("TENANTID"));
+        customAttributes.put("CompanyID", firstClaim(jwt, "CompanyID", "companyId"));
+        customAttributes.put("EmployeeID", firstClaim(jwt, "EmployeeID", "employeeId"));
+        String tenantId = firstClaim(jwt, "TenantID", "TENANTID", "X-Tenant-ID");
+        if (tenantId != null) {
+            customAttributes.put("TenantID", tenantId);
         }
 
         CustomUserDetails userDetails = new CustomUserDetails(name, email, authorities, customAttributes);
@@ -47,5 +48,15 @@ public class CustomJwtAuthenticationConverter implements Converter<Jwt, Abstract
         }
         String upper = role.toUpperCase();
         return upper.startsWith("ROLE_") ? upper : "ROLE_" + upper;
+    }
+
+    private String firstClaim(Jwt jwt, String... names) {
+        for (String name : names) {
+            String value = jwt.getClaimAsString(name);
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return null;
     }
 }
