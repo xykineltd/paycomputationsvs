@@ -11,6 +11,11 @@ spring:
   profiles:
     active: dev
 
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 30MB
+
   codec:
     max-in-memory-size: 500000KB
 
