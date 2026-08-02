@@ -1,32 +1,47 @@
-version: '3'
+#version: '3'
+#
+#services:
+#  mongo:
+#    image: mongo
+#    environment:
+#      - MONGO_INITDB_ROOT_USERNAME=admin
+#      - MONGO_INITDB_ROOT_PASSWORD=docker
+#      - MONGO_INITDB_DATABASE=admin
+#    ports:
+#      - "27017:27017"
+#
+#  mongo-express:
+#    image: mongo-express
+#    environment:
+#      - ME_CONFIG_MONGODB_SERVER=mongo
+#      - ME_CONFIG_MONGODB_PORT=27017
+#      - ME_CONFIG_MONGODB_ENABLE_ADMIN=false
+#      - ME_CONFIG_MONGODB_AUTH_DATABASE=admin
+#      - ME_CONFIG_MONGODB_AUTH_USERNAME=admin
+#      - ME_CONFIG_MONGODB_AUTH_PASSWORD=docker
+#      - ME_CONFIG_BASICAUTH_USERNAME=admin
+#      - ME_CONFIG_BASICAUTH_PASSWORD=docker
+#    depends_on:
+#      - mongo
+#    ports:
+#      - "8888:8081"
+#  polar-redis:
+#    image: "redis:7.0"
+#    container_name: "xykine-redis"
+#    ports:
+#      - 6379:6379
+
+
+version: "3.8"
 
 services:
-  mongo:
-    image: mongo
-    environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=docker
-      - MONGO_INITDB_DATABASE=admin
-    ports:
-      - "27017:27017"
-
   mongo-express:
-    image: mongo-express
+    image: mongo-express:latest
+    container_name: mongo-express
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
     environment:
-      - ME_CONFIG_MONGODB_SERVER=mongo
-      - ME_CONFIG_MONGODB_PORT=27017
-      - ME_CONFIG_MONGODB_ENABLE_ADMIN=false
-      - ME_CONFIG_MONGODB_AUTH_DATABASE=admin
-      - ME_CONFIG_MONGODB_AUTH_USERNAME=admin
-      - ME_CONFIG_MONGODB_AUTH_PASSWORD=docker
-      - ME_CONFIG_BASICAUTH_USERNAME=admin
-      - ME_CONFIG_BASICAUTH_PASSWORD=docker
-    depends_on:
-      - mongo
-    ports:
-      - "8888:8081"
-  polar-redis:
-    image: "redis:7.0"
-    container_name: "xykine-redis"
-    ports:
-      - 6379:6379
+      ME_CONFIG_MONGODB_URL: "mongodb+srv://acedpay:vI91d0AU87T46Fj2@acepay-db-a585911e.mongo.ondigitalocean.com/admin?authSource=admin&tls=true"
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: admin123
