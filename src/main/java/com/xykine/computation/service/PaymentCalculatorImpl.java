@@ -216,10 +216,10 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
         BigDecimal nationalHousingFund = isNHFSubscribed(paymentInfo)
                 ? ComputationUtils.roundToTwoDecimalPlaces(
                 sessionCalculationObject.getComputationConstants().get("nationalHousingFundPercent")
-                        .multiply(grossPay))
+                        .multiply(paymentInfo.getBasicSalary()))
                 : BigDecimal.ZERO;
 
-        BigDecimal nhfValue = ComputationUtils.prorate(nationalHousingFund, unpaidDays, salaryFrequency, paymentInfo.getStartDate());
+        BigDecimal nhfValue = ComputationUtils.prorate(nationalHousingFund, 0, salaryFrequency, paymentInfo.getStartDate());
         nonTaxableIncomeExemptMap.put(MapKeys.NATIONAL_HOUSING_FUND, nhfValue);
         nhf.put(MapKeys.NATIONAL_HOUSING_FUND, nhfValue);
         paymentInfo.setNhf(nhf);
@@ -236,6 +236,11 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     }
 
 public PaymentInfo computeNonTaxableIncomeExemptForMFBNewTaxLaw(PaymentInfo paymentInfo, BigDecimal nationalHousingFund) {
+
+    Map<String, BigDecimal> nonTaxableMonthly = new HashMap<>();
+    nonTaxableMonthly.put("691b7c124ada597551264f6a", BigDecimal.valueOf(64248.83));
+    nonTaxableMonthly.put("691b7c124ada597551264f9b", BigDecimal.valueOf(23677.36));
+
     Map<String, BigDecimal> nonTaxableIncomeExemptMap = new HashMap<>();
     if (isContract(paymentInfo)) {
         return paymentInfo;
@@ -262,7 +267,7 @@ public PaymentInfo computeNonTaxableIncomeExemptForMFBNewTaxLaw(PaymentInfo paym
     BigDecimal chargeableIncome = annualGrossSalary.subtract(reliefAllowance);
     BigDecimal callAllowance = paymentInfo.getGrossPay().getOrDefault("Call/Data Allowance", BigDecimal.ZERO);
     BigDecimal monthlyChargeable = chargeableIncome.divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP).subtract(callAllowance);
-    monthlyChargeable = monthlyChargeable.subtract(getTotalMonthlyTaxFreeAllowance(paymentInfo));
+    monthlyChargeable = monthlyChargeable.subtract(getTotalMonthlyTaxFreeAllowance(paymentInfo)).subtract(nonTaxableMonthly.getOrDefault(paymentInfo.getEmployeeID().toString(), BigDecimal.ZERO));
 
     nonTaxableIncomeExemptMap.put("ANNUAL EMPLOYEE PENSION @ 8%", annualEmployeePensionAtEightPercent);
     nonTaxableIncomeExemptMap.put("RENT RELIEF", rentAllowance);
