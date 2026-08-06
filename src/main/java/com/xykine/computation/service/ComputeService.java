@@ -146,7 +146,7 @@ public class ComputeService {
                                 return PaymentSettingsResponse.builder()
                                         .active(true)
                                         .employeeID(paymentInfo.getEmployeeID())
-                                        .type(PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT)
+                                        .type(PaymentTypeEnum.GROSS_EARNING)
                                         .salaryFrequency(PaymentFrequencyEnum.MONTHLY)
                                         .value(setting.getPaymentAmount())
                                         .name(setting.getPaymentName())

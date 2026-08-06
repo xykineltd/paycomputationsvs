@@ -109,15 +109,15 @@ public class TestDataGenerator {
         ArrayNode settingsArray = mapper.createArrayNode();
 
         if (index % 5 != 0) {
-            settingsArray.add(createPaymentSetting(mapper, index, "BASIC_SALARY_ANNUAL", "Basic Salary", 500000.0 + (index % 5) * 10000));
+            settingsArray.add(createPaymentSetting(mapper, index, "GROSS_EARNING", "Basic Salary", 500000.0 + (index % 5) * 10000));
         }
 
         if (index % 3 == 0) {
-            settingsArray.add(createPaymentSetting(mapper, index, "ALLOWANCE_ANNUAL_TRANSPORT", "Transport Allowance", 50000.0));
+            settingsArray.add(createPaymentSetting(mapper, index, "GROSS_EARNING", "Transport Allowance", 50000.0));
         }
 
         if (index % 4 == 0) {
-            settingsArray.add(createPaymentSetting(mapper, index, "ALLOWANCE_ANNUAL_HOUSING", "Housing Allowance", 80000.0));
+            settingsArray.add(createPaymentSetting(mapper, index, "GROSS_EARNING", "Housing Allowance", 80000.0));
         }
 
         return settingsArray;

@@ -44,7 +44,7 @@ class PensionNhfPeriodizationTest {
 
         Set<PaymentSettingsResponse> settings = new HashSet<>();
         PaymentSettingsResponse basic = new PaymentSettingsResponse();
-        basic.setType(PaymentTypeEnum.BASIC_SALARY_ANNUAL);
+        basic.setType(PaymentTypeEnum.GROSS_EARNING);
         basic.setName("Basic");
         basic.setValue(BigDecimal.valueOf(1_200_000));
         settings.add(basic);

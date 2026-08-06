@@ -19,11 +19,11 @@ class PensionNhfCalculatorTest {
         info.setBasicSalary(BigDecimal.valueOf(1_200_000));
 
         Set<PaymentSettingsResponse> settings = new HashSet<>();
-        settings.add(setting(PaymentTypeEnum.BASIC_SALARY_ANNUAL, "Basic", BigDecimal.valueOf(1_200_000), false));
-        settings.add(setting(PaymentTypeEnum.ALLOWANCE_ANNUAL_HOUSING, "Housing", BigDecimal.valueOf(300_000), false));
-        settings.add(setting(PaymentTypeEnum.ALLOWANCE_ANNUAL_TRANSPORT, "Transport", BigDecimal.valueOf(100_000), false));
-        settings.add(setting(PaymentTypeEnum.ALLOWANCE_ANNUAL, "Call", BigDecimal.valueOf(50_000), false));
-        settings.add(setting(PaymentTypeEnum.ALLOWANCE_ANNUAL, "Pensionable Bonus", BigDecimal.valueOf(80_000), true));
+        settings.add(setting(PaymentTypeEnum.GROSS_EARNING, "Basic", BigDecimal.valueOf(1_200_000), false));
+        settings.add(setting(PaymentTypeEnum.GROSS_EARNING, "Housing", BigDecimal.valueOf(300_000), false));
+        settings.add(setting(PaymentTypeEnum.GROSS_EARNING, "Transport", BigDecimal.valueOf(100_000), false));
+        settings.add(setting(PaymentTypeEnum.GROSS_EARNING, "Call", BigDecimal.valueOf(50_000), false));
+        settings.add(setting(PaymentTypeEnum.GROSS_EARNING, "Pensionable Bonus", BigDecimal.valueOf(80_000), true));
         info.setPaymentSettings(settings);
 
         BigDecimal annualBasic = PensionNhfCalculator.resolveAnnualBasicSalary(info);

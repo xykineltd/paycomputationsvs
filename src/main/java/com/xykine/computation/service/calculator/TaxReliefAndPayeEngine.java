@@ -146,7 +146,7 @@ public final class TaxReliefAndPayeEngine {
 
         if (paymentInfo.isOffCycle()) {
             PaymentSettingsResponse offCyclePayment = paymentInfo.getPaymentSettings().stream()
-                    .filter(p -> p.getType() == PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT)
+                    .filter(p -> p.getType() == PaymentTypeEnum.GROSS_EARNING)
                     .findFirst()
                     .orElse(null);
             if (offCyclePayment == null) {
@@ -185,7 +185,7 @@ public final class TaxReliefAndPayeEngine {
             monthlyPayeeTax = ComputationUtils.getTaxAmount(requireGross(paymentInfo), taxInfo);
             payeKey = PayrollMapKeys.offCyclePayeKey(
                     paymentInfo.getPaymentSettings().stream()
-                            .filter(p -> p.getType() == PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT)
+                            .filter(p -> p.getType() == PaymentTypeEnum.GROSS_EARNING)
                             .map(PaymentSettingsResponse::getName)
                             .findFirst()
                             .orElse("Off-Cycle"));

@@ -115,24 +115,14 @@ public class PaymentCalculatorImpl implements PaymentCalculator {
     }
 
     private PaymentSettingsResponse harmonisePaymentSetting(PaymentSettingsResponse setting, long globalMultiplier) {
-        String description = setting.getType().getDescription();
-        if (description.contains("ALLOWANCE") || description.contains("BASIC SALARY")) {
+        PaymentTypeEnum type = setting.getType();
+        if (type == PaymentTypeEnum.GROSS_EARNING || type == PaymentTypeEnum.NET_EARNING) {
             setting.setValue(ComputationUtils.harmoniseToAnnual(globalMultiplier, setting.getValue()));
-            if (description.contains("HOUSING")) {
-                setting.setType(PaymentTypeEnum.ALLOWANCE_ANNUAL_HOUSING);
-            } else if (description.contains("TRANSPORT")) {
-                setting.setType(PaymentTypeEnum.ALLOWANCE_ANNUAL_TRANSPORT);
-            } else if (description.contains("BASIC SALARY")) {
-                setting.setType(PaymentTypeEnum.BASIC_SALARY_ANNUAL);
-            } else {
-                setting.setType(PaymentTypeEnum.ALLOWANCE_ANNUAL);
-            }
-        } else if (description.contains("OFF CYCLE")) {
-            long customMultiplier = getMultiplier(setting.getSalaryFrequency());
-            setting.setValue(ComputationUtils.harmoniseToAnnual(customMultiplier, setting.getValue()));
-            setting.setType(PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT);
-            setting.setSalaryFrequency(PaymentFrequencyEnum.YEARLY);
+        } else if (type == PaymentTypeEnum.RELIEF || type == PaymentTypeEnum.SUBSCRIPTION) {
+            // profile / relief amounts stay as supplied
+            return setting;
         }
+        // Deductions stay period-scale unless already annualized upstream
         return setting;
     }
 
@@ -283,9 +273,8 @@ public class PaymentCalculatorImpl implements PaymentCalculator {
         } else {
             // Do not mutate annual settings in place — pension/relief still need annual values.
             PensionNhfCalculator.getAllowanceForEmployee(paymentInfo).forEach(entry -> {
-                int days = entry.getType() != PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT ? unpaidDays : 0;
                 BigDecimal periodValue = prorate(
-                        entry.getValue(), days, salaryFrequency, paymentInfo.getStartDate());
+                        entry.getValue(), unpaidDays, salaryFrequency, paymentInfo.getStartDate());
                 earningMap.put(entry.getName(), periodValue);
             });
         }
@@ -349,7 +338,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator {
 
     private PaymentSettingsResponse getOffCyclePaymentDetails(PaymentInfo paymentInfo) {
         return paymentInfo.getPaymentSettings().stream()
-                .filter(setting -> setting.getType().equals(PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT))
+                .filter(setting -> setting.getType().equals(PaymentTypeEnum.GROSS_EARNING))
                 .findFirst()
                 .orElseGet(PaymentSettingsResponse::new);
     }
@@ -360,7 +349,9 @@ public class PaymentCalculatorImpl implements PaymentCalculator {
 
     private Set<PaymentSettingsResponse> getDeductionsForEmployee(PaymentInfo paymentInfo) {
         return paymentInfo.getPaymentSettings().stream()
-                .filter(setting -> setting.getType().getDescription().contains("DEDUCTION"))
+                .filter(setting -> setting.getType() == PaymentTypeEnum.DEDUCTION
+                        || setting.getType() == PaymentTypeEnum.NET_DEDUCTION
+                        || setting.getType() == PaymentTypeEnum.GROSS_DEDUCTION)
                 .collect(Collectors.toSet());
     }
 
@@ -454,7 +445,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator {
 
     private PaymentFrequencyEnum getOffCyclePaymentFrequency(PaymentInfo paymentInfo) {
         return paymentInfo.getPaymentSettings().stream()
-                .filter(setting -> setting.getType() == PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT)
+                .filter(setting -> setting.getType() == PaymentTypeEnum.GROSS_EARNING)
                 .map(PaymentSettingsResponse::getSalaryFrequency)
                 .filter(Objects::nonNull)
                 .findFirst()

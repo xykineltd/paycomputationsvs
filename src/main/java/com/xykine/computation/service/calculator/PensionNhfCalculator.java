@@ -13,6 +13,7 @@ import org.xykine.payroll.model.enums.PaymentTypeEnum;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -26,31 +27,28 @@ public final class PensionNhfCalculator {
 
     public static BigDecimal resolveAnnualBasicSalary(PaymentInfo paymentInfo) {
         return paymentInfo.getPaymentSettings().stream()
-                .filter(x -> x.getType() == PaymentTypeEnum.BASIC_SALARY_ANNUAL)
+                .filter(PensionNhfCalculator::isBasicSalary)
                 .map(PaymentSettingsResponse::getValue)
                 .findFirst()
                 .orElse(paymentInfo.getBasicSalary() != null ? paymentInfo.getBasicSalary() : BigDecimal.ZERO);
     }
 
     /**
-     * Pensionable base = annual basic + pensionable allowances (incl. housing/transport).
+     * Pensionable base = annual basic + pensionable earnings (nature GROSS/NET earning).
      */
     public static BigDecimal resolvePensionableBase(PaymentInfo paymentInfo, BigDecimal annualBasic) {
         return getAllowanceForEmployee(paymentInfo).stream()
+                .filter(x -> !isBasicSalary(x))
                 .filter(x -> x.isPensionable()
-                        || x.getType() == PaymentTypeEnum.ALLOWANCE_ANNUAL_HOUSING
-                        || x.getType() == PaymentTypeEnum.ALLOWANCE_ANNUAL_TRANSPORT)
+                        || isHousingOrTransport(x))
                 .map(PaymentSettingsResponse::getValue)
                 .reduce(annualBasic, BigDecimal::add);
     }
 
     public static Set<PaymentSettingsResponse> getAllowanceForEmployee(PaymentInfo paymentInfo) {
         return paymentInfo.getPaymentSettings().stream()
-                .filter(setting -> setting.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL)
-                        || setting.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_TRANSPORT)
-                        || setting.getType().equals(PaymentTypeEnum.ALLOWANCE_ANNUAL_HOUSING)
-                        || setting.getType().equals(PaymentTypeEnum.BASIC_SALARY_ANNUAL)
-                        || setting.getType().equals(PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT))
+                .filter(setting -> setting.getType() == PaymentTypeEnum.GROSS_EARNING
+                        || setting.getType() == PaymentTypeEnum.NET_EARNING)
                 .collect(Collectors.toSet());
     }
 
@@ -75,7 +73,6 @@ public final class PensionNhfCalculator {
                 ? ComputationUtils.roundToTwoDecimalPlaces(pensionPercent.multiply(pensionableBase))
                 : BigDecimal.ZERO;
 
-        // Period amount for payroll deduction (same scale as other monthly items after proration)
         BigDecimal periodEmployeePension = ComputationUtils.prorate(
                 annualEmployeePension, 0, salaryFrequency, paymentInfo.getStartDate());
 
@@ -107,6 +104,22 @@ public final class PensionNhfCalculator {
         nhf.put(MapKeys.NATIONAL_HOUSING_FUND, periodNhf);
 
         return new Result(pension, nhf, annualEmployeePension, annualNhf, annualBasic, pensionableBase);
+    }
+
+    private static boolean isBasicSalary(PaymentSettingsResponse setting) {
+        if (setting == null || setting.getName() == null) {
+            return false;
+        }
+        String name = setting.getName().toLowerCase(Locale.ROOT);
+        return name.contains("basic") && name.contains("salary");
+    }
+
+    private static boolean isHousingOrTransport(PaymentSettingsResponse setting) {
+        if (setting == null || setting.getName() == null) {
+            return false;
+        }
+        String name = setting.getName().toLowerCase(Locale.ROOT);
+        return name.contains("housing") || name.contains("transport");
     }
 
     public record Result(

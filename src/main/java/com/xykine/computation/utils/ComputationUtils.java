@@ -302,7 +302,7 @@ public class ComputationUtils {
             if (dist.getType() != null) {
                 copy.setType(PaymentTypeEnum.valueOf(dist.getType().toUpperCase()));
             } else {
-                copy.setType(PaymentTypeEnum.ALLOWANCE_ANNUAL); // fallback
+                copy.setType(PaymentTypeEnum.GROSS_EARNING); // fallback
             }
 
             // Calculate distributed value (with rounding to 2 decimals)
@@ -332,7 +332,7 @@ public class ComputationUtils {
             loan.setActive(true);
             loan.setValue(x.getScheduledRepaymentAmount());
             loan.setName(x.getDescription());
-            loan.setType(PaymentTypeEnum.DEDUCTION_MONTHLY);
+            loan.setType(PaymentTypeEnum.NET_DEDUCTION);
             result.add(loan);
         });
         return result;

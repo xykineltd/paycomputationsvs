@@ -486,7 +486,7 @@ public abstract class AbstractIntegrationTest {
         var paymentSettings = paymentInfo.getPaymentSettings();
         return paymentSettings
                 .stream()
-                .filter(setting -> setting.getType().equals(PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT))
+                .filter(setting -> setting.getType().equals(PaymentTypeEnum.GROSS_EARNING))
                 .findFirst().orElseGet(PaymentSettingsResponse::new);
     }
 

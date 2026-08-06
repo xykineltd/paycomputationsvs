@@ -76,7 +76,7 @@ public class PayrollAsyncService {
                 .map(ReportUtils::transform)
                 .filter(x -> !x.getDetail().getReport().getPaymentSettings().isEmpty())
                 .flatMap(x -> x.getDetail().getReport().getPaymentSettings().stream())
-                .filter(x -> x.getType().equals(PaymentTypeEnum.DEDUCTION_MONTHLY))
+                .filter(x -> x.getType().equals(PaymentTypeEnum.NET_DEDUCTION))
                 .map(x -> loanService.getEmployeeActiveLoan(companyId, x.getEmployeeID(), x.getName()))
                 .forEach(loan -> {
                     RepaymentRequest req = new RepaymentRequest();

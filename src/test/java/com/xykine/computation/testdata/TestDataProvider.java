@@ -32,7 +32,7 @@ public class TestDataProvider {
                                  "paymentSettings":[ {
                                      "paymentSettingID": null,
                                      "employeeID": "7654321",
-                                     "type": "OFF_CYCLE_PAYMENT_AMOUNT",
+                                     "type": "GROSS_EARNING",
                                      "name": "Monthly Performance Bonus",
                                      "value":  65355.628875,
                                      "currency": "NGN",
@@ -80,7 +80,7 @@ public class TestDataProvider {
                                  "paymentSettings":[ {
                                      "paymentSettingID": null,
                                      "employeeID": "7654322",
-                                     "type": "OFF_CYCLE_PAYMENT_AMOUNT",
+                                     "type": "GROSS_EARNING",
                                      "name": "Monthly Performance Bonus",
                                      "value":  1634698.27083333,
                                      "currency": "NGN",
@@ -211,7 +211,7 @@ public class TestDataProvider {
                                    {
                                      "paymentSettingID": null,
                                      "employeeID": "682cf69592b07e60fa10991b",
-                                     "type": "OFF_CYCLE_PAYMENT_AMOUNT",
+                                     "type": "GROSS_EARNING",
                                      "name": "Monthly Performance Bonus",
                                      "value":  15,
                                      "currency": "NGN",
@@ -228,7 +228,7 @@ public class TestDataProvider {
                                    {
                                      "paymentSettingID": null,
                                      "employeeID": "682cf69592b07e60fa10991b",
-                                     "type": "OFF_CYCLE_PAYMENT_AMOUNT",
+                                     "type": "GROSS_EARNING",
                                      "name": "OVERTIME GROSS",
                                      "value":  58817.24,
                                      "currency": "NGN",
@@ -277,7 +277,7 @@ public class TestDataProvider {
                                    {
                                      "paymentSettingID": null,
                                      "employeeID": "682cf69592b07e60fa10991b",
-                                     "type": "OFF_CYCLE_PAYMENT_AMOUNT",
+                                     "type": "GROSS_EARNING",
                                      "name": "Monthly Performance Bonus",
                                      "value":  15,
                                      "currency": "NGN",
@@ -294,7 +294,7 @@ public class TestDataProvider {
                                    {
                                      "paymentSettingID": null,
                                      "employeeID": "682cf69592b07e60fa10991b",
-                                     "type": "OFF_CYCLE_PAYMENT_AMOUNT",
+                                     "type": "GROSS_EARNING",
                                      "name": "OVERTIME GROSS",
                                      "value":  58817.24,
                                      "currency": "NGN",
@@ -343,7 +343,7 @@ public class TestDataProvider {
                           {
                             "paymentSettingID": null,
                             "employeeID": "682cf69592b07e60fa10991b",
-                            "type": "DEDUCTION_MONTHLY",
+                            "type": "NET_DEDUCTION",
                             "name": "Coop Loan",
                             "value": 0.0,
                             "currency": "NGN",
@@ -360,7 +360,7 @@ public class TestDataProvider {
                           {
                             "paymentSettingID": null,
                             "employeeID": "682cf69592b07e60fa10991b",
-                            "type": "ALLOWANCE_ANNUAL_TRANSPORT",
+                            "type": "GROSS_EARNING",
                             "name": "Transport Allowance",
                             "value": 0.0,
                             "currency": "NGN",
@@ -377,7 +377,7 @@ public class TestDataProvider {
                           {
                             "paymentSettingID": null,
                             "employeeID": "682cf69592b07e60fa10991b",
-                            "type": "OFF_CYCLE_PAYMENT_AMOUNT",
+                            "type": "GROSS_EARNING",
                             "name": "Off-Cycle Payment Amount",
                             "value": 507722.72,
                             "currency": "NGN",
@@ -394,7 +394,7 @@ public class TestDataProvider {
                           {
                             "paymentSettingID": null,
                             "employeeID": "682cf69592b07e60fa10991b",
-                            "type": "ALLOWANCE_ANNUAL",
+                            "type": "GROSS_EARNING",
                             "name": "Acting Allowance",
                             "value": 0.0,
                             "currency": "NGN",
@@ -411,7 +411,7 @@ public class TestDataProvider {
                           {
                             "paymentSettingID": null,
                             "employeeID": "682cf69592b07e60fa10991b",
-                            "type": "BASIC_SALARY_ANNUAL",
+                            "type": "GROSS_EARNING",
                             "name": "Basic Salary",
                             "value": 0.0,
                             "currency": "NGN",
@@ -428,7 +428,7 @@ public class TestDataProvider {
                           {
                             "paymentSettingID": null,
                             "employeeID": "682cf69592b07e60fa10991b",
-                            "type": "ALLOWANCE_ANNUAL_HOUSING",
+                            "type": "GROSS_EARNING",
                             "name": "Housing Allowance",
                             "value": 0.0,
                             "currency": "NGN",
@@ -477,7 +477,7 @@ public class TestDataProvider {
                           {
                             "paymentSettingID": null,
                             "employeeID": "8e3b6e4952e8468a84fd84556f8fdf2a",
-                            "type": "BASIC_SALARY_ANNUAL",
+                            "type": "GROSS_EARNING",
                             "name": "Basic Salary",
                             "value": 1800000.00,
                             "currency": "NGN",
@@ -526,7 +526,7 @@ public class TestDataProvider {
                           {
                             "paymentSettingID": null,
                             "employeeID": "8e3b6e4952e8468a84fd84556f8fdf2a",
-                            "type": "BASIC_SALARY_ANNUAL",
+                            "type": "GROSS_EARNING",
                             "name": "Basic Salary",
                             "value": 1800000.00,
                             "currency": "NGN",

@@ -238,15 +238,15 @@ public class LoadComputationConfig{
 
         String morufoye_international_payment_distribution = """
     [
-      {"type": "BASIC_SALARY_ANNUAL", "percentage": 16.46, "name": "Basic Salary"},
-      {"type": "ALLOWANCE_ANNUAL_HOUSING", "percentage": 8.23, "name": "Housing Allowance"},
-      {"type": "ALLOWANCE_ANNUAL_TRANSPORT", "percentage": 8.23, "name": "Transport Allowance"},
-      {"type": "ALLOWANCE_ANNUAL", "percentage": 10, "name": "UTILITY"},
-      {"type": "ALLOWANCE_ANNUAL", "percentage": 10, "name": "ENTERTAINMENT"},
-      {"type": "ALLOWANCE_ANNUAL", "percentage": 17.08, "name": "PERSONAL OUTFIT"},
-      {"type": "ALLOWANCE_ANNUAL", "percentage": 10, "name": "LEAVE"},
-      {"type": "ALLOWANCE_ANNUAL", "percentage": 10, "name": "MEDICAL"},
-      {"type": "ALLOWANCE_ANNUAL", "percentage": 10, "name": "TRAINING"}
+      {"type": "GROSS_EARNING", "percentage": 16.46, "name": "Basic Salary"},
+      {"type": "GROSS_EARNING", "percentage": 8.23, "name": "Housing Allowance"},
+      {"type": "GROSS_EARNING", "percentage": 8.23, "name": "Transport Allowance"},
+      {"type": "GROSS_EARNING", "percentage": 10, "name": "UTILITY"},
+      {"type": "GROSS_EARNING", "percentage": 10, "name": "ENTERTAINMENT"},
+      {"type": "GROSS_EARNING", "percentage": 17.08, "name": "PERSONAL OUTFIT"},
+      {"type": "GROSS_EARNING", "percentage": 10, "name": "LEAVE"},
+      {"type": "GROSS_EARNING", "percentage": 10, "name": "MEDICAL"},
+      {"type": "GROSS_EARNING", "percentage": 10, "name": "TRAINING"}
     ]
     """;
 
