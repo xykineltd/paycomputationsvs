@@ -5,10 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Data
@@ -20,6 +17,8 @@ public class SessionCalculationObject {
     private  ConcurrentHashMap<String, BigDecimal> computationConstants = new ConcurrentHashMap<>();
     private  Map<String, ConcurrentHashMap<String, BigDecimal>> costCenterSummary = new ConcurrentHashMap<>();
     private Map<String, List<String>> costCenters = new HashMap<>();
+    private List<String> allNonTaxableEntries = new ArrayList<>();
+    private List<String> allNonTaxableAllowances = new ArrayList<>();
     private boolean isOffCycleTaxable  = true;
 
 }

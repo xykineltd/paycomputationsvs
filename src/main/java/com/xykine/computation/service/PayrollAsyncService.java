@@ -1,15 +1,12 @@
 package com.xykine.computation.service;
 
 
-import com.xykine.computation.entity.PayrollReportDetail;
-import com.xykine.computation.entity.PayrollStatus;
+import com.xykine.computation.dto.GLReportStatus;
+import com.xykine.computation.dto.GLSummary;
+import com.xykine.computation.entity.*;
 
-import com.xykine.computation.entity.PayrollVarianceDetailsCustomized;
-import com.xykine.computation.entity.YTDReport;
-import com.xykine.computation.repo.PayrollReportDetailRepo;
+import com.xykine.computation.repo.*;
 
-import com.xykine.computation.repo.PayrollVarianceDetailsCustomizedRepo;
-import com.xykine.computation.repo.YTDReportRepo;
 import com.xykine.computation.request.RepaymentRequest;
 import com.xykine.computation.response.PayCompteVarianceDetailsCustomized;
 import com.xykine.computation.response.PayComputeDetailResponse;
@@ -31,6 +28,7 @@ import org.xykine.payroll.model.enums.PaymentTypeEnum;
 
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -45,6 +43,8 @@ public class PayrollAsyncService {
     private final LoanService loanService;
     private final YTDReportRepo ytdReportRepo;
     private final PayrollVarianceDetailsCustomizedRepo payrollVarianceDetailsCustomizedRepo;
+    private final PaymentElementGLMappingRepository paymentElementGLMappingCustomRepository;
+    private final PayrollGLReportRepository payrollGLReportRepository;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PayrollAsyncService.class);
 
@@ -437,5 +437,96 @@ public class PayrollAsyncService {
                 });
 
         return extractedValues;
+    }
+
+    @Async
+    public void generatePayrollGLReport(PayrollReportSummary existingSummaryReport) {
+
+        List<PayrollReportDetail> reportDetails =
+                payrollReportDetailRepo.findPayrollReportDetailBySummaryId(existingSummaryReport.getId().toString());
+
+        List<PaymentInfo> paymentInfoList = ReportUtils.transform(reportDetails)
+                .stream()
+                .map(info -> info.getDetail().getReport())
+                .toList();
+
+        List<PaymentElementGLMapping> glMappings =
+                paymentElementGLMappingCustomRepository.findAll();
+
+        Map<String, GLSummary> gls = new HashMap<>();
+
+        paymentInfoList.stream()
+                .flatMap(paymentInfo -> paymentInfo.getPaymentSettings().stream())
+                .forEach(setting -> {
+
+                    PaymentElementGLMapping glMapping = glMappings.stream()
+                            .filter(mapping ->
+                                    mapping.getPayElement()
+                                            .equalsIgnoreCase(setting.getName()))
+                            .findFirst()
+                            .orElseThrow(() -> new IllegalArgumentException(
+                                    "No GL mapping found for payment element: "
+                                            + setting.getName()
+                            ));
+
+                    BigDecimal amount = setting.getValue();
+
+                    addToGL(
+                            gls,
+                            glMapping.getGlCodeDebit(),
+                            amount,
+                            true
+                    );
+
+                    addToGL(
+                            gls,
+                            glMapping.getGlCodeCredit(),
+                            amount,
+                            false
+                    );
+                });
+        PayrollGLReport payrollGLReport = PayrollGLReport.builder()
+                .id(existingSummaryReport.getId().toString())
+                .generated(LocalDateTime.from(Instant.now()))
+                .gls(gls)
+                .status(GLReportStatus.GENERATED)
+                .build();
+
+        payrollGLReportRepository.save(payrollGLReport);
+    }
+
+    private void addToGL(
+            Map<String, GLSummary> gls,
+            String glCode,
+            BigDecimal amount,
+            boolean debit
+    ) {
+        if (glCode == null || amount == null) {
+            return;
+        }
+
+        gls.compute(glCode, (key, existing) -> {
+
+            if (existing == null) {
+                return GLSummary.builder()
+                        .glCode(glCode)
+                        .debit(debit ? amount : BigDecimal.ZERO)
+                        .credit(debit ? BigDecimal.ZERO : amount)
+                        .net(debit ? amount : amount.negate())
+                        .build();
+            }
+
+            if (debit) {
+                existing.setDebit(existing.getDebit().add(amount));
+            } else {
+                existing.setCredit(existing.getCredit().add(amount));
+            }
+
+            existing.setNet(
+                    existing.getDebit().subtract(existing.getCredit())
+            );
+
+            return existing;
+        });
     }
 }

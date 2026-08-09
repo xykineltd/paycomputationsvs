@@ -9,7 +9,7 @@ import com.xykine.computation.entity.PayrollStatus;
 import com.xykine.computation.exceptions.IncompleteEntitySetupException;
 import com.xykine.computation.exceptions.PayrollUnmodifiableException;
 import com.xykine.computation.repo.CompanyMetaDataRepo;
-import com.xykine.computation.repo.PaymentSettingMetadataRepo;
+//import com.xykine.computation.repo.PaymentSettingMetadataRepo;
 import com.xykine.computation.repo.PayrollReportSummaryRepo;
 import com.xykine.computation.utils.ComputationUtils;
 import org.slf4j.Logger;
@@ -44,7 +44,6 @@ public class ComputeService {
     private final PaymentCalculator paymentCalculator;
     private final PayrollReportSummaryRepo payrollReportSummaryRepo;
     private final CompanyMetaDataRepo companyMetaDataRepo;
-    private final PaymentSettingMetadataRepo paymentSettingMetadataRepo;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ComputeService.class);
 
@@ -79,7 +78,7 @@ public class ComputeService {
 
         futures.addAll(
                 chunks.stream()
-                        .map(chunk -> addAdditionalPaymentsIfApplicable(chunk))
+                        //.map(chunk -> addAdditionalPaymentsIfApplicable(chunk))
                         .map(finalChunk -> CompletableFuture.supplyAsync(() -> processReport(finalChunk)))
                         .toList()
         );
@@ -109,38 +108,6 @@ public class ComputeService {
                 .collect(Collectors.toList());
         return  payInfos;
     }
-
-    private List<PaymentInfo> addAdditionalPaymentsIfApplicable(List<PaymentInfo> rawInfo) {
-        for (PaymentInfo paymentInfo : rawInfo) {
-
-            List<PaymentSettingsResponse> additionalSettings =
-                    paymentSettingMetadataRepo.findByEmployeeIdAndCompanyId(paymentInfo.getEmployeeID(), paymentInfo.getCompanyID())
-                            .stream()
-                            .filter(Objects::nonNull)
-                            .filter(setting -> !setting.getStartDate().isAfter(LocalDate.parse(paymentInfo.getStartDate()))
-                                    && !setting.getEndDate().isBefore(LocalDate.parse(paymentInfo.getEndDate())))
-                            .filter(setting -> setting.getPaymentAmount() != null)
-                            .map(setting -> {
-                                paymentInfo.getPaymentSettings().removeIf(existing ->
-                                        existing.getName().equalsIgnoreCase(setting.getPaymentName()));
-
-                                return PaymentSettingsResponse.builder()
-                                        .active(true)
-                                        .employeeID(paymentInfo.getEmployeeID())
-                                        .type(PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT)
-                                        .salaryFrequency(PaymentFrequencyEnum.MONTHLY)
-                                        .value(setting.getPaymentAmount())
-                                        .name(setting.getPaymentName())
-                                        .build();
-                            })
-                            .collect(Collectors.toList());
-            if (!paymentInfo.isOffCycle()) {
-                paymentInfo.getPaymentSettings().addAll(additionalSettings);
-            }
-        }
-        return rawInfo;
-    }
-
     public void validatePayrollIsNotCompleted (String startDate, String companyId) {
 
         List<PayrollReportSummary> payroll = payrollReportSummaryRepo

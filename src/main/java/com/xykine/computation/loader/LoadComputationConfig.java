@@ -2,6 +2,8 @@ package com.xykine.computation.loader;
 
 
 import com.xykine.computation.domain.LoanStatus;
+import com.xykine.computation.dto.Nature;
+import com.xykine.computation.dto.PayElement;
 import com.xykine.computation.entity.*;
 import com.xykine.computation.repo.*;
 import lombok.AllArgsConstructor;
@@ -21,23 +23,18 @@ import java.util.UUID;
 @AllArgsConstructor
 public class LoadComputationConfig{
 
-//    private final TaxRepo taxRepo;
-//	private final PensionFundRepo pensionFundRepo;
-//	private final ComputationConstantsRepo computationConstantsRepo;
-//	private final DashboardCardRepo dashboardCardRepo;
-//    private final EmployeeMetadataRepo employeeMetaDataRepo;
-//    private final CompanyMetaDataRepo companyMetadataRepo;
-//    private final LoanRepo loanRepo;
-    private final PaymentSettingMetadataRepo paymentSettingMetadataRepo;
-
-
+    private final TaxRepo taxRepo;
+	private final PensionFundRepo pensionFundRepo;
+	private final ComputationConstantsRepo computationConstantsRepo;
+	private final DashboardCardRepo dashboardCardRepo;
+    private final EmployeeMetadataRepo employeeMetaDataRepo;
+    private final CompanyMetaDataRepo companyMetadataRepo;
+    private final LoanRepo loanRepo;
+    //private final PaymentSettingMetadataRepo paymentSettingMetadataRepo;
+    private final PaymentElementGLMappingRepository repository;
 
    @EventListener(ApplicationReadyEvent.class)
     public void loadLegalEntityTestData() {
-
-       //TODO remove
-//       paymentSettingMetadataRepo.deleteAll();
-
         String oldTaxRule = """
     [
       {"limit": 300000, "rate": 7},
@@ -72,10 +69,10 @@ public class LoadComputationConfig{
                 .active(true)
                 .build();
 
-//        taxRepo.deleteAll();
-//
-//        taxRepo.save(nigeriaOldTaxRule);
-//        taxRepo.save(nigeriaNewTaxRule);
+        taxRepo.deleteAll();
+
+        taxRepo.save(nigeriaOldTaxRule);
+        taxRepo.save(nigeriaNewTaxRule);
 
         ComputationConstants pensionFundPercent = ComputationConstants.builder()
                 .id("pensionFundPercent")
@@ -114,16 +111,16 @@ public class LoadComputationConfig{
                 .build();
 
         //Delete everything so that we dont keep adding duplicate data every time we restart
-//        computationConstantsRepo.deleteAll();
-//
-//        //Recreate
-//        computationConstantsRepo.save(pensionFundPercent);
-//        computationConstantsRepo.save(nationalHousingFund);
-//        computationConstantsRepo.save(craFraction);
-//        computationConstantsRepo.save(craCutOff);
-//        computationConstantsRepo.save(variableCRAFraction);
-//        computationConstantsRepo.save(employerPensionContributionPercent);
-//        computationConstantsRepo.save(withHoldingTax);
+        computationConstantsRepo.deleteAll();
+
+        //Recreate
+        computationConstantsRepo.save(pensionFundPercent);
+        computationConstantsRepo.save(nationalHousingFund);
+        computationConstantsRepo.save(craFraction);
+        computationConstantsRepo.save(craCutOff);
+        computationConstantsRepo.save(variableCRAFraction);
+        computationConstantsRepo.save(employerPensionContributionPercent);
+        computationConstantsRepo.save(withHoldingTax);
 
         DashboardCard dashboardCard = DashboardCard.builder()
                 .id(UUID.randomUUID().toString())
@@ -133,9 +130,9 @@ public class LoadComputationConfig{
                 .averageEmployeeCost(BigDecimal.ZERO)
                 .lastUpdatedAt(LocalDateTime.now())
                 .build();
-//
-//        if (dashboardCardRepo.findAll().size() == 0)
-//            dashboardCardRepo.save(dashboardCard);
+
+        if (dashboardCardRepo.findAll().size() == 0)
+            dashboardCardRepo.save(dashboardCard);
 
         EmployeeMetadata contractStaff = EmployeeMetadata.builder()
                 .employeeId("8e3b6e4952e8468a84fd84556f8fdf2a")
@@ -169,7 +166,7 @@ public class LoadComputationConfig{
                 .isPensioned(true)
                 .build();
 
-//        employeeMetaDataRepo.deleteAll();
+        employeeMetaDataRepo.deleteAll();
 
         EmployeeMetadata regularStaffWithCustomTaxReleif = EmployeeMetadata.builder()
                 .employeeId("8654321")
@@ -232,15 +229,15 @@ public class LoadComputationConfig{
                .isPensioned(true)
                .build();
 
-//       employeeMetaDataRepo.save(omolereBabatunder);
-//        employeeMetaDataRepo.save(gbagi);
-//        employeeMetaDataRepo.save(intern);
-//        employeeMetaDataRepo.save(standardNotPensioned);
-//        employeeMetaDataRepo.save(regularStaffWithCustomTaxReleif);
-//        employeeMetaDataRepo.save(contractStaff);
-//        employeeMetaDataRepo.save(regularStaffWithNHF);
-//        employeeMetaDataRepo.save(regularStaffNoNHF);
-//        employeeMetaDataRepo.save(regularStaffWithCustomTaxReleifAndVoluntaryPensionContribution);
+       employeeMetaDataRepo.save(omolereBabatunder);
+        employeeMetaDataRepo.save(gbagi);
+        employeeMetaDataRepo.save(intern);
+        employeeMetaDataRepo.save(standardNotPensioned);
+        employeeMetaDataRepo.save(regularStaffWithCustomTaxReleif);
+        employeeMetaDataRepo.save(contractStaff);
+        employeeMetaDataRepo.save(regularStaffWithNHF);
+        employeeMetaDataRepo.save(regularStaffNoNHF);
+        employeeMetaDataRepo.save(regularStaffWithCustomTaxReleifAndVoluntaryPensionContribution);
 
         String morufoye_international_payment_distribution = """
     [
@@ -288,11 +285,11 @@ public class LoadComputationConfig{
                 .companyName("MonieWorld")
                 .build();
 
-//        companyMetadataRepo.deleteAll();
-//        companyMetadataRepo.save(xykineCompanyMetadata);
-//        companyMetadataRepo.save(xykineCompanyMetadata2);
-//        companyMetadataRepo.save(morufoyeCompanyMetadata);
-//        companyMetadataRepo.save(moniepointMfbCompanyMetadata);
+        companyMetadataRepo.deleteAll();
+        companyMetadataRepo.save(xykineCompanyMetadata);
+        companyMetadataRepo.save(xykineCompanyMetadata2);
+        companyMetadataRepo.save(morufoyeCompanyMetadata);
+        companyMetadataRepo.save(moniepointMfbCompanyMetadata);
 
         Loan loan = Loan.builder()
                 .companyId("1234567")
@@ -319,8 +316,8 @@ public class LoadComputationConfig{
                 .endDate(LocalDate.parse("2099-07-31"))
                 .build();
 
-//        loanRepo.save(staffLoan);
-//        loanRepo.save(loan);
+        loanRepo.save(staffLoan);
+        loanRepo.save(loan);
 
         PaymentSettingMetaData callAllowance = PaymentSettingMetaData.builder()
                 .companyId("1234567")
@@ -373,6 +370,362 @@ public class LoadComputationConfig{
 //        paymentSettingMetadataRepo.save(abasydoOffcycle14);
 //        paymentSettingMetadataRepo.save(overtime);
 //        paymentSettingMetadataRepo.save(callAllowance);
+    }
+
+    private void initializePaymentElementMappings() {
+
+        save(
+                PayElement.PERFORMANCE_BONUS.getDisplayName(),
+                Nature.GROSS_EARNINGS,
+                false,
+                "7030003",
+                "2100107",
+                true,
+                false,
+                true,
+                true
+        );
+
+        save(
+                PayElement.ARREARS.getDisplayName(),
+                Nature.GROSS_EARNINGS,
+                false,
+                "7010001",
+                "2100107",
+                true,
+                false,
+                true,
+                false
+        );
+
+        save(
+                PayElement.OVERTIME.getDisplayName(),
+                Nature.GROSS_EARNINGS,
+                false,
+                "7030003",
+                "2100107",
+                true,
+                false,
+                true,
+                false
+        );
+
+        save(
+                PayElement.OTHER_EARNINGS.getDisplayName(),
+                Nature.GROSS_EARNINGS,
+                false,
+                "7030003",
+                "2100107",
+                true,
+                false,
+                true,
+                false
+        );
+
+        save(
+                PayElement.REPAIR_BONUS.getDisplayName(),
+                Nature.GROSS_EARNINGS,
+                false,
+                "7030003",
+                "2100107",
+                true,
+                false,
+                true,
+                false
+        );
+
+        save(
+                PayElement.PILON.getDisplayName(),
+                Nature.GROSS_EARNINGS,
+                false,
+                "7030003",
+                "2100107",
+                true,
+                false,
+                true,
+                false
+        );
+
+        save(
+                PayElement.PER_DIEM.getDisplayName(),
+                Nature.GROSS_EARNINGS,
+                false,
+                "7030003",
+                "2100107",
+                true,
+                false,
+                true,
+                false
+        );
+
+        save(
+                PayElement.SIGN_ON_BONUS.getDisplayName(),
+                Nature.GROSS_EARNINGS,
+                false,
+                "7030003",
+                "2100107",
+                true,
+                false,
+                true,
+                false
+        );
+
+        save(
+                PayElement.ON_CALL.getDisplayName(),
+                Nature.GROSS_EARNINGS,
+                false,
+                "7030003",
+                "2100107",
+                true,
+                false,
+                true,
+                false
+        );
+
+        save(
+                PayElement.REFERRAL_BONUS.getDisplayName(),
+                Nature.GROSS_EARNINGS,
+                false,
+                "7030003",
+                "2100107",
+                true,
+                false,
+                true,
+                false
+        );
+
+        save(
+                PayElement.UNPAID_LEAVE.getDisplayName(),
+                Nature.GROSS_DEDUCTIONS,
+                false,
+                "7010001",
+                "8000001",
+                true,
+                false,
+                true,
+                false
+        );
+
+        save(
+                PayElement.NOTICE_PAY_CLAWBACK.getDisplayName(),
+                Nature.GROSS_DEDUCTIONS,
+                false,
+                "7010001",
+                "8000001",
+                true,
+                false,
+                true,
+                false
+        );
+
+        save(
+                PayElement.MONTHLY_NHF.getDisplayName(),
+                Nature.DEDUCTIONS,
+                false,
+                "7010012",
+                "2100121",
+                null,
+                null,
+                null,
+                null
+        );
+
+        save(
+                PayElement.MONTHLY_EMPLOYEE_PENSION_8_PERCENT.getDisplayName(),
+                Nature.DEDUCTIONS,
+                true,
+                "7040001",
+                "2100106",
+                null,
+                null,
+                null,
+                null
+        );
+
+        save(
+                PayElement.MONTHLY_VOLUNTARY_PENSION.getDisplayName(),
+                Nature.DEDUCTIONS,
+                false,
+                "7040001",
+                "2100106",
+                null,
+                null,
+                null,
+                null
+        );
+
+        save(
+                PayElement.PAYE_TAX.getDisplayName(),
+                null,
+                true,
+                "7010011",
+                "2100105",
+                null,
+                null,
+                null,
+                null
+        );
+
+        save(
+                PayElement.SALARY_ADVANCES.getDisplayName(),
+                Nature.NET_DEDUCTIONS,
+                false,
+                "7010001",
+                "1200007",
+                false,
+                null,
+                null,
+                null
+        );
+
+        save(
+                PayElement.STAFF_LOANS.getDisplayName(),
+                Nature.NET_DEDUCTIONS,
+                false,
+                "7010001",
+                "1200007",
+                false,
+                null,
+                null,
+                null
+        );
+
+        save(
+                PayElement.DEVICE_DAMAGE.getDisplayName(),
+                Nature.NET_DEDUCTIONS,
+                false,
+                "7010001",
+                "7900031",
+                false,
+                null,
+                null,
+                null
+        );
+
+        save(
+                PayElement.OTHER_DEDUCTIONS.getDisplayName(),
+                Nature.GROSS_DEDUCTIONS,
+                false,
+                "7010001",
+                "8000001",
+                true,
+                null,
+                null,
+                null
+        );
+
+        save(
+                PayElement.OTHER_NET_PAYMENTS.getDisplayName(),
+                Nature.NET_EARNINGS,
+                false,
+                "7030003",
+                "2100107",
+                false,
+                null,
+                null,
+                null
+        );
+
+        save(
+                PayElement.CALL_AND_DATA_ALLOWANCE.getDisplayName(),
+                Nature.NET_EARNINGS,
+                false,
+                "7050023",
+                "2100107",
+                false,
+                null,
+                null,
+                true
+        );
+
+        save(
+                PayElement.TRAVEL_ALLOWANCE.getDisplayName(),
+                Nature.NET_EARNINGS,
+                false,
+                "7050023",
+                "2100107",
+                false,
+                null,
+                null,
+                true
+        );
+
+        save(
+                PayElement.NET_SALARY.getDisplayName(),
+                null,
+                true,
+                "7010001",
+                "2100107",
+                null,
+                null,
+                null,
+                null
+        );
+
+        save(
+                PayElement.ER_PENSION.getDisplayName(),
+                null,
+                true,
+                "7040001",
+                "2100106",
+                null,
+                null,
+                null,
+                null
+        );
+
+        save(
+                PayElement.NSITF.getDisplayName(),
+                null,
+                true,
+                "7040019",
+                "2100101",
+                null,
+                null,
+                null,
+                null
+        );
+
+        save(
+                PayElement.ITF.getDisplayName(),
+                null,
+                true,
+                "7040018",
+                "2100203",
+                null,
+                null,
+                null,
+                null
+        );
+    }
+
+    private void save(
+            String payElement,
+            Nature nature,
+            Boolean calculated,
+            String glCodeDebit,
+            String glCodeCredit,
+            Boolean taxable,
+            Boolean pensionable,
+            Boolean nstif,
+            Boolean proration
+    ) {
+
+        PaymentElementGLMapping mapping =
+                repository.findByPayElement(payElement)
+                        .orElseGet(PaymentElementGLMapping::new);
+
+        mapping.setPayElement(payElement);
+        mapping.setNature(nature);
+        mapping.setCalculated(calculated);
+        mapping.setGlCodeDebit(glCodeDebit);
+        mapping.setGlCodeCredit(glCodeCredit);
+        mapping.setTaxable(taxable);
+        mapping.setPensionable(pensionable);
+        mapping.setNstif(nstif);
+        mapping.setProration(proration);
+
+        repository.save(mapping);
     }
 }
 

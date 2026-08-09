@@ -2,8 +2,9 @@ package com.xykine.computation.service;
 
 import com.xykine.computation.domain.LoanStatus;
 import com.xykine.computation.dto.LoanFilter;
+import com.xykine.computation.dto.PayElement;
 import com.xykine.computation.entity.*;
-import com.xykine.computation.repo.PaymentSettingMetadataRepo;
+
 import com.xykine.computation.repo.TaxRepo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,8 +35,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     private final CompanyMetadataService companyMetadataService;
     private final TaxRepo taxRepo;
     private final LoanService loanService;
-    private final PaymentSettingMetadataRepo paymentSettingMetadataRepo;
-
+    //private final PaymentSettingMetadataRepo paymentSettingMetadataRepo;
 
     protected static final Logger LOGGER = LoggerFactory.getLogger(PaymentCalculatorImpl.class);
 
@@ -238,8 +238,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 public PaymentInfo computeNonTaxableIncomeExemptForMFBNewTaxLaw(PaymentInfo paymentInfo, BigDecimal nationalHousingFund) {
 
     Map<String, BigDecimal> nonTaxableMonthly = new HashMap<>();
-    nonTaxableMonthly.put("691b7c124ada597551264f6a", BigDecimal.valueOf(64248.83));
-    nonTaxableMonthly.put("691b7c124ada597551264f9b", BigDecimal.valueOf(23677.36));
 
     Map<String, BigDecimal> nonTaxableIncomeExemptMap = new HashMap<>();
     if (isContract(paymentInfo)) {
@@ -265,9 +263,9 @@ public PaymentInfo computeNonTaxableIncomeExemptForMFBNewTaxLaw(PaymentInfo paym
             .add(customTaxReliefApplicable);
 
     BigDecimal chargeableIncome = annualGrossSalary.subtract(reliefAllowance);
-    BigDecimal callAllowance = paymentInfo.getGrossPay().getOrDefault("Call/Data Allowance", BigDecimal.ZERO);
+    BigDecimal callAllowance = paymentInfo.getGrossPay().getOrDefault(PayElement.CALL_AND_DATA_ALLOWANCE.getDisplayName(), BigDecimal.ZERO);
     BigDecimal monthlyChargeable = chargeableIncome.divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP).subtract(callAllowance);
-    monthlyChargeable = monthlyChargeable.subtract(getTotalMonthlyTaxFreeAllowance(paymentInfo)).subtract(nonTaxableMonthly.getOrDefault(paymentInfo.getEmployeeID().toString(), BigDecimal.ZERO));
+    monthlyChargeable = monthlyChargeable.subtract(getTotalMonthlyTaxFreeAEntries(paymentInfo)).subtract(nonTaxableMonthly.getOrDefault(paymentInfo.getEmployeeID().toString(), BigDecimal.ZERO));
 
     nonTaxableIncomeExemptMap.put("ANNUAL EMPLOYEE PENSION @ 8%", annualEmployeePensionAtEightPercent);
     nonTaxableIncomeExemptMap.put("RENT RELIEF", rentAllowance);
@@ -311,24 +309,9 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
     BigDecimal total = getTotal(nonTaxableIncomeExemptMap);
     nonTaxableIncomeExemptMap.put(MapKeys.TOTAL_TAX_RELIEF, total);
 
-    //nonTaxableIncomeExemptMap.put("MONTHLY CHARGEABLE INCOME", roundToTwoDecimalPlaces(grossIncomeForCRA));
-
     LocalDate start = LocalDate.parse(paymentInfo.getStartDate());
 
-    List<String> nonTaxableEntries =
-            paymentSettingMetadataRepo.findByEmployeeIdAndTaxable(paymentInfo.getEmployeeID(), false)
-                    .stream()
-                    .filter(x -> !x.getStartDate().isAfter(start) && !x.getEndDate().isBefore(start))
-                    .map(PaymentSettingMetaData::getPaymentName)
-                    .toList();
-
-    BigDecimal nonTaxableValue = paymentInfo.getPaymentSettings()
-            .stream()
-            .filter(x -> nonTaxableEntries.contains(x.getName()))
-            .map(PaymentSettingsResponse::getValue).reduce(BigDecimal.ZERO, BigDecimal::add);
-
-
-    BigDecimal totalChargeable = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(nonTaxableValue);
+    BigDecimal totalChargeable = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(getTotalMonthlyTaxFreeAllowance(paymentInfo));
     nonTaxableIncomeExemptMap.put("MONTHLY CHARGEABLE INCOME", totalChargeable.divide(
             BigDecimal.valueOf(12),
             2,
@@ -371,7 +354,6 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
             return paymentInfo;
         }
 
-        List<PaymentSettingMetaData> settingsMetadata = paymentSettingMetadataRepo.findByEmployeeId(paymentInfo.getEmployeeID());
         Map<String, BigDecimal> payeeTax = new HashMap<>();
 
         if (paymentInfo.isOffCycle() && paymentInfo.getPaymentSettings() != null) {
@@ -664,15 +646,19 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
     }
 
     private BigDecimal getTotalMonthlyTaxFreeAllowance(PaymentInfo paymentInfo) {
-            return
-                    paymentSettingMetadataRepo.findByEmployeeIdAndCompanyId(paymentInfo.getEmployeeID(), paymentInfo.getCompanyID())
-                            .stream()
-                            .filter(Objects::nonNull)
-                            .filter(setting -> !setting.getStartDate().isAfter(LocalDate.parse(paymentInfo.getStartDate())) && !setting.getEndDate().isBefore(LocalDate.parse(paymentInfo.getEndDate())))
-                            .filter(setting -> "ALLOWANCE".equalsIgnoreCase(setting.getPaymentType()))
-                            .filter(setting -> !setting.getTaxable())
-                            .filter(setting -> setting.getPaymentAmount() != null)
-                            .map(value -> value.getPaymentAmount())
-                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        List<String> nooTaxableAllowances = sessionCalculationObject.getAllNonTaxableAllowances();
+        return paymentInfo.getPaymentSettings()
+                .stream()
+                .filter(x -> nooTaxableAllowances.contains(x.getName()))
+                .map(PaymentSettingsResponse::getValue).reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private BigDecimal getTotalMonthlyTaxFreeAEntries(PaymentInfo paymentInfo) {
+        List<String> nonTaxableEntries = sessionCalculationObject.getAllNonTaxableAllowances();
+        return paymentInfo.getPaymentSettings()
+                .stream()
+                .filter(x -> !x.getName().equalsIgnoreCase(PayElement.CALL_AND_DATA_ALLOWANCE.getDisplayName()))
+                .filter(x -> nonTaxableEntries.contains(x.getName()))
+                .map(PaymentSettingsResponse::getValue).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }

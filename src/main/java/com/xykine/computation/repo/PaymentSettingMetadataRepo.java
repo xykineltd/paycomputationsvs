@@ -5,8 +5,8 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.util.List;
 
-public interface PaymentSettingMetadataRepo  extends MongoRepository<PaymentSettingMetaData, String> {
-    List<PaymentSettingMetaData> findByEmployeeId(String employeeId);
-    List<PaymentSettingMetaData> findByEmployeeIdAndCompanyId(String employeeId, String companyId);
-    List<PaymentSettingMetaData> findByEmployeeIdAndTaxable(String employeeId, boolean taxable);
-}
+//public interface PaymentSettingMetadataRepo  extends MongoRepository<PaymentSettingMetaData, String> {
+//    List<PaymentSettingMetaData> findByEmployeeId(String employeeId);
+//    List<PaymentSettingMetaData> findByEmployeeIdAndCompanyId(String employeeId, String companyId);
+//    List<PaymentSettingMetaData> findByEmployeeIdAndTaxable(String employeeId, boolean taxable);
+//}

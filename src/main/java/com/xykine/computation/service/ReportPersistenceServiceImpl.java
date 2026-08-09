@@ -1,5 +1,8 @@
 package com.xykine.computation.service;
 
+import com.xykine.computation.dto.GLReportStatus;
+import com.xykine.computation.dto.GLSummary;
+import com.xykine.computation.dto.Nature;
 import com.xykine.computation.entity.*;
 import com.xykine.computation.exceptions.PayrollValidationException;
 import com.xykine.computation.repo.*;
@@ -21,6 +24,7 @@ import org.xykine.payroll.model.*;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
@@ -57,6 +61,9 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     private final WorkflowService workflowService;
     private final PayrollReportDetailStatusService payrollReportDetailStatusService;
     private final PayrollReportSummaryCustomFilter payrollReportSummaryCustomFilter;
+    private final PaymentElementGLMappingRepository paymentElementGLMappingRepository;
+    private final PayrollGLReportRepository payrollGLReportRepository;
+    private final PaymentElementGLMappingRepository paymentElementGLMappingCustomRepository;
 //    private final PayrollReportHydrateRepo payrollReportSearchRepo;
 
     @Autowired
@@ -120,7 +127,18 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             EmployeeFilterRequest employeeFilterRequest = new EmployeeFilterRequest();
             employeeFilterRequest.setCompanyID(paymentRequest.getCompanyId());
             Map<String, List<String>> costCenters = adminService.getCostCenterDetails(employeeFilterRequest,authorizationHeader);
+
+            List<String> nonTaxableEntries = paymentElementGLMappingRepository.findByTaxableFalse().stream()
+                    .map(entry -> entry.getPayElement())
+                    .collect(Collectors.toList());
+
+            List<String> nonTaxableAllowances = paymentElementGLMappingRepository.findByTaxableFalse().stream()
+                    .filter(entry -> entry.getNature().equals(Nature.NET_EARNINGS))
+                    .map(entry -> entry.getPayElement())
+                    .collect(Collectors.toList());
+
             sessionCalculationObject.setCostCenters(costCenters);
+            sessionCalculationObject.setAllNonTaxableEntries(nonTaxableEntries);
 
             sessionCalculationObject = OperationUtils.doPreflight(
                     sessionCalculationObject,
@@ -168,57 +186,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         return date.format(formatter);
     }
 
-
-//    @Override
-//    @Async
-//    public void computeOffCyclePayrollAsync(Consumer<JobStatusStore> progressCallback,
-//                                    String jobId, String authorizationHeader,
-//                                    PaymentInfoRequest paymentRequest) {
-//        jobStatusStore.updateJob(jobId, "IN_PROGRESS", "Computation started", "");
-//        progressCallback.accept(jobStatusStore);
-//        try {
-//            sessionCalculationObject = OperationUtils.doPreflight(
-//                    sessionCalculationObject,
-//                    computationConstantsRepo,
-//                    employeeMetadataService,
-//                    paymentRequest
-//            );
-//
-//            List<PaymentInfo> paymentInfoList = adminService.getPaymentInfoList(paymentRequest, authorizationHeader);
-//            if (paymentInfoList == null || paymentInfoList.isEmpty()) {
-//                throw new PayrollValidationException("No payment information found for request");
-//            }
-//
-//            LOGGER.info("PaymentInfo List size: {}", paymentInfoList.size());
-//            PaymentComputeResponse computeResponse = computeService.computePayroll(paymentInfoList);
-//            computeResponse = OperationUtils.refineResponse(computeResponse, sessionCalculationObject, paymentRequest);
-//            ReportResponse reportResponse = serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
-//
-//            jobStatusStore.updateJob(jobId, "COMPLETED", "Payroll computation complete", reportResponse.getReportId());
-//            progressCallback.accept(jobStatusStore);
-//
-//
-//            PayrollReportSummary payrollReportSummary = payrollReportSummaryRepo.findPayrollReportSummaryById(UUID.fromString(String.valueOf(reportResponse.getReportId())));
-//
-//            StartWorkflowRequest startWorkflowRequest = new StartWorkflowRequest();
-//            startWorkflowRequest.setEntity("PAYROLL");
-//            startWorkflowRequest.setPayrollType("PAYROLL");
-//            startWorkflowRequest.setPayrollId(payrollReportSummary.getId().toString());
-//            startWorkflowRequest.setUserId(AuthUtility.getCurrentUser());
-//            startWorkflowRequest.setCompanyId(paymentRequest.getCompanyId());
-//            startWorkflowRequest.setPayrollType(payrollReportSummary.isOffCycle() ? "OffCycle" : "Regular");
-//            startWorkflowRequest.setNumberOfPays(payrollReportDetailRepo.countBySummaryId(payrollReportSummary.getId().toString()));
-//            startWorkflowRequest.setNumberOfEmployees(payrollReportSummary.getTotalNumberOfEmployees());
-//            startWorkflowRequest.setNetPay(ReportUtils.transform(payrollReportSummary).getSummary().getSummary().get(MapKeys.TOTAL_GROSS_PAY));
-//            workflowService.startWorkflow(startWorkflowRequest, authorizationHeader);
-//
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//            LOGGER.error("Exception occurred while computing payroll for companyId: {}", paymentRequest.getCompanyId(), e);
-//            jobStatusStore.updateJob(jobId, "FAILED", e.getMessage(), "");
-//            progressCallback.accept(jobStatusStore);
-//        }
-//    }
 
     public Map<String, Map<String, BigDecimal>> getSummaryVarianceDetails(String reportId, List<String> employeeIds){
         PayrollVarianceDetailsCustomized payrollVarianceDetails = payrollVarianceDetailsCustomizedRepo.findById(UUID.fromString(reportId)).orElse(null);
@@ -773,6 +740,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 updateDashboardData(AppConstants.payrollCountRegular, existingSummaryReport, true);
             }
         }
+        payrollAsyncService.generatePayrollGLReport(existingSummaryReport);
     }
 
     private static boolean payrollNotYetApproved(PayrollStatus currentStatus) {
