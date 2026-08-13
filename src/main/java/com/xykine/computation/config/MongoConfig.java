@@ -58,7 +58,9 @@ public class MongoConfig {
 
         MongoClientSettings settings = MongoClientSettings.builder()
                 .applyConnectionString(cs)
-                .uuidRepresentation(UuidRepresentation.STANDARD)
+                // Existing docs store UUID _ids as BSON Binary subtype 3 (Java legacy).
+                // STANDARD (subtype 4) cannot read those and fails with ConverterNotFoundException.
+                .uuidRepresentation(UuidRepresentation.JAVA_LEGACY)
                 .applyToSocketSettings(b -> b
                         .connectTimeout(connectTimeoutMs, TimeUnit.MILLISECONDS)
                         .readTimeout(readTimeoutMs, TimeUnit.MILLISECONDS))

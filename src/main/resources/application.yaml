@@ -4,12 +4,20 @@ server:
     connection-timeout: 2s
     idle-timeout: 15s
   shutdown: graceful
+  tomcat:
+    max-http-form-post-size: 100MB
+    max-swallow-size: 100MB
 
 spring:
   jpa:
     hibernate:
   profiles:
     active: dev
+
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
 
   codec:
     max-in-memory-size: 500000KB
@@ -18,8 +26,8 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-#            issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:https://auth.acedpaydev.com/realms/localdev}
-            jwk-set-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI:https://auth.acedpaydev.com/realms/localdev/protocol/openid-connect/certs}
+#            issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:https://auth.acedpaydev.com/realms/local}
+            jwk-set-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI:https://auth.acedpaydev.com/realms/local/protocol/openid-connect/certs}
 
   data:
     redis:

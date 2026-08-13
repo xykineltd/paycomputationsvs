@@ -4,8 +4,15 @@ server:
   netty:
     connection-timeout: 2s
     idle-timeout: 15s
+  tomcat:
+    max-http-form-post-size: 100MB
+    max-swallow-size: 100MB
 
 spring:
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
   codec:
     max-in-memory-size: 500000KB
 
