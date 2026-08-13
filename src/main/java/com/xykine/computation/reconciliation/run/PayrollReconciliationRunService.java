@@ -12,6 +12,7 @@ import com.xykine.computation.reconciliation.mapping.ReconciliationMappingReadin
 import com.xykine.computation.reconciliation.mapping.ReconciliationMappingService;
 import com.xykine.computation.reconciliation.mapping.ReconciliationTolerances;
 import com.xykine.computation.service.AdminService;
+import com.xykine.computation.service.ReportGeneratorService;
 import com.xykine.computation.utils.ReportUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +30,6 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -45,6 +45,7 @@ public class PayrollReconciliationRunService {
     private final PayrollReconciliationDiffRepository diffRepository;
     private final PayrollReportDetailRepo payrollReportDetailRepo;
     private final AdminService adminService;
+    private final ReportGeneratorService reportGeneratorService;
     private final ObjectMapper objectMapper;
 
     public PayrollReconciliationRunService(
@@ -55,6 +56,7 @@ public class PayrollReconciliationRunService {
             PayrollReconciliationDiffRepository diffRepository,
             PayrollReportDetailRepo payrollReportDetailRepo,
             AdminService adminService,
+            ReportGeneratorService reportGeneratorService,
             ObjectMapper objectMapper
     ) {
         this.mappingService = mappingService;
@@ -64,6 +66,7 @@ public class PayrollReconciliationRunService {
         this.diffRepository = diffRepository;
         this.payrollReportDetailRepo = payrollReportDetailRepo;
         this.adminService = adminService;
+        this.reportGeneratorService = reportGeneratorService;
         this.objectMapper = objectMapper;
     }
 
@@ -204,13 +207,14 @@ public class PayrollReconciliationRunService {
             String stage,
             String bearerToken
     ) {
-        List<ReconciliationColumnMapping> columns = ReconciliationExcelParser.enabledColumns(mapping, stage);
+        List<ReconciliationColumnMapping> columns = compareColumns(mapping, stage);
         Map<String, Map<String, Object>> systemByCode = loadSystemRows(run, bearerToken);
 
         Map<String, PayrollReconciliationTempRow> excelByCode = new LinkedHashMap<>();
         for (PayrollReconciliationTempRow row : excelRows) {
-            if (row.getMatchKeyValue() != null) {
-                excelByCode.putIfAbsent(row.getMatchKeyValue().trim(), row);
+            String code = ReconciliationValueSupport.normalizeEmpId(row.getMatchKeyValue());
+            if (!code.isBlank()) {
+                excelByCode.putIfAbsent(code, row);
             }
         }
 
@@ -248,11 +252,12 @@ public class PayrollReconciliationRunService {
 
             matchedCodes.add(code);
             boolean employeeMismatch = false;
-            String employeeName = Objects.toString(systemRow.get("fullName"), stringCell(excelRow, "EMPLOYEE NAME"));
+            String employeeName = employeeName(systemRow, excelRow);
 
             for (ReconciliationColumnMapping col : columns) {
                 Object excelVal = ReconciliationExcelParser.cellForHeader(excelRow.getCells(), col.getExcelHeader());
-                Object systemVal = ReconciliationValueSupport.getByPath(systemRow, col.getSystemPath());
+                Object systemVal = ReconciliationValueSupport.lookupSystemValue(
+                        systemRow, col.getExcelHeader(), col.getSystemPath());
                 boolean equal = ReconciliationValueSupport.valuesEqual(
                         excelVal, systemVal, col.getValueType(), mapping.getTolerances());
                 if (equal) {
@@ -297,7 +302,7 @@ public class PayrollReconciliationRunService {
                     .stage(stage)
                     .status("SYSTEM_ONLY")
                     .employeeCode(entry.getKey())
-                    .employeeName(Objects.toString(systemRow.get("fullName"), null))
+                    .employeeName(employeeName(systemRow, null))
                     .field(mapping.getSystemMatchKey())
                     .excelValue(null)
                     .systemValue(entry.getKey())
@@ -346,6 +351,32 @@ public class PayrollReconciliationRunService {
     }
 
     private Map<String, Map<String, Object>> loadSystemRows(PayrollReconciliationTemp run, String bearerToken) {
+        List<Map<String, Object>> reportRows = reportGeneratorService.loadPaymentInfoRowsForReport(
+                run.getCompanyId(), run.getReportId(), bearerToken);
+        Map<String, Map<String, Object>> byCodeOut = new LinkedHashMap<>();
+        if (reportRows != null) {
+            for (Map<String, Object> row : reportRows) {
+                if (row == null) {
+                    continue;
+                }
+                String code = employeeCodeFromReportRow(row);
+                if (code.isBlank()) {
+                    continue;
+                }
+                byCodeOut.put(code, row);
+            }
+        }
+
+        if (byCodeOut.isEmpty()) {
+            byCodeOut.putAll(loadFlattenedSystemRows(run, bearerToken));
+        }
+
+        log.info("Loaded {} system rows for reconciliation companyId={} reportId={}",
+                byCodeOut.size(), run.getCompanyId(), run.getReportId());
+        return byCodeOut;
+    }
+
+    private Map<String, Map<String, Object>> loadFlattenedSystemRows(PayrollReconciliationTemp run, String bearerToken) {
         List<PayrollReportDetail> details =
                 payrollReportDetailRepo.findPayrollReportDetailByCompanyIdAndSummaryId(
                         run.getCompanyId(), run.getReportId());
@@ -354,7 +385,6 @@ public class PayrollReconciliationRunService {
                 : ReportUtils.transform(details);
 
         Map<String, EmployeeDetail> byEmployeeId = loadEmployeeDetails(run, bearerToken);
-
         Map<String, Map<String, Object>> byCodeOut = new LinkedHashMap<>();
         for (ReportResponse report : reports) {
             EmployeeDetail emp = byEmployeeId.get(report.getEmployeeId());
@@ -363,11 +393,30 @@ public class PayrollReconciliationRunService {
             if (codeObj == null || String.valueOf(codeObj).isBlank()) {
                 continue;
             }
-            byCodeOut.put(String.valueOf(codeObj).trim(), flat);
+            byCodeOut.put(ReconciliationValueSupport.normalizeEmpId(String.valueOf(codeObj)), flat);
         }
-        log.info("Loaded {} system rows for reconciliation companyId={} reportId={}",
-                byCodeOut.size(), run.getCompanyId(), run.getReportId());
         return byCodeOut;
+    }
+
+    private static String employeeCodeFromReportRow(Map<String, Object> row) {
+        for (String key : List.of("EMP ID", "EMPID", "employeeCode", "employeeID", "employeeId")) {
+            Object v = row.get(key);
+            if (v != null && !String.valueOf(v).isBlank()) {
+                return ReconciliationValueSupport.normalizeEmpId(String.valueOf(v));
+            }
+        }
+        Object lookedUp = ReconciliationValueSupport.lookupSystemValue(row, "EMP ID", "EMP ID");
+        return lookedUp == null ? "" : ReconciliationValueSupport.normalizeEmpId(String.valueOf(lookedUp));
+    }
+
+    private List<ReconciliationColumnMapping> compareColumns(ReconciliationMapping mapping, String stage) {
+        String matchKey = mapping.getExcelMatchKey();
+        return ReconciliationExcelParser.enabledColumns(mapping, stage).stream()
+                .filter(c -> !Boolean.TRUE.equals(c.getIsMatchKey()))
+                .filter(c -> matchKey == null
+                        || !ReconciliationExcelParser.normalizeHeader(c.getExcelHeader())
+                        .equals(ReconciliationExcelParser.normalizeHeader(matchKey)))
+                .toList();
     }
 
     private Map<String, EmployeeDetail> loadEmployeeDetails(PayrollReconciliationTemp run, String bearerToken) {
@@ -427,6 +476,18 @@ public class PayrollReconciliationRunService {
                 .map(c -> objectMapper.convertValue(c, Map.class))
                 .map(m -> (Map<String, Object>) m)
                 .collect(Collectors.toList());
+    }
+
+    private static String employeeName(Map<String, Object> systemRow, PayrollReconciliationTempRow excelRow) {
+        Object name = ReconciliationValueSupport.lookupSystemValue(systemRow, "EMPLOYEE NAME", "EMPLOYEE NAME");
+        if (!ReconciliationValueSupport.isAbsent(name)) {
+            return String.valueOf(name);
+        }
+        Object fullName = systemRow != null ? systemRow.get("fullName") : null;
+        if (!ReconciliationValueSupport.isAbsent(fullName)) {
+            return String.valueOf(fullName);
+        }
+        return excelRow == null ? null : stringCell(excelRow, "EMPLOYEE NAME");
     }
 
     private static String stringCell(PayrollReconciliationTempRow row, String header) {

@@ -16,4 +16,10 @@ public interface ReportGeneratorService {
     Set<String> getHeadersForReport(String companyId, String reportId );
     List<Map<String, Object>> retrievePaymentElementFromReport(RetrievePaymentElementPayload retrievePaymentElementPayload);
     Map<String, Object> extractDataFromSummary(RetrieveSummaryElementRequest request);
+
+    /**
+     * Same PaymentInfo flattening used by {@link #generateReport} for entityType=details:
+     * load report details by companyId + reportId (summaryId), transform, extractDetail, swapKey.
+     */
+    List<Map<String, Object>> loadPaymentInfoRowsForReport(String companyId, String reportId, String token);
 }

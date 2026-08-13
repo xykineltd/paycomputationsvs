@@ -15,6 +15,22 @@ final class ReconciliationValueSupport {
     private ReconciliationValueSupport() {
     }
 
+    /** Excel header → generateReport key when mapping still uses the sheet title as systemPath. */
+    private static final Map<String, String> EXCEL_TO_REPORT_KEY = Map.ofEntries(
+            Map.entry("MONTHLY GROSS EARNED", "GROSS PAY"),
+            Map.entry("GROSS INCOME", "GROSS PAY"),
+            Map.entry("MONTHLY NHF", "NHF"),
+            Map.entry("MONTHLY EMPLOYEE PENSION @ 8%", "EMPLOYEE PENSION"),
+            Map.entry("MONTHLY VOLUNTARY PENSION", "VOLUNTARY PENSION CONTRIBUTION"),
+            Map.entry("PAYE TAX", "PAYE"),
+            Map.entry("TOTAL DEDUCTIONS", "TOTAL DEDUCTION"),
+            Map.entry("NET SALARY", "NETPAY"),
+            Map.entry("ER PENSION", "EMPLOYER PENSION"),
+            Map.entry("HIRE DATE", "HIRE DATE"),
+            Map.entry("REFERAL BONUS", "REFERRAL BONUS"),
+            Map.entry("TOTAL RELIEF", "TOTAL TAX RELIEF")
+    );
+
     static Map<String, Object> flattenSystemRow(ReportResponse report, EmployeeDetail employee) {
         Map<String, Object> out = new LinkedHashMap<>();
         PaymentInfo info = report.getDetail() != null ? report.getDetail().getReport() : null;
@@ -60,12 +76,40 @@ final class ReconciliationValueSupport {
         return out;
     }
 
+    /**
+     * Look up a system cell using generateReport keys first (excel header, then systemPath),
+     * then dotted PaymentInfo paths as a fallback.
+     */
+    static Object lookupSystemValue(Map<String, Object> row, String excelHeader, String systemPath) {
+        Object found = lookupKey(row, systemPath);
+        if (!isAbsent(found)) {
+            return found;
+        }
+        found = lookupKey(row, excelHeader);
+        if (!isAbsent(found)) {
+            return found;
+        }
+        found = lookupKey(row, EXCEL_TO_REPORT_KEY.get(normalizeHeader(excelHeader)));
+        if (!isAbsent(found)) {
+            return found;
+        }
+        if (systemPath != null && systemPath.contains(".")) {
+            found = getByPath(row, systemPath);
+            if (!isAbsent(found)) {
+                return found;
+            }
+            found = lookupKey(row, systemPath.substring(systemPath.lastIndexOf('.') + 1));
+        }
+        return isAbsent(found) ? null : found;
+    }
+
     static Object getByPath(Map<String, Object> row, String path) {
         if (row == null || path == null || path.isBlank()) {
             return null;
         }
-        if (row.containsKey(path)) {
-            return row.get(path);
+        Object direct = lookupKey(row, path);
+        if (!isAbsent(direct)) {
+            return direct;
         }
         String[] parts = path.split("\\.");
         Object current = row;
@@ -73,15 +117,7 @@ final class ReconciliationValueSupport {
             if (!(current instanceof Map<?, ?> map)) {
                 return null;
             }
-            current = map.get(part);
-            if (current == null) {
-                // try case-insensitive map key
-                current = map.entrySet().stream()
-                        .filter(e -> String.valueOf(e.getKey()).equalsIgnoreCase(part))
-                        .map(Map.Entry::getValue)
-                        .findFirst()
-                        .orElse(null);
-            }
+            current = lookupInMap(map, part);
             if (current == null) {
                 return null;
             }
@@ -94,7 +130,8 @@ final class ReconciliationValueSupport {
         double daysTol = tolerances != null && tolerances.getDays() != null ? tolerances.getDays() : 0;
         double factorTol = tolerances != null && tolerances.getFactor() != null ? tolerances.getFactor() : 0.0001;
 
-        if (isEmpty(excelValue) && isEmpty(systemValue)) {
+        // Blank, dash placeholders, and numeric 0 are the same empty value — not a mismatch.
+        if (isAbsentOrZero(excelValue) && isAbsentOrZero(systemValue)) {
             return true;
         }
         if ("money".equalsIgnoreCase(valueType) || "number".equalsIgnoreCase(valueType)) {
@@ -130,7 +167,7 @@ final class ReconciliationValueSupport {
     }
 
     static Double toNumber(Object value) {
-        if (value == null || "".equals(value)) {
+        if (isAbsent(value)) {
             return null;
         }
         if (value instanceof Number n) {
@@ -152,14 +189,82 @@ final class ReconciliationValueSupport {
         }
     }
 
+    static String normalizeEmpId(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        String v = raw.trim().toUpperCase(Locale.ROOT);
+        if (v.endsWith(".0") && v.matches("\\d+\\.0")) {
+            v = v.substring(0, v.length() - 2);
+        }
+        return v;
+    }
+
+    private static Object lookupKey(Map<String, Object> row, String key) {
+        if (row == null || key == null || key.isBlank()) {
+            return null;
+        }
+        if (row.containsKey(key)) {
+            return row.get(key);
+        }
+        return lookupInMap(row, key);
+    }
+
+    private static Object lookupInMap(Map<?, ?> map, String key) {
+        if (map == null || key == null) {
+            return null;
+        }
+        Object exact = map.get(key);
+        if (!isAbsent(exact)) {
+            return exact;
+        }
+        String header = normalizeHeader(key);
+        String compact = compactHeader(key);
+        for (Map.Entry<?, ?> e : map.entrySet()) {
+            String candidate = String.valueOf(e.getKey());
+            if (normalizeHeader(candidate).equals(header) || compactHeader(candidate).equals(compact)) {
+                if (!isAbsent(e.getValue())) {
+                    return e.getValue();
+                }
+            }
+        }
+        return isAbsent(exact) ? null : exact;
+    }
+
+    private static String normalizeHeader(String value) {
+        return value == null ? "" : value.replaceAll("\\s+", " ").trim().toUpperCase(Locale.ROOT);
+    }
+
+    private static String compactHeader(String value) {
+        return normalizeHeader(value).replaceAll("[^A-Z0-9]", "");
+    }
+
     private static void putMap(Map<String, Object> out, String key, Map<String, BigDecimal> map) {
         if (map != null && !map.isEmpty()) {
             out.put(key, new LinkedHashMap<>(map));
         }
     }
 
-    private static boolean isEmpty(Object value) {
-        return value == null || String.valueOf(value).isBlank();
+    /** Empty, dash placeholders, and numeric zero all mean "no value". */
+    static boolean isAbsentOrZero(Object value) {
+        if (isAbsent(value)) {
+            return true;
+        }
+        Double n = toNumber(value);
+        return n != null && n == 0.0;
+    }
+
+    static boolean isAbsent(Object value) {
+        if (value == null) {
+            return true;
+        }
+        String t = String.valueOf(value).trim();
+        if (t.isEmpty()) {
+            return true;
+        }
+        return "-".equals(t) || "—".equals(t) || "–".equals(t) || ".".equals(t)
+                || "n/a".equalsIgnoreCase(t) || "na".equalsIgnoreCase(t)
+                || "nil".equalsIgnoreCase(t) || "none".equalsIgnoreCase(t);
     }
 
     private static String blankToNull(String value) {

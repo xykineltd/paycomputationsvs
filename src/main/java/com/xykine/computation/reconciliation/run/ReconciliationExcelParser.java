@@ -34,6 +34,8 @@ public class ReconciliationExcelParser {
         String matchKeyHeader = mapping.getExcelMatchKey() != null ? mapping.getExcelMatchKey() : "EMP ID";
 
         try (var in = new ByteArrayInputStream(bytes); Workbook wb = new XSSFWorkbook(in)) {
+            DataFormatter formatter = new DataFormatter();
+            FormulaEvaluator evaluator = wb.getCreationHelper().createFormulaEvaluator();
             Sheet sheet = findSheet(wb, alias.getExcelSheetName());
             if (sheet == null) {
                 throw new IllegalArgumentException(
@@ -49,7 +51,7 @@ public class ReconciliationExcelParser {
             Map<String, Integer> colByNormalized = new LinkedHashMap<>();
             Map<Integer, String> headerByIndex = new LinkedHashMap<>();
             for (Cell cell : headerRow) {
-                String header = cellValueAsString(cell);
+                String header = cellValueAsString(cell, formatter, evaluator);
                 if (isBlank(header)) {
                     continue;
                 }
@@ -69,7 +71,7 @@ public class ReconciliationExcelParser {
                 if (row == null) {
                     continue;
                 }
-                String matchValue = cellValueAsString(row.getCell(matchCol));
+                String matchValue = cellValueAsString(row.getCell(matchCol), formatter, evaluator);
                 if (isBlank(matchValue)) {
                     continue;
                 }
@@ -85,6 +87,15 @@ public class ReconciliationExcelParser {
                         .matchKeyValue(matchValue.trim())
                         .cells(cells)
                         .build());
+            }
+
+            if (rows.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "No employee rows found on sheet \"" + alias.getExcelSheetName()
+                                + "\" (header row " + headerRowIndex1Based
+                                + ", data from row " + dataStartRow1Based
+                                + ", match column \"" + matchKeyHeader + "\"). "
+                                + "Check the sheet name, header/data rows, and that EMP ID cells are populated.");
             }
 
             return new ParsedSheet(alias.getExcelSheetName(), rows, matchKeyHeader);
@@ -183,6 +194,18 @@ public class ReconciliationExcelParser {
                 yield s != null ? s.trim() : null;
             }
         };
+    }
+
+    private static String cellValueAsString(Cell cell, DataFormatter formatter, FormulaEvaluator evaluator) {
+        if (cell == null) {
+            return null;
+        }
+        String v = formatter.formatCellValue(cell, evaluator);
+        if (v == null) {
+            return null;
+        }
+        v = v.replaceAll("\\s+", " ").trim();
+        return v.isEmpty() ? null : v;
     }
 
     private static String cellValueAsString(Cell cell) {

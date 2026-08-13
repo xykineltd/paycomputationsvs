@@ -188,14 +188,20 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
 
     public Map<String, Map<String, BigDecimal>> getSummaryVarianceDetails(String reportId, List<String> employeeIds){
-        PayrollVarianceDetailsCustomized payrollVarianceDetails = payrollVarianceDetailsCustomizedRepo.findById(UUID.fromString(reportId)).orElse(null);
         Map<String, Map<String, BigDecimal>> summaryVarianceDetails = new HashMap<>();
+        UUID id = parseUuid(reportId);
+        if (id == null) {
+            return summaryVarianceDetails;
+        }
+        PayrollVarianceDetailsCustomized payrollVarianceDetails = payrollVarianceDetailsCustomizedRepo.findById(id).orElse(null);
         if (payrollVarianceDetails == null) {
             return summaryVarianceDetails;
         }
         PayCompteVarianceDetailsCustomized payComputeVarianceDetails = ReportUtils.transform(payrollVarianceDetails).getPayComputeVarianceDetails();
+        if (payComputeVarianceDetails == null || payComputeVarianceDetails.getSummaryDetailsVariance() == null) {
+            return summaryVarianceDetails;
+        }
         summaryVarianceDetails = payComputeVarianceDetails.getSummaryDetailsVariance();
-
 
         if (employeeIds == null || employeeIds.isEmpty()) {
             return getSummaryVarianceDetails(summaryVarianceDetails);
@@ -221,14 +227,20 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     }
 
     public ConcurrentHashMap<String, Set<SummaryDetail>> getSummaryVarianceDetails(String reportId) {
-        PayrollVarianceDetails payrollVarianceDetails = payrollVarianceDetailsRepo.findById(UUID.fromString(reportId)).orElse(null);
-
         ConcurrentHashMap<String, Set<SummaryDetail>> summaryVarianceDetails = new ConcurrentHashMap<>();
+        UUID id = parseUuid(reportId);
+        if (id == null) {
+            return summaryVarianceDetails;
+        }
+        PayrollVarianceDetails payrollVarianceDetails = payrollVarianceDetailsRepo.findById(id).orElse(null);
         if (payrollVarianceDetails == null) {
             return summaryVarianceDetails;
         }
 
         PayComputeVarianceDetails payComputeVarianceDetails = ReportUtils.transform(payrollVarianceDetails).getPayComputeVarianceDetails();
+        if (payComputeVarianceDetails == null || payComputeVarianceDetails.getSummaryDetailsVariance() == null) {
+            return summaryVarianceDetails;
+        }
         summaryVarianceDetails = payComputeVarianceDetails.getSummaryDetailsVariance();
 
         return summaryVarianceDetails.entrySet()
@@ -1082,6 +1094,17 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         var payPeriod = reportResponse.getStartDate() + " - " + reportResponse.getEndDate();
         auditTrailService.logEvent(AuditTrailEvents.POST_TO_FINANCE, "Payroll for the pay period " + payPeriod + " was posted to finance by " + loggedInUserName
                 + " (" + loggedInUserEmail + ")", companyId);
+    }
+
+    private static UUID parseUuid(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return UUID.fromString(value.trim());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 
     public static Map<String, BigDecimal> mergeMaps(Map<String, BigDecimal> map1, Map<String, BigDecimal> map2) {

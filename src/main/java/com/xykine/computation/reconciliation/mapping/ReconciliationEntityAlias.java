@@ -17,7 +17,6 @@ public class ReconciliationEntityAlias {
     /** Legacy fields — kept for backward-compatible stored mappings. */
     private String legalEntityId;
     private String legalEntityName;
-
     private String excelSheetName;
     private String excelLegalEntityValue;
 }

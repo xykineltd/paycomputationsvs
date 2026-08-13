@@ -100,6 +100,26 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
             "NETPAY"
     );
 
+    private static final List<String> DEFAULT_PAYMENT_HEADERS = List.of(
+            "Gross Pay",
+            "Basic Salary",
+            "Housing",
+            "Transport",
+            "Utility",
+            "Entertainment",
+            "Medical",
+            "Personal Outfit",
+            "Leave",
+            "Training",
+            "MONTHLY CHARGEABLE INCOME",
+            "Total PAYE",
+            "National Housing Fund",
+            "Employee Pension Contribution",
+            "Voluntary Pension Contribution",
+            "Employer Pension Contribution",
+            "Net Pay"
+    );
+
     @Override
     public byte[] generateReport(ReportRequestPayload reportRequestPayload, String token) throws IOException {
 
@@ -124,33 +144,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         LOGGER.info("Deductions: {}", deductionComponents);
 
         if (reportRequestPayload.isDefaultHeaders()) {
-            List<String> defaultHeaders = new LinkedList<>();
-            defaultHeaders.add("Gross Pay");
-            defaultHeaders.add("Basic Salary");
-            defaultHeaders.add("Housing");
-            defaultHeaders.add("Transport");
-            defaultHeaders.add("Utility");
-            defaultHeaders.add("Entertainment");
-            defaultHeaders.add("Medical");
-            defaultHeaders.add("Personal Outfit");
-            defaultHeaders.add("Leave");
-            defaultHeaders.add("Training");
-//            defaultHeaders.add("Monthly Performance Bonus");
-//            defaultHeaders.add("overtime");
-//            defaultHeaders.add("other variable");
-//            defaultHeaders.add("other allowance");
-//            defaultHeaders.add("other wage types");
-            defaultHeaders.add("MONTHLY CHARGEABLE INCOME");
-//            defaultHeaders.add("other deduction");
-//            defaultHeaders.add("Loan");   // **
-            defaultHeaders.add("Total PAYE");
-            defaultHeaders.add("National Housing Fund");
-            defaultHeaders.add("Employee Pension Contribution");
-            defaultHeaders.add("Voluntary Pension Contribution");
-            defaultHeaders.add("Employer Pension Contribution");
-            defaultHeaders.add("Net Pay");
-
-            reportRequestPayload.setHeaders(defaultHeaders);
+            reportRequestPayload.setHeaders(new LinkedList<>(DEFAULT_PAYMENT_HEADERS));
         }
 
         List<?> source; // raw entities before transform
@@ -276,6 +270,82 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
     }
 
     @Override
+    public List<Map<String, Object>> loadPaymentInfoRowsForReport(String companyId, String reportId, String token) {
+        if (companyId == null || companyId.isBlank() || reportId == null || reportId.isBlank()) {
+            return List.of();
+        }
+
+        EmployeeFilterRequest employeeFilterRequest = new EmployeeFilterRequest();
+        employeeFilterRequest.setCompanyID(companyId);
+        Map<String, EmployeeDetail> employeeDetailMap = Map.of();
+        try {
+            if (token != null && !token.isBlank()) {
+                employeeDetailMap = Optional.ofNullable(
+                        adminService.getEmployeesDetail(employeeFilterRequest, token)
+                ).orElse(Map.of());
+            }
+        } catch (Exception e) {
+            LOGGER.warn("Unable to load employee details for report {}: {}", reportId, e.getMessage());
+        }
+
+        final List<String> grossSalaryComponents = getMetadata(companyId);
+        LocalDate today = LocalDate.now(ZoneId.of("Africa/Lagos"));
+        final List<String> deductionComponents = loanRepo
+                .findActiveApprovedNonExpiredLoans(companyId, today)
+                .stream()
+                .map(Loan::getDescription)
+                .toList();
+
+        List<PayrollReportDetail> source = payrollReportDetailRepo
+                .findPayrollReportDetailByCompanyIdAndSummaryId(companyId, reportId);
+        if (source == null || source.isEmpty()) {
+            return List.of();
+        }
+
+        List<Map<String, Object>> rows = new ArrayList<>();
+        for (PayrollReportDetail detail : source) {
+            if (detail == null) continue;
+            try {
+                ReportResponse transformed = ReportUtils.transform(detail);
+                if (transformed == null || transformed.getDetail() == null || transformed.getDetail().getReport() == null) {
+                    continue;
+                }
+                PaymentInfo paymentInfo = transformed.getDetail().getReport();
+                Map<String, Object> raw = extractRawDetail(paymentInfo, transformed.getReportId());
+                List<String> selected = new LinkedList<>(DEFAULT_PAYMENT_HEADERS);
+                raw.keySet().stream()
+                        .filter(Objects::nonNull)
+                        .filter(k -> !selected.contains(k))
+                        .forEach(selected::add);
+
+                Map<String, Object> row = extractDetail(
+                        paymentInfo,
+                        selected,
+                        true,
+                        employeeDetailMap,
+                        transformed.getReportId(),
+                        grossSalaryComponents,
+                        deductionComponents
+                );
+                if (row.get("EMP ID") == null || String.valueOf(row.get("EMP ID")).isBlank()) {
+                    row.put("EMP ID", paymentInfo.getEmployeeID());
+                }
+                if (row.get("EMPLOYEE NAME") == null) {
+                    row.put("EMPLOYEE NAME", paymentInfo.getFullName());
+                }
+                raw.forEach((k, v) -> {
+                    if (k != null) row.putIfAbsent(k, v);
+                });
+                rows.add(row);
+            } catch (Exception e) {
+                LOGGER.warn("Skipping payroll detail {} while building PaymentInfo rows: {}",
+                        detail.getId(), e.getMessage());
+            }
+        }
+        return rows;
+    }
+
+    @Override
     public Set<String> getHeadersForReport(String companyId, String reportId) {
         Pageable paging = PageRequest.of(0, 1);
 
@@ -377,11 +447,13 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         final EmployeeDetail employeeDetail = (employeeDetailMap != null) ? employeeDetailMap.get(employeeId) : null;
 
         if (isDetail && employeeDetail != null) {
-            String exitDate = employeeDetail.getExitDate().equals(employeeDetail.getHireDate()) ? "" : employeeDetail.getExitDate();
+            String hireDate = employeeDetail.getHireDate();
+            String rawExit = employeeDetail.getExitDate();
+            String exitDate = (rawExit != null && rawExit.equals(hireDate)) ? "" : rawExit;
 
             result.put("EMP ID", employeeDetail.getMappedId());
             result.put("EMPLOYEE NAME", paymentInfo.getFullName());
-            result.put("HIRE DATE", AppUtil.formatDate(employeeDetail.getHireDate()));
+            result.put("HIRE DATE", AppUtil.formatDate(hireDate));
             result.put("EXIT DATE", AppUtil.formatDate(exitDate));
             result.put("ROLE", employeeDetail.getRole());
         }
