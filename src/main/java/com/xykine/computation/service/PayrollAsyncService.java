@@ -459,32 +459,31 @@ public class PayrollAsyncService {
                 .flatMap(paymentInfo -> paymentInfo.getPaymentSettings().stream())
                 .forEach(setting -> {
 
-                    PaymentElementGLMapping glMapping = glMappings.stream()
+                    glMappings.stream()
                             .filter(mapping ->
                                     mapping.getPayElement()
                                             .equalsIgnoreCase(setting.getName()))
                             .findFirst()
-                            .orElseThrow(() -> new IllegalArgumentException(
-                                    "No GL mapping found for payment element: "
-                                            + setting.getName()
-                            ));
+                            .ifPresent(glMapping -> {
 
-                    BigDecimal amount = setting.getValue();
+                                BigDecimal amount = setting.getValue();
 
-                    addToGL(
-                            gls,
-                            glMapping.getGlCodeDebit(),
-                            amount,
-                            true
-                    );
+                                addToGL(
+                                        gls,
+                                        glMapping.getGlCodeDebit(),
+                                        amount,
+                                        true
+                                );
 
-                    addToGL(
-                            gls,
-                            glMapping.getGlCodeCredit(),
-                            amount,
-                            false
-                    );
+                                addToGL(
+                                        gls,
+                                        glMapping.getGlCodeCredit(),
+                                        amount,
+                                        false
+                                );
+                            });
                 });
+
         PayrollGLReport payrollGLReport = PayrollGLReport.builder()
                 .id(existingSummaryReport.getId().toString())
                 .generated(LocalDateTime.from(Instant.now()))
