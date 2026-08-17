@@ -458,7 +458,6 @@ public class PayrollAsyncService {
         paymentInfoList.stream()
                 .flatMap(paymentInfo -> paymentInfo.getPaymentSettings().stream())
                 .forEach(setting -> {
-
                     glMappings.stream()
                             .filter(mapping ->
                                     mapping.getPayElement()
@@ -483,6 +482,50 @@ public class PayrollAsyncService {
                                 );
                             });
                 });
+
+        paymentInfoList.forEach(setting -> {
+
+            addPaymentElementToGL(
+                    gls,
+                    glMappings,
+                    "PAYE TAX",
+                    setting.getPayeeTax().get(MapKeys.PAYEE_TAX)
+            );
+
+            addPaymentElementToGL(
+                    gls,
+                    glMappings,
+                    "NET SALARY",
+                    setting.getNetPay()
+            );
+
+            addPaymentElementToGL(
+                    gls,
+                    glMappings,
+                    "ER PENSION",
+                    setting.getPension().get(
+                            MapKeys.EMPLOYER_PENSION_CONTRIBUTION
+                    )
+            );
+
+            addPaymentElementToGL(
+                    gls,
+                    glMappings,
+                    "MONTHLY EMPLOYEE PENSION @ 8%",
+                    setting.getPension().get(
+                            MapKeys.EMPLOYEE_PENSION_CONTRIBUTION
+                    )
+            );
+
+            addPaymentElementToGL(
+                    gls,
+                    glMappings,
+                    "MONTHLY NHF",
+                    setting.getNhf().get(
+                            MapKeys.NATIONAL_HOUSING_FUND
+                    )
+            );
+        });
 
         PayrollGLReport payrollGLReport = PayrollGLReport.builder()
                 .id(existingSummaryReport.getId().toString())
@@ -527,5 +570,37 @@ public class PayrollAsyncService {
 
             return existing;
         });
+    }
+
+    private void addPaymentElementToGL(
+            Map<String, GLSummary> gls,
+            List<PaymentElementGLMapping> glMappings,
+            String paymentElement,
+            BigDecimal amount
+    ) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) == 0) {
+            return;
+        }
+
+        glMappings.stream()
+                .filter(mapping ->
+                        mapping.getPayElement().equalsIgnoreCase(paymentElement))
+                .findFirst()
+                .ifPresent(glMapping -> {
+
+                    addToGL(
+                            gls,
+                            glMapping.getGlCodeDebit(),
+                            amount,
+                            true
+                    );
+
+                    addToGL(
+                            gls,
+                            glMapping.getGlCodeCredit(),
+                            amount,
+                            false
+                    );
+                });
     }
 }
