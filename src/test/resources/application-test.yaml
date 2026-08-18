@@ -19,6 +19,7 @@ spring:
   data:
     mongodb:
       database: test-db
+      uuid-representation: standard
 
   main:
     allow-bean-definition-overriding: true

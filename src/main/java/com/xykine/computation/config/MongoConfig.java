@@ -4,25 +4,31 @@ import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
-import lombok.AllArgsConstructor;
+import org.bson.BsonBinary;
+import org.bson.BsonBinarySubType;
 import org.bson.UuidRepresentation;
+import org.bson.types.Binary;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.mongodb.config.AbstractMongoClientConfiguration;
+import org.springframework.core.convert.converter.Converter;
+import org.springframework.data.mongodb.MongoDatabaseFactory;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.convert.DefaultDbRefResolver;
+import org.springframework.data.mongodb.core.convert.MappingMongoConverter;
+import org.springframework.data.mongodb.core.convert.MongoCustomConversions;
+import org.springframework.data.mongodb.core.mapping.MongoMappingContext;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
-import org.springframework.lang.NonNull;
 
+import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Configuration
 @EnableMongoRepositories(basePackages = "com.xykine.computation")
 public class MongoConfig {
-
-    @Value("${spring.data.mongodb.database}")
-    private String databaseName;
 
     @Value("${spring.data.mongodb.uri}")
     private String mongoUri;
@@ -58,9 +64,8 @@ public class MongoConfig {
 
         MongoClientSettings settings = MongoClientSettings.builder()
                 .applyConnectionString(cs)
-                // Existing docs store UUID _ids as BSON Binary subtype 3 (Java legacy).
-                // STANDARD (subtype 4) cannot read those and fails with ConverterNotFoundException.
-                .uuidRepresentation(UuidRepresentation.JAVA_LEGACY)
+                // Existing payroll summary _ids are BSON Binary UUID subtype 4 (STANDARD).
+                .uuidRepresentation(UuidRepresentation.STANDARD)
                 .applyToSocketSettings(b -> b
                         .connectTimeout(connectTimeoutMs, TimeUnit.MILLISECONDS)
                         .readTimeout(readTimeoutMs, TimeUnit.MILLISECONDS))
@@ -78,7 +83,57 @@ public class MongoConfig {
     }
 
     @Bean
-    public MongoTemplate mongoTemplate(MongoClient mongoClient) {
-        return new MongoTemplate(mongoClient, databaseName);
+    public MongoCustomConversions mongoCustomConversions() {
+        return new MongoCustomConversions(List.of(
+                new BinaryToUuidConverter(),
+                new UuidToBinaryConverter()
+        ));
+    }
+
+    @Bean
+    public MappingMongoConverter mappingMongoConverter(
+            MongoDatabaseFactory mongoDatabaseFactory,
+            MongoMappingContext mongoMappingContext,
+            MongoCustomConversions mongoCustomConversions) {
+        MappingMongoConverter converter = new MappingMongoConverter(
+                new DefaultDbRefResolver(mongoDatabaseFactory), mongoMappingContext);
+        converter.setCustomConversions(mongoCustomConversions);
+        converter.setCodecRegistryProvider(mongoDatabaseFactory);
+        return converter;
+    }
+
+    @Bean
+    public MongoTemplate mongoTemplate(
+            MongoDatabaseFactory mongoDatabaseFactory,
+            MappingMongoConverter mappingMongoConverter) {
+        return new MongoTemplate(mongoDatabaseFactory, mappingMongoConverter);
+    }
+
+    private static final class BinaryToUuidConverter implements Converter<Binary, UUID> {
+        @Override
+        public UUID convert(Binary source) {
+            byte type = source.getType();
+            BsonBinary bsonBinary = new BsonBinary(type, source.getData());
+            if (type == BsonBinarySubType.UUID_STANDARD.getValue()) {
+                return bsonBinary.asUuid(UuidRepresentation.STANDARD);
+            }
+            if (type == BsonBinarySubType.UUID_LEGACY.getValue()) {
+                return bsonBinary.asUuid(UuidRepresentation.JAVA_LEGACY);
+            }
+            byte[] data = source.getData();
+            if (data != null && data.length == 16) {
+                ByteBuffer buffer = ByteBuffer.wrap(data);
+                return new UUID(buffer.getLong(), buffer.getLong());
+            }
+            throw new IllegalArgumentException("Cannot convert BSON Binary subtype " + type + " to UUID");
+        }
+    }
+
+    private static final class UuidToBinaryConverter implements Converter<UUID, Binary> {
+        @Override
+        public Binary convert(UUID source) {
+            BsonBinary bsonBinary = new BsonBinary(source, UuidRepresentation.STANDARD);
+            return new Binary(bsonBinary.getType(), bsonBinary.getData());
+        }
     }
 }
