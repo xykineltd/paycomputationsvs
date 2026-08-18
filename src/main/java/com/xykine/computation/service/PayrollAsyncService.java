@@ -529,7 +529,7 @@ public class PayrollAsyncService {
 
         PayrollGLReport payrollGLReport = PayrollGLReport.builder()
                 .id(existingSummaryReport.getId().toString())
-                .generated(LocalDateTime.from(Instant.now()))
+                .generated(LocalDateTime.now())
                 .gls(gls)
                 .status(GLReportStatus.GENERATED)
                 .build();
