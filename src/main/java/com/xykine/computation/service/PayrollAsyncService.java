@@ -485,6 +485,17 @@ public class PayrollAsyncService {
 
         paymentInfoList.forEach(setting -> {
 
+            BigDecimal employerPension = setting.getPension().get(
+                    MapKeys.EMPLOYER_PENSION_CONTRIBUTION
+            );
+            BigDecimal nstif = setting.getGrossPay()
+                    .get(MapKeys.GROSS_PAY)
+                    .multiply(BigDecimal.valueOf(0.01));
+
+            BigDecimal itf = employerPension
+                    .add(nstif)
+                    .multiply(new BigDecimal("0.01"));
+
             addPaymentElementToGL(
                     gls,
                     glMappings,
@@ -504,9 +515,7 @@ public class PayrollAsyncService {
                     gls,
                     glMappings,
                     "ER PENSION",
-                    setting.getPension().get(
-                            MapKeys.EMPLOYER_PENSION_CONTRIBUTION
-                    )
+                    employerPension
             );
 
             addPaymentElementToGL(
@@ -525,6 +534,20 @@ public class PayrollAsyncService {
                     setting.getNhf().get(
                             MapKeys.NATIONAL_HOUSING_FUND
                     )
+            );
+
+            addPaymentElementToGL(
+                    gls,
+                    glMappings,
+                    "NSITF",
+                    nstif
+                    );
+
+            addPaymentElementToGL(
+                    gls,
+                    glMappings,
+                    "ITF",
+                    itf
             );
         });
 
