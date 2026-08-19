@@ -489,7 +489,8 @@ public class PayrollAsyncService {
                     gls,
                     glMappings,
                     "PAYE TAX",
-                    setting.getPayeeTax().get(MapKeys.PAYEE_TAX)
+//                    setting.getPayeeTax().get(MapKeys.PAYEE_TAX)
+                    setting.getPayeeTax().get("PAYE")
             );
 
             addPaymentElementToGL(
