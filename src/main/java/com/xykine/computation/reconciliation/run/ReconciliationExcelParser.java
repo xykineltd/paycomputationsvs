@@ -8,14 +8,19 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 @Component
 public class ReconciliationExcelParser {
@@ -33,13 +38,16 @@ public class ReconciliationExcelParser {
         int dataStartRow1Based = mapping.getDataStartRow() != null ? mapping.getDataStartRow() : headerRowIndex1Based + 1;
         String matchKeyHeader = mapping.getExcelMatchKey() != null ? mapping.getExcelMatchKey() : "EMP ID";
 
-        try (var in = new ByteArrayInputStream(bytes); Workbook wb = new XSSFWorkbook(in)) {
+        try (Workbook wb = openWorkbookWithoutExternalLinks(bytes)) {
             DataFormatter formatter = new DataFormatter();
             FormulaEvaluator evaluator = wb.getCreationHelper().createFormulaEvaluator();
             Sheet sheet = findSheet(wb, alias.getExcelSheetName());
             if (sheet == null) {
                 throw new IllegalArgumentException(
-                        "Excel sheet not found: " + alias.getExcelSheetName());
+                        "Excel sheet not found: " + alias.getExcelSheetName()
+                                + ". Available sheets: " + availableSheetNames(wb)
+                                + ". Update the company Excel sheet alias (entityAliases[].excelSheetName)"
+                                + " to match a tab name in the uploaded file.");
             }
 
             int headerIdx = headerRowIndex1Based - 1;
@@ -143,18 +151,122 @@ public class ReconciliationExcelParser {
                 .orElse(null);
     }
 
+    /**
+     * Excel files often cache unused external-workbook links. POI parses that XML with JAXP,
+     * which on recent JDKs rejects entities over 100,000 chars. Reconciliation only needs
+     * cell values, so drop those zip parts (and their relationships) before opening.
+     */
+    private Workbook openWorkbookWithoutExternalLinks(byte[] bytes) throws IOException {
+        byte[] sanitized = stripExternalLinkZipEntries(bytes);
+        return new XSSFWorkbook(new ByteArrayInputStream(sanitized));
+    }
+
+    private static byte[] stripExternalLinkZipEntries(byte[] bytes) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream(Math.max(32, bytes.length));
+        try (ZipInputStream in = new ZipInputStream(new ByteArrayInputStream(bytes));
+             ZipOutputStream out = new ZipOutputStream(baos)) {
+            ZipEntry entry;
+            while ((entry = in.getNextEntry()) != null) {
+                String name = entry.getName().replace('\\', '/');
+                if (name.contains("/externalLinks/") || name.startsWith("xl/externalLinks/")) {
+                    continue;
+                }
+                byte[] data = in.readAllBytes();
+                if (name.endsWith(".rels") || "[Content_Types].xml".equals(name)) {
+                    String xml = new String(data, StandardCharsets.UTF_8);
+                    xml = xml.replaceAll("(?is)<Relationship\\b[^>]*externalLink[^>]*/>", "");
+                    xml = xml.replaceAll("(?is)<Override\\b[^>]*externalLink[^>]*/>", "");
+                    data = xml.getBytes(StandardCharsets.UTF_8);
+                }
+                ZipEntry copy = new ZipEntry(name);
+                out.putNextEntry(copy);
+                out.write(data);
+                out.closeEntry();
+            }
+        }
+        return baos.toByteArray();
+    }
+
     private Sheet findSheet(Workbook wb, String sheetName) {
+        if (isBlank(sheetName)) {
+            return null;
+        }
         Sheet exact = wb.getSheet(sheetName);
         if (exact != null) {
             return exact;
         }
-        for (int i = 0; i < wb.getNumberOfSheets(); i++) {
-            Sheet s = wb.getSheetAt(i);
-            if (s != null && normalizeHeader(s.getSheetName()).equals(normalizeHeader(sheetName))) {
+
+        List<Sheet> visible = visibleSheets(wb);
+        String wanted = normalizeSheetName(sheetName);
+        String wantedKey = sheetKey(sheetName);
+
+        for (Sheet s : visible) {
+            if (normalizeSheetName(s.getSheetName()).equals(wanted)) {
                 return s;
             }
         }
+        for (Sheet s : visible) {
+            if (sheetKey(s.getSheetName()).equals(wantedKey)) {
+                return s;
+            }
+        }
+
+        List<Sheet> partial = new ArrayList<>();
+        for (Sheet s : visible) {
+            String actual = normalizeSheetName(s.getSheetName());
+            String actualKey = sheetKey(s.getSheetName());
+            if (actual.contains(wanted) || wanted.contains(actual)
+                    || actualKey.contains(wantedKey) || wantedKey.contains(actualKey)) {
+                partial.add(s);
+            }
+        }
+        if (partial.size() == 1) {
+            return partial.get(0);
+        }
+        if (visible.size() == 1) {
+            return visible.get(0);
+        }
         return null;
+    }
+
+    private List<Sheet> visibleSheets(Workbook wb) {
+        List<Sheet> sheets = new ArrayList<>();
+        for (int i = 0; i < wb.getNumberOfSheets(); i++) {
+            if (wb.isSheetHidden(i) || wb.isSheetVeryHidden(i)) {
+                continue;
+            }
+            Sheet s = wb.getSheetAt(i);
+            if (s != null) {
+                sheets.add(s);
+            }
+        }
+        return sheets;
+    }
+
+    private String availableSheetNames(Workbook wb) {
+        List<String> names = new ArrayList<>();
+        for (int i = 0; i < wb.getNumberOfSheets(); i++) {
+            Sheet s = wb.getSheetAt(i);
+            if (s != null) {
+                names.add(s.getSheetName());
+            }
+        }
+        return names.isEmpty() ? "(none)" : String.join(", ", names);
+    }
+
+    private static String normalizeSheetName(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace('\u00A0', ' ')
+                .replaceAll("[\\p{Cf}]", "")
+                .replaceAll("\\s+", " ")
+                .trim()
+                .toUpperCase(Locale.ROOT);
+    }
+
+    private static String sheetKey(String value) {
+        return normalizeSheetName(value).replaceAll("[^A-Z0-9]", "");
     }
 
     static String normalizeHeader(String value) {

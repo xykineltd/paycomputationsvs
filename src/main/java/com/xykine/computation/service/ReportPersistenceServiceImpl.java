@@ -132,10 +132,10 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                     .map(entry -> entry.getPayElement())
                     .collect(Collectors.toList());
 
-            List<String> nonTaxableAllowances = paymentElementGLMappingRepository.findByTaxableFalse().stream()
-                    .filter(entry -> entry.getNature().equals(Nature.NET_EARNINGS))
-                    .map(entry -> entry.getPayElement())
-                    .collect(Collectors.toList());
+//            List<String> nonTaxableAllowances = paymentElementGLMappingRepository.findByTaxableFalse().stream()
+//                    .filter(entry -> entry.getNature().equals(Nature.NET_EARNINGS))
+//                    .map(entry -> entry.getPayElement())
+//                    .collect(Collectors.toList());
 
             sessionCalculationObject.setCostCenters(costCenters);
             sessionCalculationObject.setAllNonTaxableEntries(nonTaxableEntries);
