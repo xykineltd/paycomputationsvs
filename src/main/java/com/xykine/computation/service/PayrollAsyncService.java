@@ -458,36 +458,102 @@ public class PayrollAsyncService {
         paymentInfoList.stream()
                 .flatMap(paymentInfo -> paymentInfo.getPaymentSettings().stream())
                 .forEach(setting -> {
-
-                    PaymentElementGLMapping glMapping = glMappings.stream()
+                    glMappings.stream()
                             .filter(mapping ->
                                     mapping.getPayElement()
                                             .equalsIgnoreCase(setting.getName()))
                             .findFirst()
-                            .orElseThrow(() -> new IllegalArgumentException(
-                                    "No GL mapping found for payment element: "
-                                            + setting.getName()
-                            ));
+                            .ifPresent(glMapping -> {
 
-                    BigDecimal amount = setting.getValue();
+                                BigDecimal amount = setting.getValue();
 
-                    addToGL(
-                            gls,
-                            glMapping.getGlCodeDebit(),
-                            amount,
-                            true
-                    );
+                                addToGL(
+                                        gls,
+                                        glMapping.getGlCodeDebit(),
+                                        amount,
+                                        true
+                                );
 
-                    addToGL(
-                            gls,
-                            glMapping.getGlCodeCredit(),
-                            amount,
-                            false
-                    );
+                                addToGL(
+                                        gls,
+                                        glMapping.getGlCodeCredit(),
+                                        amount,
+                                        false
+                                );
+                            });
                 });
+
+        paymentInfoList.forEach(setting -> {
+
+            BigDecimal employerPension = setting.getPension().get(
+                    MapKeys.EMPLOYER_PENSION_CONTRIBUTION
+            );
+            BigDecimal nstif = setting.getGrossPay()
+                    .get(MapKeys.GROSS_PAY)
+                    .multiply(BigDecimal.valueOf(0.01));
+
+            BigDecimal itf = employerPension
+                    .add(nstif)
+                    .multiply(new BigDecimal("0.01"));
+
+            addPaymentElementToGL(
+                    gls,
+                    glMappings,
+                    "PAYE TAX",
+//                    setting.getPayeeTax().get(MapKeys.PAYEE_TAX)
+                    setting.getPayeeTax().get("PAYE")
+            );
+
+            addPaymentElementToGL(
+                    gls,
+                    glMappings,
+                    "NET SALARY",
+                    setting.getNetPay()
+            );
+
+            addPaymentElementToGL(
+                    gls,
+                    glMappings,
+                    "ER PENSION",
+                    employerPension
+            );
+
+            addPaymentElementToGL(
+                    gls,
+                    glMappings,
+                    "MONTHLY EMPLOYEE PENSION @ 8%",
+                    setting.getPension().get(
+                            MapKeys.EMPLOYEE_PENSION_CONTRIBUTION
+                    )
+            );
+
+            addPaymentElementToGL(
+                    gls,
+                    glMappings,
+                    "MONTHLY NHF",
+                    setting.getNhf().get(
+                            MapKeys.NATIONAL_HOUSING_FUND
+                    )
+            );
+
+            addPaymentElementToGL(
+                    gls,
+                    glMappings,
+                    "NSITF",
+                    nstif
+                    );
+
+            addPaymentElementToGL(
+                    gls,
+                    glMappings,
+                    "ITF",
+                    itf
+            );
+        });
+
         PayrollGLReport payrollGLReport = PayrollGLReport.builder()
                 .id(existingSummaryReport.getId().toString())
-                .generated(LocalDateTime.from(Instant.now()))
+                .generated(LocalDateTime.now())
                 .gls(gls)
                 .status(GLReportStatus.GENERATED)
                 .build();
@@ -528,5 +594,37 @@ public class PayrollAsyncService {
 
             return existing;
         });
+    }
+
+    private void addPaymentElementToGL(
+            Map<String, GLSummary> gls,
+            List<PaymentElementGLMapping> glMappings,
+            String paymentElement,
+            BigDecimal amount
+    ) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) == 0) {
+            return;
+        }
+
+        glMappings.stream()
+                .filter(mapping ->
+                        mapping.getPayElement().equalsIgnoreCase(paymentElement))
+                .findFirst()
+                .ifPresent(glMapping -> {
+
+                    addToGL(
+                            gls,
+                            glMapping.getGlCodeDebit(),
+                            amount,
+                            true
+                    );
+
+                    addToGL(
+                            gls,
+                            glMapping.getGlCodeCredit(),
+                            amount,
+                            false
+                    );
+                });
     }
 }
