@@ -6,7 +6,11 @@ import com.xykine.computation.reconciliation.mapping.ReconciliationTolerances;
 import org.xykine.payroll.model.PaymentInfo;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -29,6 +33,18 @@ final class ReconciliationValueSupport {
             Map.entry("HIRE DATE", "HIRE DATE"),
             Map.entry("REFERAL BONUS", "REFERRAL BONUS"),
             Map.entry("TOTAL RELIEF", "TOTAL TAX RELIEF")
+    );
+
+    /** Excel header → system keys that must be summed before compare. */
+    private static final Map<String, List<String>> EXCEL_TO_SUMMED_SYSTEM_KEYS = Map.of(
+            "OTHER ALLOWANCE", List.of(
+                    "UTILITY",
+                    "ENTERTAINMENT",
+                    "MEDICAL",
+                    "PERSONAL OUTFIT",
+                    "LEAVE",
+                    "TRAINING"
+            )
     );
 
     static Map<String, Object> flattenSystemRow(ReportResponse report, EmployeeDetail employee) {
@@ -81,6 +97,10 @@ final class ReconciliationValueSupport {
      * then dotted PaymentInfo paths as a fallback.
      */
     static Object lookupSystemValue(Map<String, Object> row, String excelHeader, String systemPath) {
+        Object composite = sumMappedComponents(row, excelHeader);
+        if (!isAbsent(composite)) {
+            return composite;
+        }
         Object found = lookupKey(row, systemPath);
         if (!isAbsent(found)) {
             return found;
@@ -101,6 +121,40 @@ final class ReconciliationValueSupport {
             found = lookupKey(row, systemPath.substring(systemPath.lastIndexOf('.') + 1));
         }
         return isAbsent(found) ? null : found;
+    }
+
+    private static Object sumMappedComponents(Map<String, Object> row, String excelHeader) {
+        List<String> parts = EXCEL_TO_SUMMED_SYSTEM_KEYS.get(normalizeHeader(excelHeader));
+        if (row == null || parts == null || parts.isEmpty()) {
+            return null;
+        }
+        BigDecimal sum = BigDecimal.ZERO;
+        boolean any = false;
+        for (String part : parts) {
+            Double n = lookupNumericComponent(row, part);
+            if (n != null) {
+                sum = sum.add(BigDecimal.valueOf(n));
+                any = true;
+            }
+        }
+        return any ? sum : null;
+    }
+
+    private static Double lookupNumericComponent(Map<String, Object> row, String name) {
+        Object found = lookupKey(row, name);
+        if (!isAbsent(found)) {
+            return toNumber(found);
+        }
+        for (String nest : List.of("earning", "grossPay", "others")) {
+            Object nested = row.get(nest);
+            if (nested instanceof Map<?, ?> map) {
+                Object v = lookupInMap(map, name);
+                if (!isAbsent(v)) {
+                    return toNumber(v);
+                }
+            }
+        }
+        return null;
     }
 
     static Object getByPath(Map<String, Object> row, String path) {
@@ -125,6 +179,20 @@ final class ReconciliationValueSupport {
         return current;
     }
 
+    private static final DateTimeFormatter[] DATE_FORMATS = {
+            DateTimeFormatter.ISO_LOCAL_DATE,
+            DateTimeFormatter.ofPattern("MMMM d, yyyy", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("MMMM dd, yyyy", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("MMM dd, yyyy", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("M/d/yyyy", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("MM/dd/yyyy", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("d/M/yyyy", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("yyyy/MM/dd", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("d-MMM-yyyy", Locale.ENGLISH)
+    };
+
     static boolean valuesEqual(Object excelValue, Object systemValue, String valueType, ReconciliationTolerances tolerances) {
         double moneyTol = tolerances != null && tolerances.getMoney() != null ? tolerances.getMoney() : 0.01;
         double daysTol = tolerances != null && tolerances.getDays() != null ? tolerances.getDays() : 0;
@@ -147,6 +215,15 @@ final class ReconciliationValueSupport {
                     ? moneyTol
                     : (Math.abs(a) <= 1 && Math.abs(b) <= 1 ? factorTol : daysTol);
             return Math.abs(a - b) <= tol;
+        }
+
+        LocalDate excelDate = toDate(excelValue);
+        LocalDate systemDate = toDate(systemValue);
+        if (excelDate != null && systemDate != null) {
+            return excelDate.equals(systemDate);
+        }
+        if ("date".equalsIgnoreCase(valueType)) {
+            return false;
         }
 
         String a = String.valueOf(excelValue == null ? "" : excelValue).trim().toLowerCase(Locale.ROOT);
@@ -187,6 +264,24 @@ final class ReconciliationValueSupport {
         } catch (NumberFormatException ex) {
             return null;
         }
+    }
+
+    static LocalDate toDate(Object value) {
+        if (isAbsent(value)) {
+            return null;
+        }
+        if (value instanceof LocalDate localDate) {
+            return localDate;
+        }
+        String raw = String.valueOf(value).trim();
+        for (DateTimeFormatter formatter : DATE_FORMATS) {
+            try {
+                return LocalDate.parse(raw, formatter);
+            } catch (DateTimeParseException ignored) {
+                // try next pattern
+            }
+        }
+        return null;
     }
 
     static String normalizeEmpId(String raw) {
