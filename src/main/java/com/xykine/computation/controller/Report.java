@@ -6,6 +6,7 @@ import com.xykine.computation.request.*;
 
 import com.xykine.computation.response.*;
 import com.xykine.computation.service.AdminService;
+import com.xykine.computation.service.PayrollGLReportQueryService;
 import com.xykine.computation.service.ReportGeneratorService;
 import com.xykine.computation.service.ReportPersistenceService;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class Report {
     private final ReportPersistenceService reportPersistenceService;
     private final ReportGeneratorService reportGeneratorService;
     private final AdminService adminService;
+    private final PayrollGLReportQueryService payrollGLReportQueryService;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Report.class);
 
@@ -305,6 +307,34 @@ public class Report {
     @PostMapping("/total-netpay-by-report-id")
     public Map<String, Object> getTotalNetPayByReportId(@RequestBody RetrieveSummaryElementRequest request){
         return reportGeneratorService.extractDataFromSummary(request);
+    }
+
+    @PostMapping("/gl")
+    public PayrollGLReportResponse getPayrollGlReport(@RequestBody RetrieveSummaryElementRequest request) {
+        return payrollGLReportQueryService.getReport(request.getCompanyId(), request.getReportId());
+    }
+
+    @PostMapping("/gl/download")
+    public ResponseEntity<byte[]> downloadPayrollGlReport(
+            @RequestBody RetrieveSummaryElementRequest request
+    ) throws IOException {
+        byte[] file = payrollGLReportQueryService.downloadNetsuiteExcel(
+                request.getCompanyId(),
+                request.getReportId()
+        );
+        String fileName = payrollGLReportQueryService.downloadFileName(
+                request.getCompanyId(),
+                request.getReportId(),
+                "xlsx"
+        );
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        headers.setContentDisposition(
+                ContentDisposition.attachment().filename(fileName).build()
+        );
+        headers.setCacheControl(CacheControl.noCache().getHeaderValue());
+        return new ResponseEntity<>(file, headers, HttpStatus.OK);
     }
 
     @PostMapping("/variance-details")
