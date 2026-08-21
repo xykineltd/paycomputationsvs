@@ -21,5 +21,6 @@ public class GLSummary {
 
     private BigDecimal credit;
 
-    private BigDecimal net;
+    private String function;
+
 }

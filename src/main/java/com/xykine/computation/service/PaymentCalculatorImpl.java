@@ -348,6 +348,53 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
     }
 
     @Override
+    public PaymentInfo separateEarnings(PaymentInfo paymentInfo) {
+
+        Map<String, BigDecimal> earningMap = new HashMap<>();
+        Map<String, BigDecimal> grossMap = paymentInfo.getGrossPay();
+
+        List<String> earningsToSeparate = List.of(
+                "Call & Data Allowance",
+                "Travel Allowance",
+                "Other Payment"
+        );
+
+        BigDecimal totalEarnings = BigDecimal.ZERO;
+
+        Iterator<Map.Entry<String, BigDecimal>> iterator =
+                grossMap.entrySet().iterator();
+
+        while (iterator.hasNext()) {
+            Map.Entry<String, BigDecimal> entry = iterator.next();
+
+            if (earningsToSeparate.stream()
+                    .anyMatch(name -> name.equalsIgnoreCase(entry.getKey()))) {
+
+                BigDecimal amount = entry.getValue();
+
+                if (amount != null) {
+                    earningMap.put(entry.getKey(), amount);
+                    totalEarnings = totalEarnings.add(amount);
+                }
+
+                iterator.remove();
+            }
+        }
+
+        // Remove the separated earnings from Gross Salary
+        BigDecimal finalTotalEarnings = totalEarnings;
+        grossMap.computeIfPresent(
+                "Gross Salary",
+                (key, grossSalary) -> grossSalary.subtract(finalTotalEarnings)
+        );
+
+        // Store the separated earnings on PaymentInfo
+        paymentInfo.setEarning(earningMap);
+
+        return paymentInfo;
+    }
+
+    @Override
     public PaymentInfo computePayeeTax(PaymentInfo paymentInfo) {
 
         if (isContract(paymentInfo)) {
@@ -466,12 +513,12 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
         return paymentInfo;
     }
 
-    private Map<String, BigDecimal> insertRecurrentPaymentMap(Map<String, BigDecimal> earningMap, PaymentInfo paymentInfo){
+    private void insertRecurrentPaymentMap(Map<String, BigDecimal> grossMap,  PaymentInfo paymentInfo){
         PaymentFrequencyEnum salaryFrequency = paymentInfo.isOffCycle() ? getOffCyclePaymentFrequency(paymentInfo) :  getSalaryFrequency(paymentInfo);
         int numberOfUnpaidDays = paymentInfo.getNumberOfDaysOfUnpaidAbsence();
         if (paymentInfo.isOffCycle()) {
             PaymentSettingsResponse paymentSettingsResponse = getOffCyclePaymentDetails(paymentInfo);
-            earningMap.put(paymentSettingsResponse.getName(), paymentSettingsResponse.getValue());
+            grossMap.put(paymentSettingsResponse.getName(), paymentSettingsResponse.getValue());
         } else {
             Set<PaymentSettingsResponse> allowance = getAllowanceForEmployee(paymentInfo);
             allowance.stream()
@@ -483,9 +530,8 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
                                 return entry;
                             }
                     )
-                    .forEach(x -> earningMap.put(x.getName(), x.getValue()));
+                    .forEach(x -> grossMap.put(x.getName(), x.getValue()));
         }
-        return earningMap;
     }
 
     @Override

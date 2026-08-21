@@ -7,11 +7,13 @@ import com.xykine.computation.entity.*;
 
 import com.xykine.computation.repo.*;
 
+import com.xykine.computation.request.EmployeeFilterRequest;
 import com.xykine.computation.request.RepaymentRequest;
 import com.xykine.computation.response.PayCompteVarianceDetailsCustomized;
 import com.xykine.computation.response.PayComputeDetailResponse;
 import com.xykine.computation.response.PaymentComputeResponse;
 import com.xykine.computation.response.ReportResponse;
+import com.xykine.computation.utils.AuthUtil;
 import com.xykine.computation.utils.PayrollMetrics;
 import com.xykine.computation.utils.ReportUtils;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +47,7 @@ public class PayrollAsyncService {
     private final PayrollVarianceDetailsCustomizedRepo payrollVarianceDetailsCustomizedRepo;
     private final PaymentElementGLMappingRepository paymentElementGLMappingCustomRepository;
     private final PayrollGLReportRepository payrollGLReportRepository;
+    private final AdminService adminService;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PayrollAsyncService.class);
 
@@ -442,118 +445,147 @@ public class PayrollAsyncService {
     @Async
     public void generatePayrollGLReport(PayrollReportSummary existingSummaryReport) {
 
-        List<PayrollReportDetail> reportDetails =
-                payrollReportDetailRepo.findPayrollReportDetailBySummaryId(existingSummaryReport.getId().toString());
+        EmployeeFilterRequest employeeFilterRequest = new EmployeeFilterRequest();
+        employeeFilterRequest.setCompanyID(existingSummaryReport.getCompanyId());
 
-        List<PaymentInfo> paymentInfoList = ReportUtils.transform(reportDetails)
-                .stream()
-                .map(info -> info.getDetail().getReport())
-                .toList();
+        Map<String, List<String>> costCenters =
+                adminService.getCostCenterDetails(
+                        employeeFilterRequest,
+                        AuthUtil.getAuthentication().toString()
+                );
+
+        List<PayrollReportDetail> reportDetails =
+                payrollReportDetailRepo.findPayrollReportDetailBySummaryId(
+                        existingSummaryReport.getId().toString()
+                );
 
         List<PaymentElementGLMapping> glMappings =
                 paymentElementGLMappingCustomRepository.findAll();
 
+        // ONE map for ALL cost centers
         Map<String, GLSummary> gls = new HashMap<>();
 
-        paymentInfoList.stream()
-                .flatMap(paymentInfo -> paymentInfo.getPaymentSettings().stream())
-                .forEach(setting -> {
-                    glMappings.stream()
-                            .filter(mapping ->
-                                    mapping.getPayElement()
-                                            .equalsIgnoreCase(setting.getName()))
-                            .findFirst()
-                            .ifPresent(glMapping -> {
+        for (String costCenter : costCenters.keySet()) {
 
-                                BigDecimal amount = setting.getValue();
+            List<String> employeeIds = costCenters.get(costCenter);
 
-                                addToGL(
-                                        gls,
-                                        glMapping.getGlCodeDebit(),
-                                        amount,
-                                        true
-                                );
+            List<PaymentInfo> paymentInfoList = ReportUtils.transform(reportDetails)
+                    .stream()
+                    .filter(employee -> employeeIds.contains(employee.getEmployeeId()))
+                    .map(info -> info.getDetail().getReport())
+                    .toList();
 
-                                addToGL(
-                                        gls,
-                                        glMapping.getGlCodeCredit(),
-                                        amount,
-                                        false
-                                );
-                            });
-                });
+            paymentInfoList.stream()
+                    .flatMap(paymentInfo -> paymentInfo.getPaymentSettings().stream())
+                    .forEach(setting -> {
 
-        paymentInfoList.forEach(setting -> {
+                        glMappings.stream()
+                                .filter(mapping ->
+                                        mapping.getPayElement()
+                                                .equalsIgnoreCase(setting.getName()))
+                                .findFirst()
+                                .ifPresent(glMapping -> {
 
-            BigDecimal employerPension = setting.getPension().get(
-                    MapKeys.EMPLOYER_PENSION_CONTRIBUTION
-            );
-            BigDecimal nstif = setting.getGrossPay()
-                    .get(MapKeys.GROSS_PAY)
-                    .multiply(BigDecimal.valueOf(0.01));
+                                    BigDecimal amount = setting.getValue();
 
-            BigDecimal itf = employerPension
-                    .add(nstif)
-                    .multiply(new BigDecimal("0.01"));
+                                    addToGL(
+                                            gls,
+                                            glMapping.getGlCodeDebit(),
+                                            amount,
+                                            true,
+                                            costCenter
+                                    );
 
-            addPaymentElementToGL(
-                    gls,
-                    glMappings,
-                    "PAYE TAX",
-//                    setting.getPayeeTax().get(MapKeys.PAYEE_TAX)
-                    setting.getPayeeTax().get("PAYE")
-            );
+                                    addToGL(
+                                            gls,
+                                            glMapping.getGlCodeCredit(),
+                                            amount,
+                                            false,
+                                            costCenter
+                                    );
+                                });
+                    });
 
-            addPaymentElementToGL(
-                    gls,
-                    glMappings,
-                    "NET SALARY",
-                    setting.getNetPay()
-            );
+            paymentInfoList.forEach(setting -> {
 
-            addPaymentElementToGL(
-                    gls,
-                    glMappings,
-                    "ER PENSION",
-                    employerPension
-            );
+                BigDecimal employerPension = setting.getPension().get(
+                        MapKeys.EMPLOYER_PENSION_CONTRIBUTION
+                );
 
-            addPaymentElementToGL(
-                    gls,
-                    glMappings,
-                    "MONTHLY EMPLOYEE PENSION @ 8%",
-                    setting.getPension().get(
-                            MapKeys.EMPLOYEE_PENSION_CONTRIBUTION
-                    )
-            );
+                BigDecimal nstif = setting.getGrossPay()
+                        .get(MapKeys.GROSS_PAY)
+                        .multiply(BigDecimal.valueOf(0.01));
 
-            addPaymentElementToGL(
-                    gls,
-                    glMappings,
-                    "MONTHLY NHF",
-                    setting.getNhf().get(
-                            MapKeys.NATIONAL_HOUSING_FUND
-                    )
-            );
+                BigDecimal itf = employerPension
+                        .add(nstif)
+                        .multiply(new BigDecimal("0.01"));
 
-            addPaymentElementToGL(
-                    gls,
-                    glMappings,
-                    "NSITF",
-                    nstif
-                    );
+                addPaymentElementToGL(
+                        gls,
+                        glMappings,
+                        "PAYE TAX",
+                        setting.getPayeeTax().get("PAYEE"),
+                        costCenter
+                );
 
-            addPaymentElementToGL(
-                    gls,
-                    glMappings,
-                    "ITF",
-                    itf
-            );
-        });
+                addPaymentElementToGL(
+                        gls,
+                        glMappings,
+                        "NET SALARY",
+                        setting.getNetPay(),
+                        costCenter
+                );
 
+                addPaymentElementToGL(
+                        gls,
+                        glMappings,
+                        "ER PENSION",
+                        employerPension,
+                        costCenter
+                );
+
+                addPaymentElementToGL(
+                        gls,
+                        glMappings,
+                        "MONTHLY EMPLOYEE PENSION @ 8%",
+                        setting.getPension().get(
+                                MapKeys.EMPLOYEE_PENSION_CONTRIBUTION
+                        ),
+                        costCenter
+                );
+
+                addPaymentElementToGL(
+                        gls,
+                        glMappings,
+                        "MONTHLY NHF",
+                        setting.getNhf().get(
+                                MapKeys.NATIONAL_HOUSING_FUND
+                        ),
+                        costCenter
+                );
+
+                addPaymentElementToGL(
+                        gls,
+                        glMappings,
+                        "NSITF",
+                        nstif,
+                        costCenter
+                );
+
+                addPaymentElementToGL(
+                        gls,
+                        glMappings,
+                        "ITF",
+                        itf,
+                        costCenter
+                );
+            });
+        }
+
+        // SAVE ONLY ONCE
         PayrollGLReport payrollGLReport = PayrollGLReport.builder()
                 .id(existingSummaryReport.getId().toString())
-                .generated(LocalDateTime.now())
+                .generated(LocalDateTime.from(Instant.now()))
                 .gls(gls)
                 .status(GLReportStatus.GENERATED)
                 .build();
@@ -561,70 +593,34 @@ public class PayrollAsyncService {
         payrollGLReportRepository.save(payrollGLReport);
     }
 
-    private void addToGL(
-            Map<String, GLSummary> gls,
-            String glCode,
-            BigDecimal amount,
-            boolean debit
-    ) {
+    private void addToGL( Map<String, GLSummary> gls, String glCode, BigDecimal amount, boolean debit, String costCenter ) {
         if (glCode == null || amount == null) {
             return;
         }
+        gls.compute(glCode, (key, existing) -> { if (existing == null) {
 
-        gls.compute(glCode, (key, existing) -> {
-
-            if (existing == null) {
-                return GLSummary.builder()
-                        .glCode(glCode)
-                        .debit(debit ? amount : BigDecimal.ZERO)
-                        .credit(debit ? BigDecimal.ZERO : amount)
-                        .net(debit ? amount : amount.negate())
-                        .build();
-            }
-
+            return GLSummary.builder()
+                    .glCode(glCode)
+                    .debit(debit ? amount : BigDecimal.ZERO)
+                    .credit(debit ? BigDecimal.ZERO : amount)
+                    .function(costCenter)
+                    .build(); }
             if (debit) {
-                existing.setDebit(existing.getDebit().add(amount));
-            } else {
-                existing.setCredit(existing.getCredit().add(amount));
-            }
-
-            existing.setNet(
-                    existing.getDebit().subtract(existing.getCredit())
-            );
-
-            return existing;
-        });
+                existing.setDebit(existing.getDebit().add(amount)); }
+            else { existing.setCredit(existing.getCredit().add(amount));
+            }  return existing; });
     }
 
-    private void addPaymentElementToGL(
-            Map<String, GLSummary> gls,
-            List<PaymentElementGLMapping> glMappings,
-            String paymentElement,
-            BigDecimal amount
-    ) {
+    private void addPaymentElementToGL( Map<String, GLSummary> gls, List<PaymentElementGLMapping> glMappings, String paymentElement, BigDecimal amount, String costCenter ) {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) == 0) {
             return;
         }
-
         glMappings.stream()
-                .filter(mapping ->
-                        mapping.getPayElement().equalsIgnoreCase(paymentElement))
+                .filter(mapping -> mapping.getPayElement().equalsIgnoreCase(paymentElement))
                 .findFirst()
-                .ifPresent(glMapping -> {
-
-                    addToGL(
-                            gls,
-                            glMapping.getGlCodeDebit(),
-                            amount,
-                            true
-                    );
-
-                    addToGL(
-                            gls,
-                            glMapping.getGlCodeCredit(),
-                            amount,
-                            false
-                    );
-                });
+                .ifPresent(
+                        glMapping -> { addToGL( gls, glMapping.getGlCodeDebit(), amount, true, costCenter );
+                            addToGL( gls, glMapping.getGlCodeCredit(), amount, false, costCenter );
+                        });
     }
 }
