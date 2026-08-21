@@ -13,8 +13,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 final class ReconciliationValueSupport {
+
+    /** Whole or decimal amounts such as 7000 and 7000.00 — not employee codes like MON0311. */
+    private static final Pattern PLAIN_NUMBER = Pattern.compile("-?\\d+(\\.\\d+)?");
 
     private ReconciliationValueSupport() {
     }
@@ -226,13 +230,27 @@ final class ReconciliationValueSupport {
             return false;
         }
 
+        // Text fields that are both plain amounts (7000 vs 7000.00) compare numerically.
+        if (looksLikePlainNumber(excelValue) && looksLikePlainNumber(systemValue)) {
+            BigDecimal a = toBigDecimal(excelValue);
+            BigDecimal b = toBigDecimal(systemValue);
+            if (a == null && b == null) {
+                return true;
+            }
+            if (a == null || b == null) {
+                return false;
+            }
+            return a.compareTo(b) == 0;
+        }
+
         String a = String.valueOf(excelValue == null ? "" : excelValue).trim().toLowerCase(Locale.ROOT);
         String b = String.valueOf(systemValue == null ? "" : systemValue).trim().toLowerCase(Locale.ROOT);
         return a.equals(b);
     }
 
     static Object delta(Object excelValue, Object systemValue, String valueType) {
-        if (!"money".equalsIgnoreCase(valueType) && !"number".equalsIgnoreCase(valueType)) {
+        if (!isNumericValueType(valueType)
+                && !(looksLikePlainNumber(excelValue) && looksLikePlainNumber(systemValue))) {
             return null;
         }
         Double a = toNumber(excelValue);
@@ -264,6 +282,43 @@ final class ReconciliationValueSupport {
         } catch (NumberFormatException ex) {
             return null;
         }
+    }
+
+    static BigDecimal toBigDecimal(Object value) {
+        if (isAbsent(value)) {
+            return null;
+        }
+        if (value instanceof BigDecimal bd) {
+            return bd;
+        }
+        if (value instanceof Number n) {
+            return BigDecimal.valueOf(n.doubleValue());
+        }
+        String cleaned = String.valueOf(value).trim().replace(",", "");
+        if (cleaned.isBlank()) {
+            return null;
+        }
+        try {
+            return new BigDecimal(cleaned);
+        } catch (NumberFormatException ex) {
+            Double parsed = toNumber(value);
+            return parsed == null ? null : BigDecimal.valueOf(parsed);
+        }
+    }
+
+    static boolean looksLikePlainNumber(Object value) {
+        if (isAbsent(value)) {
+            return false;
+        }
+        if (value instanceof Number) {
+            return true;
+        }
+        String s = String.valueOf(value).trim().replace(",", "");
+        return PLAIN_NUMBER.matcher(s).matches();
+    }
+
+    private static boolean isNumericValueType(String valueType) {
+        return "money".equalsIgnoreCase(valueType) || "number".equalsIgnoreCase(valueType);
     }
 
     static LocalDate toDate(Object value) {

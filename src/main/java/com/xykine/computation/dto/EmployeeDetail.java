@@ -9,4 +9,8 @@ public class EmployeeDetail {
     private String hireDate;
     private String exitDate;
     private String role;
+    private String dateOfBirth;
+    private String sex;
+    private String stateOfResidence;
+    private String taxId;
 }

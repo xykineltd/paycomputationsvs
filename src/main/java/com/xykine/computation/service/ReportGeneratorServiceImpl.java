@@ -6,7 +6,9 @@ import com.xykine.computation.dto.EmployeeDetail;
 import com.xykine.computation.dto.PaymentDistributionItem;
 import com.xykine.computation.entity.CompanyMetadata;
 import com.xykine.computation.entity.Loan;
+import com.xykine.computation.entity.YTDReport;
 import com.xykine.computation.repo.LoanRepo;
+import com.xykine.computation.repo.YTDReportRepo;
 import com.xykine.computation.request.*;
 import com.xykine.computation.utils.AppUtil;
 import org.apache.poi.ss.usermodel.*;
@@ -51,6 +53,7 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
     private final ExcelUploadService excelUploadService;
     private final AdminService adminService;
     private final LoanRepo loanRepo;
+    private final YTDReportRepo ytdReportRepo;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReportGeneratorServiceImpl.class);
 
@@ -134,7 +137,11 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         EmployeeFilterRequest employeeFilterRequest = new EmployeeFilterRequest();
         employeeFilterRequest.setCompanyID(reportRequestPayload.getCompanyID());
 
-        Map<String, EmployeeDetail> employeeDetailMap = adminService.getEmployeesDetail(employeeFilterRequest, token);
+        Map<String, EmployeeDetail> loadedEmployeeDetails = adminService.getEmployeesDetail(employeeFilterRequest, token);
+        final Map<String, EmployeeDetail> employeeDetailMap =
+                loadedEmployeeDetails != null ? loadedEmployeeDetails : Map.of();
+        LOGGER.info("Loaded {} employee records from admin svc for report type {}",
+                employeeDetailMap.size(), reportRequestPayload.getEntityType());
         final List<String> GROSS_SALARY_COMPONENTS = getMetadata(reportRequestPayload.getCompanyID());
 
         LocalDate today = LocalDate.now(ZoneId.of("Africa/Lagos"));
@@ -149,9 +156,11 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
 
         List<?> source; // raw entities before transform
 
+        String entityType = reportRequestPayload.getEntityType().trim().toLowerCase(Locale.ROOT);
+
         // Decide source based on type + flags
-        switch (reportRequestPayload.getEntityType()) {
-            case "details" -> {
+        switch (entityType) {
+            case "details", "itf", "nsitf", "nhf", "pension", "monthly", "ytd", "paye", "bank-file", "bank_file" -> {
 
                 if (reportRequestPayload.isAll()) {
                     source = payrollReportDetailRepo.findPayrollReportDetailByCompanyIdAndSummaryId(
@@ -178,6 +187,13 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
             }
             default -> throw new RuntimeException("Invalid report type: " + reportRequestPayload.getEntityType());
         }
+
+        final Map<String, YTDReport> ytdByEmployeeId = loadYtdReports(
+                entityType,
+                source,
+                reportRequestPayload.getCompanyID()
+        );
+
         AtomicBoolean isDetail = new AtomicBoolean(false);
         int i = 0;
 
@@ -196,15 +212,37 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                 })
                 // Allow all details entry in the downloaded reports
 //                .filter(detail -> filterByDates(detail, reportRequestPayload))
-                .map(detail -> extractDetail(
-                        detail.getDetail().getReport(),
-                        reportRequestPayload.getHeaders(),
-                        isDetail.get(),
-                        employeeDetailMap,
-                        detail.getReportId(),
-                        GROSS_SALARY_COMPONENTS,
-                        deductionComponents
-                ))
+                .map(detail -> {
+                    if ("nsitf".equals(entityType)) {
+                        return extractNsitfDetail(detail.getDetail().getReport(), employeeDetailMap);
+                    }
+                    if ("itf".equals(entityType)) {
+                        return extractItfDetail(detail.getDetail().getReport(), employeeDetailMap, ytdByEmployeeId);
+                    }
+                    if ("paye".equals(entityType)) {
+                        return extractPayeDetail(
+                                detail.getDetail().getReport(),
+                                employeeDetailMap,
+                                GROSS_SALARY_COMPONENTS
+                        );
+                    }
+                    if ("ytd".equals(entityType)) {
+                        return extractYtdDetail(
+                                detail.getDetail().getReport(),
+                                employeeDetailMap,
+                                ytdByEmployeeId
+                        );
+                    }
+                    return extractDetail(
+                            detail.getDetail().getReport(),
+                            reportRequestPayload.getHeaders(),
+                            isDetail.get(),
+                            employeeDetailMap,
+                            detail.getReportId(),
+                            GROSS_SALARY_COMPONENTS,
+                            deductionComponents
+                    );
+                })
                 .toList();
 
         // After dataRows is built:
@@ -213,19 +251,27 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         }
 
 
-        // 🔁 Build dynamic headers from any keys not in the fixed prefix/suffix
-        Set<String> dynamicHeaders = dataRows.stream()
-                .flatMap(row -> row.keySet().stream())
-                .filter(Objects::nonNull)
-                .filter(key -> !TEMPLATE_PREFIX.contains(key))
-                .filter(key -> !TEMPLATE_SUFFIX.contains(key))
-                .collect(Collectors.toCollection(LinkedHashSet::new)); // preserves order of discovery
+        boolean useRequestedHeaders = !reportRequestPayload.isDefaultHeaders()
+                && reportRequestPayload.getHeaders() != null
+                && !reportRequestPayload.getHeaders().isEmpty();
 
-        // Final headers in correct order: prefix + dynamic + suffix
-        List<String> headers = new ArrayList<>();
-        headers.addAll(TEMPLATE_PREFIX);
-        headers.addAll(dynamicHeaders);   // this replaces the old "OTHER ALLOWANCE" placeholder
-        headers.addAll(TEMPLATE_SUFFIX);
+        List<String> headers;
+        if (useRequestedHeaders) {
+            headers = new ArrayList<>(reportRequestPayload.getHeaders());
+        } else {
+            // 🔁 Build dynamic headers from any keys not in the fixed prefix/suffix
+            Set<String> dynamicHeaders = dataRows.stream()
+                    .flatMap(row -> row.keySet().stream())
+                    .filter(Objects::nonNull)
+                    .filter(key -> !TEMPLATE_PREFIX.contains(key))
+                    .filter(key -> !TEMPLATE_SUFFIX.contains(key))
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
+
+            headers = new ArrayList<>();
+            headers.addAll(TEMPLATE_PREFIX);
+            headers.addAll(dynamicHeaders);
+            headers.addAll(TEMPLATE_SUFFIX);
+        }
 
 
 
@@ -249,13 +295,21 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         // Make sure all headers exist as keys (fill blanks for missing)
         // and enforce the final dynamic order
         List<Map<String, Object>> normalizedRows = new ArrayList<>(dataRows.size());
+        int serialNumber = 1;
 
         for (Map<String, Object> row : dataRows) {
             Map<String, Object> norm = new LinkedHashMap<>();
             for (String h : headers) {
-                norm.put(h, row.getOrDefault(h, " "));
+                if (isSerialNumberHeader(h)) {
+                    norm.put(h, serialNumber);
+                } else if (useRequestedHeaders) {
+                    norm.put(h, resolveColumnValue(row, h));
+                } else {
+                    norm.put(h, row.getOrDefault(h, " "));
+                }
             }
             normalizedRows.add(norm);
+            serialNumber++;
         }
 
 
@@ -432,6 +486,259 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         return result;
     }
 
+    private Map<String, Object> extractNsitfDetail(
+            PaymentInfo paymentInfo,
+            Map<String, EmployeeDetail> employeeDetailMap
+    ) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        EmployeeDetail employee = employeeDetailMap != null
+                ? employeeDetailMap.get(paymentInfo.getEmployeeID())
+                : null;
+
+        row.put("EMP ID", employee != null && hasValue(employee.getMappedId())
+                ? employee.getMappedId()
+                : paymentInfo.getEmployeeID());
+        row.put("EMPLOYEE NAME", firstNonBlank(
+                employee != null ? employee.getName() : null,
+                paymentInfo.getFullName()
+        ));
+        row.put("DATE OF BIRTH", employee != null ? formatDateOfBirth(employee.getDateOfBirth()) : "");
+        row.put("SEX", employee != null && employee.getSex() != null ? employee.getSex() : "");
+
+        BigDecimal grossPay = mapDecimal(paymentInfo.getGrossPay(), "Gross Pay", MapKeys.GROSS_PAY, "GROSS PAY");
+        row.put("GROSS PAY", grossPay != null ? grossPay : " ");
+        row.put("GROSS INCOME", grossPay != null ? grossPay : " ");
+        row.put("NSITF", grossPay != null ? grossPay.multiply(new BigDecimal("0.01")) : " ");
+
+        return row;
+    }
+
+    private Map<String, Object> extractItfDetail(
+            PaymentInfo paymentInfo,
+            Map<String, EmployeeDetail> employeeDetailMap,
+            Map<String, YTDReport> ytdByEmployeeId
+    ) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        EmployeeDetail employee = employeeDetailMap != null
+                ? employeeDetailMap.get(paymentInfo.getEmployeeID())
+                : null;
+        YTDReport ytd = ytdByEmployeeId != null
+                ? ytdByEmployeeId.get(paymentInfo.getEmployeeID())
+                : null;
+
+        row.put("EMP ID", employee != null && hasValue(employee.getMappedId())
+                ? employee.getMappedId()
+                : paymentInfo.getEmployeeID());
+        row.put("EMPLOYEE NAME", firstNonBlank(
+                employee != null ? employee.getName() : null,
+                paymentInfo.getFullName()
+        ));
+        row.put("ROLE", employee != null && employee.getRole() != null ? employee.getRole() : "");
+
+        BigDecimal ytdGrossPay = ytd != null ? ytd.getGrossPay() : null;
+        BigDecimal ytdEmployeePension = ytd != null ? ytd.getEmployeePension() : null;
+        BigDecimal ytdEmployerPension = ytd != null ? ytd.getEmployerPension() : null;
+
+        row.put("GROSS SALARY (YTD)", ytdGrossPay != null ? ytdGrossPay : " ");
+        row.put("YTD EMPLOYEE PENSION @ 8%", ytdEmployeePension != null ? ytdEmployeePension : " ");
+
+        if (ytdGrossPay != null) {
+            BigDecimal ytdNsitf = ytdGrossPay.multiply(new BigDecimal("0.01"));
+            BigDecimal employerPension = ytdEmployerPension != null ? ytdEmployerPension : BigDecimal.ZERO;
+            row.put("ITF", employerPension.add(ytdNsitf).multiply(new BigDecimal("0.01")));
+        } else {
+            row.put("ITF", " ");
+        }
+
+        return row;
+    }
+
+    private Map<String, Object> extractYtdDetail(
+            PaymentInfo paymentInfo,
+            Map<String, EmployeeDetail> employeeDetailMap,
+            Map<String, YTDReport> ytdByEmployeeId
+    ) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        EmployeeDetail employee = employeeDetailMap != null
+                ? employeeDetailMap.get(paymentInfo.getEmployeeID())
+                : null;
+        YTDReport ytd = ytdByEmployeeId != null
+                ? ytdByEmployeeId.get(paymentInfo.getEmployeeID())
+                : null;
+
+        row.put("EMP ID", employee != null && hasValue(employee.getMappedId())
+                ? employee.getMappedId()
+                : paymentInfo.getEmployeeID());
+        row.put("EMPLOYEE NAME", firstNonBlank(
+                employee != null ? employee.getName() : null,
+                paymentInfo.getFullName()
+        ));
+        row.put("ROLE", employee != null && employee.getRole() != null ? employee.getRole() : "");
+
+        row.put("GROSS SALARY", moneyOrBlank(ytd != null ? ytd.getGrossPay() : null));
+        row.put("GROSS SALARY (MONTHLY)", moneyOrBlank(ytd != null ? ytd.getGrossPay() : null));
+        row.put("NHF", moneyOrBlank(ytd != null ? ytd.getNhf() : null));
+        row.put("EMPLOYEE PENSION", moneyOrBlank(ytd != null ? ytd.getEmployeePension() : null));
+        row.put("VOLUNTARY PENSION CONTRIBUTION", moneyOrBlank(ytd != null ? ytd.getVoluntarPensionContribution() : null));
+        row.put("TAXABLE INCOME", moneyOrBlank(ytd != null ? ytd.getTaxableIncome() : null));
+        row.put("PAYE TAX", moneyOrBlank(ytd != null ? ytd.getPayeeTax() : null));
+        row.put("PAYE", moneyOrBlank(ytd != null ? ytd.getPayeeTax() : null));
+        row.put("NETPAY", moneyOrBlank(ytd != null ? ytd.getNetPay() : null));
+        row.put("EMPLOYER PENSION", moneyOrBlank(ytd != null ? ytd.getEmployerPension() : null));
+
+        BigDecimal deductionsTotal = ytdDeductionsTotal(ytd != null ? ytd.getDeductions() : null);
+        row.put("DEDUCTIONS", moneyOrBlank(deductionsTotal));
+        row.put("TOTAL DEDUCTION", moneyOrBlank(deductionsTotal));
+
+        return row;
+    }
+
+    private static BigDecimal ytdDeductionsTotal(Map<String, BigDecimal> deductions) {
+        if (deductions == null || deductions.isEmpty()) {
+            return null;
+        }
+        BigDecimal total = mapDecimalIgnoreCase(deductions, "Total Deduction", "Total Deductions", "TOTAL DEDUCTION");
+        if (total != null) {
+            return total;
+        }
+        return deductions.values().stream()
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private Map<String, YTDReport> loadYtdReports(String entityType, List<?> source, String companyId) {
+        if ((!"itf".equals(entityType) && !"ytd".equals(entityType))
+                || source == null
+                || source.isEmpty()
+                || companyId == null) {
+            return Map.of();
+        }
+
+        List<String> employeeIds = source.stream()
+                .filter(PayrollReportDetail.class::isInstance)
+                .map(obj -> ((PayrollReportDetail) obj).getEmployeeId())
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        if (employeeIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return ytdReportRepo.findYTDReportByEmployeeIdInAndCompanyId(employeeIds, companyId).stream()
+                .filter(Objects::nonNull)
+                .filter(ytd -> ytd.getEmployeeId() != null)
+                .collect(Collectors.toMap(YTDReport::getEmployeeId, ytd -> ytd, (a, b) -> a));
+    }
+
+    private Map<String, Object> extractPayeDetail(
+            PaymentInfo paymentInfo,
+            Map<String, EmployeeDetail> employeeDetailMap,
+            List<String> grossSalaryComponent
+    ) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        EmployeeDetail employee = employeeDetailMap != null
+                ? employeeDetailMap.get(paymentInfo.getEmployeeID())
+                : null;
+
+        row.put("EMP ID", employee != null && hasValue(employee.getMappedId())
+                ? employee.getMappedId()
+                : paymentInfo.getEmployeeID());
+        row.put("EMPLOYEE NAME", firstNonBlank(
+                employee != null ? employee.getName() : null,
+                paymentInfo.getFullName()
+        ));
+        row.put("ROLE", employee != null && employee.getRole() != null ? employee.getRole() : "");
+        row.put("STATE OF RESIDENCE", employee != null ? firstNonBlank(employee.getStateOfResidence()) : "");
+        row.put("TAX ID", employee != null ? firstNonBlank(employee.getTaxId()) : "");
+
+        BigDecimal derivedGrossSalary = deriveGrossSalary(paymentInfo.getGrossPay(), grossSalaryComponent);
+        BigDecimal grossPay = amountFrom(paymentInfo, "Gross Pay", MapKeys.GROSS_PAY, "GROSS PAY");
+        BigDecimal monthlyGrossSalary = derivedGrossSalary != null && derivedGrossSalary.compareTo(BigDecimal.ZERO) != 0
+                ? derivedGrossSalary
+                : grossPay;
+
+        row.put("GROSS SALARY", moneyOrBlank(monthlyGrossSalary));
+        row.put("GROSS SALARY (MONTHLY)", moneyOrBlank(monthlyGrossSalary));
+        row.put("NHF", moneyOrBlank(amountFrom(
+                paymentInfo,
+                MapKeys.NATIONAL_HOUSING_FUND,
+                "National Housing Fund",
+                "NHF"
+        )));
+        row.put("EMPLOYEE PENSION", moneyOrBlank(amountFrom(
+                paymentInfo,
+                MapKeys.EMPLOYEE_PENSION_CONTRIBUTION,
+                "Employee Pension Contribution",
+                "EMPLOYEE PENSION"
+        )));
+        row.put("VOLUNTARY PENSION CONTRIBUTION", moneyOrBlank(amountFrom(
+                paymentInfo,
+                "Voluntary Pension Contribution",
+                "VOLUNTARY PENSION CONTRIBUTION"
+        )));
+        row.put("LIFE INSURANCE PREMIUM", moneyOrBlank(amountFrom(
+                paymentInfo,
+                "Life Insurance Premium",
+                "Life Insurance",
+                "LIFE INSURANCE PREMIUM"
+        )));
+        row.put("MORTGAGE INTEREST", moneyOrBlank(amountFrom(
+                paymentInfo,
+                "Mortgage Interest",
+                "Mortgage",
+                "MORTGAGE INTEREST"
+        )));
+        row.put("RENT RELIEF", moneyOrBlank(amountFrom(paymentInfo, "RENT RELIEF", "Rent Relief")));
+        row.put("OTHER RELIEF", moneyOrBlank(amountFrom(
+                paymentInfo,
+                "Other Relief (If Applicable)",
+                "Other Relief",
+                "Custom Tax Relief",
+                "CUSTOM TAX RELIEF"
+        )));
+        row.put("TOTAL TAX RELIEF", moneyOrBlank(amountFrom(
+                paymentInfo,
+                MapKeys.TOTAL_TAX_RELIEF,
+                "Total Tax Relief",
+                "MONTHLY RELIEF"
+        )));
+        row.put("TAXABLE GROSS", moneyOrBlank(amountFrom(
+                paymentInfo,
+                "MONTHLY CHARGEABLE INCOME",
+                MapKeys.TAXABLE_INCOME,
+                "TAXABLE INCOME",
+                "TAXABLE GROSS"
+        )));
+        row.put("PAYE", moneyOrBlank(amountFrom(paymentInfo, "Total PAYE", "PAYE")));
+        row.put("TOTAL PAYE", moneyOrBlank(amountFrom(paymentInfo, "Total PAYE", "PAYE")));
+
+        return row;
+    }
+
+    private static Object moneyOrBlank(BigDecimal value) {
+        return value != null ? value : " ";
+    }
+
+    private static BigDecimal amountFrom(PaymentInfo paymentInfo, String... keys) {
+        if (paymentInfo == null) {
+            return null;
+        }
+        BigDecimal value = mapDecimalIgnoreCase(paymentInfo.getGrossPay(), keys);
+        if (value != null) return value;
+        value = mapDecimalIgnoreCase(paymentInfo.getDeduction(), keys);
+        if (value != null) return value;
+        value = mapDecimalIgnoreCase(paymentInfo.getTaxRelief(), keys);
+        if (value != null) return value;
+        value = mapDecimalIgnoreCase(paymentInfo.getPension(), keys);
+        if (value != null) return value;
+        value = mapDecimalIgnoreCase(paymentInfo.getNhf(), keys);
+        if (value != null) return value;
+        value = mapDecimalIgnoreCase(paymentInfo.getPayeeTax(), keys);
+        if (value != null) return value;
+        return mapDecimalIgnoreCase(paymentInfo.getOthers(), keys);
+    }
+
     private Map<String, Object> extractDetail(
             PaymentInfo paymentInfo,
             List<String> selectedReports,
@@ -456,6 +763,8 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
             result.put("HIRE DATE", AppUtil.formatDate(hireDate));
             result.put("EXIT DATE", AppUtil.formatDate(exitDate));
             result.put("ROLE", employeeDetail.getRole());
+            result.put("DATE OF BIRTH", safeFormatDate(employeeDetail.getDateOfBirth()));
+            result.put("SEX", employeeDetail.getSex() != null ? employeeDetail.getSex() : "");
         }
 
         Map<String, Object> finalResult = new LinkedHashMap<>(result);
@@ -474,6 +783,35 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         //  Add each otherComponent into the row so they can become columns
         finalResult.putAll(otherComponents);
         finalResult.putAll(otherDeductions);
+
+        BigDecimal grossPayValue = mapDecimal(paymentInfo.getGrossPay(), "Gross Pay", MapKeys.GROSS_PAY);
+        if (grossPayValue != null) {
+            finalResult.put("NSITF", grossPayValue.multiply(new BigDecimal("0.01")));
+        }
+
+        Map<String, BigDecimal> ytd = paymentInfo.getYtdReport();
+        if (ytd != null && !ytd.isEmpty()) {
+            BigDecimal ytdGross = mapDecimal(ytd, "Gross Pay", MapKeys.GROSS_PAY);
+            BigDecimal ytdEmployeePension = mapDecimal(
+                    ytd,
+                    "Employee Pension Contribution",
+                    MapKeys.EMPLOYEE_PENSION_CONTRIBUTION
+            );
+            BigDecimal ytdEmployerPension = mapDecimal(
+                    ytd,
+                    "Employer Pension Contribution",
+                    MapKeys.EMPLOYER_PENSION_CONTRIBUTION
+            );
+            if (ytdGross != null) {
+                finalResult.put("GROSS SALARY (YTD)", ytdGross);
+                BigDecimal ytdNsitf = ytdGross.multiply(new BigDecimal("0.01"));
+                BigDecimal employerPension = ytdEmployerPension != null ? ytdEmployerPension : BigDecimal.ZERO;
+                finalResult.put("ITF", employerPension.add(ytdNsitf).multiply(new BigDecimal("0.01")));
+            }
+            if (ytdEmployeePension != null) {
+                finalResult.put("YTD EMPLOYEE PENSION @ 8%", ytdEmployeePension);
+            }
+        }
 
         return swapKey(finalResult);
     }
@@ -644,7 +982,9 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                     Object value = rowData.get(headerName);
                     Cell cell = row.createCell(j);
 
-                    if (value instanceof Number number) {
+                    if (isSerialNumberHeader(headerName) && value instanceof Number number) {
+                        cell.setCellValue(number.longValue());
+                    } else if (value instanceof Number number) {
                         cell.setCellValue(number.doubleValue());
                         // always use plain number style (no ₦)
                         cell.setCellStyle(numberStyle);
@@ -720,6 +1060,144 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
             renamed.put(newKey, value);
         }
         return renamed;
+    }
+
+    private static String firstNonBlank(String... values) {
+        if (values == null) {
+            return "";
+        }
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return "";
+    }
+
+    private static boolean isSerialNumberHeader(String header) {
+        if (header == null) {
+            return false;
+        }
+        String normalized = header.trim().toLowerCase(Locale.ROOT);
+        return normalized.equals("serial number") || normalized.equals("s/n") || normalized.equals("sn");
+    }
+
+    private static Object resolveColumnValue(Map<String, Object> row, String header) {
+        if (row == null || header == null) {
+            return " ";
+        }
+        Object direct = row.get(header);
+        if (hasValue(direct)) {
+            return direct;
+        }
+        for (String alias : columnAliases(header)) {
+            Object value = row.get(alias);
+            if (hasValue(value)) {
+                return value;
+            }
+        }
+        return row.getOrDefault(header, " ");
+    }
+
+    private static boolean hasValue(Object value) {
+        if (value == null) {
+            return false;
+        }
+        if (value instanceof String s) {
+            return !s.isBlank();
+        }
+        return true;
+    }
+
+    private static List<String> columnAliases(String header) {
+        return switch (header) {
+            case "Employee Code" -> List.of("EMP ID", "EMPLOYEE CODE", "EmployeeId");
+            case "Employee name" -> List.of("EMPLOYEE NAME", "FULL NAME", "EmployeeName");
+            case "Employee Role", "Employee role" -> List.of("ROLE");
+            case "State of Residence" -> List.of("STATE OF RESIDENCE");
+            case "Tax ID" -> List.of("TAX ID", "TAXID", "TIN");
+            case "Gross Salary (Monthly)" -> List.of("GROSS SALARY (MONTHLY)", "GROSS SALARY");
+            case "Monthly NHF" -> List.of("NHF", "MONTHLY NHF", "NATIONAL HOUSING FUND");
+            case "Monthly Employee Pension @ 8%" -> List.of("EMPLOYEE PENSION", "MONTHLY EMPLOYEE PENSION @ 8%");
+            case "Monthly Voluntary Pension" -> List.of("VOLUNTARY PENSION CONTRIBUTION", "MONTHLY VOLUNTARY PENSION");
+            case "Life Insurance Premium" -> List.of("LIFE INSURANCE PREMIUM", "LIFE INSURANCE");
+            case "Mortgage Interest" -> List.of("MORTGAGE INTEREST", "MORTGAGE");
+            case "Rent Relief" -> List.of("RENT RELIEF");
+            case "Other Relief (If Applicable)" -> List.of("OTHER RELIEF", "CUSTOM TAX RELIEF");
+            case "Total Tax Relief" -> List.of("TOTAL TAX RELIEF", "MONTHLY RELIEF");
+            case "Taxable Gross" -> List.of("TAXABLE GROSS", "MONTHLY CHARGEABLE INCOME", "TAXABLE INCOME");
+            case "Total PAYE" -> List.of("TOTAL PAYE", "PAYE");
+            case "Date of birth" -> List.of("DATE OF BIRTH");
+            case "Sex" -> List.of("SEX");
+            case "Gross Income" -> List.of("GROSS PAY", "GROSS INCOME");
+            case "NSITF Amount" -> List.of("NSITF", "NSITF AMOUNT");
+            case "Gross Salary (YTD)" -> List.of("GROSS SALARY (YTD)", "YTD GROSS PAY");
+            case "YTD Employee Pension @ 8%" -> List.of(
+                    "YTD EMPLOYEE PENSION @ 8%",
+                    "YTD EMPLOYEE PENSION CONTRIBUTION"
+            );
+            case "ITF (Based on YTD Figures)" -> List.of("ITF", "ITF (BASED ON YTD FIGURES)");
+            case "Voluntary Pension Contribution" -> List.of("VOLUNTARY PENSION CONTRIBUTION");
+            case "Taxable Income" -> List.of("TAXABLE INCOME", "TAXABLE GROSS", "MONTHLY CHARGEABLE INCOME");
+            case "PAYE Tax" -> List.of("PAYE TAX", "PAYE", "TOTAL PAYE");
+            case "Net Pay" -> List.of("NETPAY", "NET PAY");
+            case "Employer Pension" -> List.of("EMPLOYER PENSION");
+            case "Deductions" -> List.of("DEDUCTIONS", "TOTAL DEDUCTION", "TOTAL DEDUCTIONS");
+            default -> List.of(header.toUpperCase(Locale.ROOT));
+        };
+    }
+
+    private static BigDecimal mapDecimal(Map<String, BigDecimal> values, String... keys) {
+        if (values == null || keys == null) {
+            return null;
+        }
+        for (String key : keys) {
+            if (key != null && values.get(key) != null) {
+                return values.get(key);
+            }
+        }
+        return null;
+    }
+
+    private static BigDecimal mapDecimalIgnoreCase(Map<String, BigDecimal> values, String... keys) {
+        BigDecimal exact = mapDecimal(values, keys);
+        if (exact != null || values == null || keys == null) {
+            return exact;
+        }
+        for (String key : keys) {
+            if (key == null) {
+                continue;
+            }
+            for (Map.Entry<String, BigDecimal> entry : values.entrySet()) {
+                if (entry.getKey() != null
+                        && entry.getKey().equalsIgnoreCase(key)
+                        && entry.getValue() != null) {
+                    return entry.getValue();
+                }
+            }
+        }
+        return null;
+    }
+
+    private static String formatDateOfBirth(String dateStr) {
+        if (dateStr == null || dateStr.isBlank()) {
+            return "";
+        }
+        try {
+            LocalDate date = LocalDate.parse(dateStr.trim(), DateTimeFormatter.ISO_LOCAL_DATE);
+            return date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        } catch (DateTimeParseException e) {
+            return dateStr;
+        }
+    }
+
+    private static String safeFormatDate(String dateStr) {
+        try {
+            String formatted = AppUtil.formatDate(dateStr);
+            return formatted != null ? formatted : "";
+        } catch (Exception e) {
+            return dateStr != null ? dateStr : "";
+        }
     }
 
     private static XSSFColor argb(XSSFWorkbook wb, String argbHex) {
