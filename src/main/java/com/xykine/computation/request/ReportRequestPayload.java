@@ -6,10 +6,13 @@ import java.util.List;
 
 @Data
 public class ReportRequestPayload {
-    private boolean isAllEmployee;
-    private List<String> employeeIds;
-    private List<String> selectedHeader;
-
-    private String companyId;
+    private boolean all;
+    private List<String> ids;
+    private List<String> headers;
+    private String companyID;
     private String reportId;
+    private String entityType;
+    private DateRange dateRange;
+    private String docType;
+    private boolean defaultHeaders;
 }

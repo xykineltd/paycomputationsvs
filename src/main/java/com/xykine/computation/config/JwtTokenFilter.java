@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,7 +18,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-
+@Profile("!test")
 @Component
 public class JwtTokenFilter extends OncePerRequestFilter {
 
@@ -69,11 +70,6 @@ public class JwtTokenFilter extends OncePerRequestFilter {
             String employeeID = (String) userDetails1.getCustomAttribute("EmployeeID");
             String companyID = (String) userDetails1.getCustomAttribute("CompanyID");
 
-            // Now you can use these values in your application logic
-            System.out.println("Email: " + emailFromJwt);
-            System.out.println("roles: " + Arrays.toString(userDetails1.getAuthorities().toArray()));
-            System.out.println("EmployeeID: " + employeeID);
-            System.out.println("CompanyID: " + companyID);
         }
         // Continue the filter chain
         filterChain.doFilter(request, response);

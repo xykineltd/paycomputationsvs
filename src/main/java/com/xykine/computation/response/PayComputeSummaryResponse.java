@@ -7,8 +7,9 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Data
 @Builder
@@ -18,6 +19,7 @@ public class PayComputeSummaryResponse implements Serializable {
     private String message;
     private Map<String, BigDecimal> summary;
     private Map<String, BigDecimal> summaryVariance;
-    private Map<String, List<SummaryDetail>> summaryDetails;
-    private Map<String, List<SummaryDetail>> summaryDetailsVariance;
+    private Map<String, ConcurrentHashMap<String, BigDecimal>> costCenterSummary;
+    private ConcurrentHashMap<String, Set<SummaryDetail>> summaryDetails;
+    private ConcurrentHashMap<String, Set<SummaryDetail>> summaryDetailsVariance;
 }

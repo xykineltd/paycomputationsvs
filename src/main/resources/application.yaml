@@ -18,7 +18,9 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-            issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:http://xykine.com/realms/Payroll}
+#            issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:https://auth.acedpaydev.com/realms/localdev}
+            jwk-set-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI:https://auth.acedpaydev.com/realms/localdev/protocol/openid-connect/certs}
+
   data:
     redis:
       connect-timeout: 2s
@@ -28,13 +30,37 @@ spring:
       timeout: 1s
 
     mongodb:
-      uri: ${SPRING_DATA_MONGODB_URI}
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://root:rootpassword@localhost:27017/dev_db?authSource=admin&connectTimeoutMS=30000&serverSelectionTimeoutMS=30000&socketTimeoutMS=90000&directConnection=true}
+#      uri: mongodb://root:rootpassword@localhost:27017/dev_db?authSource=admin&connectTimeoutMS=30000&serverSelectionTimeoutMS=30000&socketTimeoutMS=90000&directConnection=true
+      database: ${MONGO_DB_NAME:dev_db}
+#      uri: mongodb://root:rootpassword@localhost:27017/dev_db?authSource=admin&connectTimeoutMS=30000&serverSelectionTimeoutMS=30000&socketTimeoutMS=90000&directConnection=true
+#            database: ${MONGO_DB_NAME:dev_db}
+#      database: dev_db
+
+mongodb:
+  pool:
+    max-size: 50
+    min-size: 5
+    max-wait-time-ms: 30000      # 30s
+    max-connection-idle-ms: 600000 # 10 minutes
+  socket:
+    connect-timeout-ms: 10000    # 10s
+    read-timeout-ms: 30000       # 30s
+  heartbeat:
+    frequency-ms: 10000          # 10s
+    min-frequency-ms: 5000       # 5s
 
 admin:
   service:
     url: ${ADMIN_SERVICE_URL:http://localhost:9001/}
 #    url: http://xykinehrs.com/
-    maxBufferSize: 500000
+    maxBufferSize: ${ADMIN_SERVICE_MAXBUFFERSIZE:500000}
+
+
+workflow:
+  service:
+    url: ${WORKFLOW_SERVICE_URL:http://localhost:9004/}
+
 
 xykine:
   spa-uri: ${SPA_URL:http://localhost:3000}

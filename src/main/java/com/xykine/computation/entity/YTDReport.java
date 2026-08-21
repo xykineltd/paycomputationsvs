@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.util.Map;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -25,7 +26,11 @@ public class YTDReport {
     private BigDecimal netPay;
     private BigDecimal nhf;
     private BigDecimal payeeTax;
-    private BigDecimal employeeContributedPension;
-    private BigDecimal employerContributedPension;
-
+    private BigDecimal employeePension;
+    private BigDecimal employerPension;
+    private BigDecimal voluntarPensionContribution;
+    private BigDecimal pension;
+    private BigDecimal taxableIncome;
+    private Map<String, BigDecimal> deductions;
+    private BigDecimal wht;
 }

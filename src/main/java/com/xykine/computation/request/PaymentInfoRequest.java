@@ -18,4 +18,5 @@ public class PaymentInfoRequest {
     boolean payrollSimulation;
     boolean offCycle;
     PaymentFrequencyEnum paymentFrequency;
+    boolean offCyleTaxable;
 }

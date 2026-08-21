@@ -87,16 +87,23 @@ jobs:
         run: |
           echo "Docker image version to be used: ${{ env.image_version }}"
 
-      # Step 6: Build and push Docker image
+      # ✅ FIX 1: Login to Docker Hub (prevents "denied: requested access to the resource is denied")
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      # ✅ FIX 2: Fonts + headless for Apache POI autoSizeColumn() inside container
+      # - Use buildpack env vars (NOT -Dspring-boot.build-image.environment.*) to avoid CLI parsing issues
       - name: Build and Push Docker Image
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
           IMAGE_VERSION: ${{ env.image_version }}
+          JAVA_TOOL_OPTIONS: "-Djava.awt.headless=true"
         run: |
           mvn -Dmaven.test.skip spring-boot:build-image \
-          -Ddocker.publishRegistry.username=${DOCKER_USERNAME} \
-          -Ddocker.publishRegistry.password=${DOCKER_PASSWORD} \
-          -Ddocker.publishRegistry.url=docker.io \
-          -Dspring-boot.build-image.publish=true \
-          -Dspring-boot.build-image.imageName=kacytunde/paycomputation-service:${IMAGE_VERSION}
+            -Dspring-boot.build-image.builder=paketobuildpacks/builder-jammy-full \
+            -Ddocker.publishRegistry.username=${DOCKER_USERNAME} \
+            -Ddocker.publishRegistry.password=${DOCKER_PASSWORD} \
+            -Ddocker.publishRegistry.url=docker.io \
+            -Dspring-boot.build-image.publish=true \
+            -Dspring-boot.build-image.imageName=${DOCKER_USERNAME}/paycomputation-service:${IMAGE_VERSION}

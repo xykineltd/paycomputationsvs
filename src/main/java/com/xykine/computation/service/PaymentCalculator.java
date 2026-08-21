@@ -3,7 +3,9 @@ package com.xykine.computation.service;
 import org.xykine.payroll.model.PaymentInfo;
 
 public interface PaymentCalculator {
+    PaymentInfo expandPaymentSettingsFromGrossAnnual(PaymentInfo paymentInfo);
     PaymentInfo applyExchange(PaymentInfo paymentInfo);
+    PaymentInfo addPersonalDeduction(PaymentInfo paymentInfo);
     PaymentInfo harmoniseToAnnual(PaymentInfo paymentInfo);
     PaymentInfo computeGrossPay(PaymentInfo paymentInfo);
     PaymentInfo computeNonTaxableIncomeExempt(PaymentInfo paymentInfo);
@@ -12,4 +14,5 @@ public interface PaymentCalculator {
     PaymentInfo computeNetPay(PaymentInfo paymentInfo);
     PaymentInfo computeTotalNHF(PaymentInfo paymentInfo);
     PaymentInfo prorateEarnings(PaymentInfo paymentInfo);
+    PaymentInfo separateEarnings(PaymentInfo paymentInfo);
 }

@@ -2,10 +2,11 @@ package com.xykine.computation.repo;
 import com.xykine.computation.entity.Tax;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.mongodb.repository.MongoRepository;
-
-import java.util.List;
+import org.springframework.data.mongodb.repository.Query;
 
 public interface TaxRepo extends MongoRepository<Tax,String> {
-    @Cacheable(value = "taxClasses")
-    List<Tax> findAllByOrderByTaxClass();
+    @Cacheable(value = "taxRule",  key = "#country")
+    @Query(value = "{ 'country': ?0, 'active': true }", fields = "{ 'taxRule': 1, '_id': 0 }")
+    String findTaxRuleByCountry(String country);
+    Tax findTaxByCountryAndActiveIsTrue(String country);
 }

@@ -1,128 +1,734 @@
 package com.xykine.computation.loader;
 
 
-import com.xykine.computation.entity.ComputationConstants;
-import com.xykine.computation.entity.DashboardCard;
-import com.xykine.computation.entity.Tax;
-import com.xykine.computation.repo.ComputationConstantsRepo;
-import com.xykine.computation.repo.DashboardCardRepo;
-import com.xykine.computation.repo.PensionFundRepo;
-import com.xykine.computation.repo.TaxRepo;
+import com.xykine.computation.domain.LoanStatus;
+import com.xykine.computation.dto.Nature;
+import com.xykine.computation.dto.PayElement;
+import com.xykine.computation.entity.*;
+import com.xykine.computation.repo.*;
 import lombok.AllArgsConstructor;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.xykine.payroll.model.PaymentFrequencyEnum;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Component
-@Profile("QA")
+//@Component
+//Profile({"dev"})
 @AllArgsConstructor
-public class LoadComputationConfig {
+public class LoadComputationConfig{
 
     private final TaxRepo taxRepo;
 	private final PensionFundRepo pensionFundRepo;
 	private final ComputationConstantsRepo computationConstantsRepo;
 	private final DashboardCardRepo dashboardCardRepo;
+    private final EmployeeMetadataRepo employeeMetaDataRepo;
+    private final CompanyMetaDataRepo companyMetadataRepo;
+    private final LoanRepo loanRepo;
+    //private final PaymentSettingMetadataRepo paymentSettingMetadataRepo;
+    private final PaymentElementGLMappingRepository repository;
 
-
-    @EventListener(ApplicationReadyEvent.class)
+   @EventListener(ApplicationReadyEvent.class)
     public void loadLegalEntityTestData() {
-        System.out.println("Loading data.......");
 
-        Tax taxClassA = Tax.builder()
-                .taxClass("TaxClassA")
-                .description(" <= 300,000 NGN")
-                .percentage(BigDecimal.valueOf(7.0))
-                .build();
 
-        Tax taxClassB = Tax.builder()
-                .taxClass("TaxClassB")
-                .description(" > 300,000 NGN and <= 600,000 NGN")
-                .percentage(BigDecimal.valueOf(11.0))
-                .build();
+       initializePaymentElementMappings();
+//        String oldTaxRule = """
+//    [
+//      {"limit": 300000, "rate": 7},
+//      {"limit": 300000, "rate": 11},
+//      {"limit": 500000, "rate": 15},
+//      {"limit": 500000, "rate": 19},
+//      {"limit": 1600000, "rate": 21},
+//      {"limit": null, "rate": 24}
+//    ]
+//    """;
+//        String newTaxRule = """
+//    [
+//      { "limit": 800000,    "rate": 0 },
+//      { "limit": 3000000,   "rate": 15 },
+//      { "limit": 12000000,  "rate": 18 },
+//      { "limit": 25000000,  "rate": 21 },
+//      { "limit": 50000000,  "rate": 23 },
+//      { "limit": null,      "rate": 25 }
+//    ]
+//    """;
+//        Tax nigeriaOldTaxRule = Tax.builder()
+//                .country("NIGERIA")
+//                .taxRule(oldTaxRule)
+//                .version("old")
+//                .active(false)
+//                .build();
+//
+//        Tax nigeriaNewTaxRule = Tax.builder()
+//                .country("NIGERIA")
+//                .taxRule(newTaxRule)
+//                .version("new")
+//                .active(true)
+//                .build();
+//
+//        taxRepo.deleteAll();
+//
+//        taxRepo.save(nigeriaOldTaxRule);
+//        taxRepo.save(nigeriaNewTaxRule);
+//
+//        ComputationConstants pensionFundPercent = ComputationConstants.builder()
+//                .id("pensionFundPercent")
+//                .description(" The percentage of basic salary and other relevant allowances that goes into employee´s pension")
+//                .value(BigDecimal.valueOf(0.08))
+//                .build();
+//        ComputationConstants employerPensionContributionPercent = ComputationConstants.builder()
+//                .id("employerPensionContributionPercent")
+//                .description("Employer pension contribution percentage")
+//                .value(BigDecimal.valueOf(0.10))
+//                .build();
+//        ComputationConstants nationalHousingFund = ComputationConstants.builder()
+//                .id("nationalHousingFundPercent")
+//                .description("The percentage of basic salary for national housing fund")
+//                .value(BigDecimal.valueOf(0.025))
+//                .build();
+//        ComputationConstants craFraction = ComputationConstants.builder()
+//                .id("craFraction")
+//                .description("Used to calculate fixed consolidated tax relief")
+//                .value(BigDecimal.valueOf(0.01))
+//                .build();
+//        ComputationConstants variableCRAFraction = ComputationConstants.builder()
+//                .id("variableCRAFraction")
+//                .description("Used to calculate variable consolidated tax relief")
+//                .value(BigDecimal.valueOf(0.20))
+//                .build();
+//        ComputationConstants craCutOff = ComputationConstants.builder()
+//                .id("craCutOff")
+//                .description("CRA cut off")
+//                .value(BigDecimal.valueOf(200000))
+//                .build();
+//        ComputationConstants withHoldingTax = ComputationConstants.builder()
+//                .id("withHoldingTax")
+//                .description("WithHolding tax")
+//                .value(BigDecimal.valueOf(0.05))
+//                .build();
+//
+//        //Delete everything so that we dont keep adding duplicate data every time we restart
+//        computationConstantsRepo.deleteAll();
+//
+//        //Recreate
+//        computationConstantsRepo.save(pensionFundPercent);
+//        computationConstantsRepo.save(nationalHousingFund);
+//        computationConstantsRepo.save(craFraction);
+//        computationConstantsRepo.save(craCutOff);
+//        computationConstantsRepo.save(variableCRAFraction);
+//        computationConstantsRepo.save(employerPensionContributionPercent);
+//        computationConstantsRepo.save(withHoldingTax);
+//
+//        DashboardCard dashboardCard = DashboardCard.builder()
+//                .id(UUID.randomUUID().toString())
+//                .totalOffCyclePayroll(0L)
+//                .totalRegularPayroll(0L)
+//                .totalPayrollCost(BigDecimal.ZERO)
+//                .averageEmployeeCost(BigDecimal.ZERO)
+//                .lastUpdatedAt(LocalDateTime.now())
+//                .build();
+//
+//        if (dashboardCardRepo.findAll().size() == 0)
+//            dashboardCardRepo.save(dashboardCard);
+//
+//        EmployeeMetadata contractStaff = EmployeeMetadata.builder()
+//                .employeeId("8e3b6e4952e8468a84fd84556f8fdf2a")
+//                .companyId("682cf69492b07e60fa109911")
+//                .employeeType(EmployeeType.CONTRACT)
+//                .isNHFSubscribed(false)
+//                .customTaxReliefApplicable(BigDecimal.ZERO)
+//                .voluntaryPensionContribution(BigDecimal.ZERO)
+//                .isPensioned(false)
+//                .build();
+//
+//        EmployeeMetadata regularStaffWithNHF = EmployeeMetadata.builder()
+//                .employeeId("682cf69592b07e60fa10991b")
+//                .companyId("682cf69492b07e60fa109911")
+//                .isNHFSubscribed(false)
+//
+//                .employeeType(EmployeeType.FULL_TIME)
+//                .isNHFSubscribed(false)
+//                .customTaxReliefApplicable(BigDecimal.ZERO)
+//                .voluntaryPensionContribution(BigDecimal.ZERO)
+//                .isPensioned(true)
+//                .build();
+//
+//        EmployeeMetadata regularStaffNoNHF = EmployeeMetadata.builder()
+//                .employeeId("682cf69592b07e60fa10992a")
+//                .companyId("682cf69592b07e60fa10991b")
+//                .employeeType(EmployeeType.FULL_TIME)
+//                .isNHFSubscribed(false)
+//                .customTaxReliefApplicable(BigDecimal.ZERO)
+//                .voluntaryPensionContribution(BigDecimal.ZERO)
+//                .isPensioned(true)
+//                .build();
+//
+//        employeeMetaDataRepo.deleteAll();
+//
+//        EmployeeMetadata regularStaffWithCustomTaxReleif = EmployeeMetadata.builder()
+//                .employeeId("8654321")
+//                .companyId("1234567")
+//                .employeeType(EmployeeType.FULL_TIME)
+//                .isNHFSubscribed(false)
+//                .customTaxReliefApplicable(BigDecimal.valueOf(50000))
+//                .voluntaryPensionContribution(BigDecimal.ZERO)
+//                .isPensioned(true)
+//                .build();
+//
+//        EmployeeMetadata regularStaffWithCustomTaxReleifAndVoluntaryPensionContribution = EmployeeMetadata.builder()
+//                .employeeId("standardWithVoluntaryPensionContribution")
+//                .companyId("1234567")
+//                .employeeType(EmployeeType.FULL_TIME)
+//                .isNHFSubscribed(false)
+//                .customTaxReliefApplicable(BigDecimal.ZERO)
+//                .voluntaryPensionContribution(BigDecimal.valueOf(1000))
+//                .isPensioned(true)
+//                .build();
+//
+//        EmployeeMetadata standardNotPensioned = EmployeeMetadata.builder()
+//                .employeeId("standardNotPensioned")
+//                .companyId("1234567")
+//                .employeeType(EmployeeType.FULL_TIME)
+//                .isNHFSubscribed(false)
+//                .customTaxReliefApplicable(BigDecimal.ZERO)
+//                .voluntaryPensionContribution(BigDecimal.ZERO)
+//                .isPensioned(false)
+//                .build();
+//
+//        EmployeeMetadata intern = EmployeeMetadata.builder()
+//                .employeeId("InternStaff")
+//                .companyId("1234567")
+//                .employeeType(EmployeeType.INTERN)
+//                .isNHFSubscribed(false)
+//                .customTaxReliefApplicable(BigDecimal.ZERO)
+//                .voluntaryPensionContribution(BigDecimal.ZERO)
+//                .isPensioned(false)
+//                .build();
+//
+//        EmployeeMetadata gbagi = EmployeeMetadata.builder()
+//                .employeeId("7654321")
+//                .companyId("1234567")
+//                .employeeType(EmployeeType.FULL_TIME)
+//                .isNHFSubscribed(false)
+//                .customTaxReliefApplicable(BigDecimal.ZERO)
+//                .voluntaryPensionContribution(BigDecimal.valueOf(0))
+//                .isPensioned(true)
+//                .build();
+//
+//       EmployeeMetadata omolereBabatunder = EmployeeMetadata.builder()
+//               .employeeId("7654322")
+//               .companyId("2234567")
+//               .employeeType(EmployeeType.FULL_TIME)
+//               .isNHFSubscribed(false)
+//               .customTaxReliefApplicable(BigDecimal.ZERO)
+//               .voluntaryPensionContribution(BigDecimal.valueOf(1000000L))
+//               .rentAllowance(BigDecimal.ZERO)
+//               .isPensioned(true)
+//               .build();
+//
+//        employeeMetaDataRepo.save(omolereBabatunder);
+//        employeeMetaDataRepo.save(gbagi);
+//        employeeMetaDataRepo.save(intern);
+//        employeeMetaDataRepo.save(standardNotPensioned);
+//        employeeMetaDataRepo.save(regularStaffWithCustomTaxReleif);
+//        employeeMetaDataRepo.save(contractStaff);
+//        employeeMetaDataRepo.save(regularStaffWithNHF);
+//        employeeMetaDataRepo.save(regularStaffNoNHF);
+//        employeeMetaDataRepo.save(regularStaffWithCustomTaxReleifAndVoluntaryPensionContribution);
+//
+//        String morufoye_international_payment_distribution = """
+//    [
+//      {"type": "BASIC_SALARY_ANNUAL", "percentage": 16.46, "name": "Basic Salary"},
+//      {"type": "ALLOWANCE_ANNUAL_HOUSING", "percentage": 8.23, "name": "Housing Allowance"},
+//      {"type": "ALLOWANCE_ANNUAL_TRANSPORT", "percentage": 8.23, "name": "Transport Allowance"},
+//      {"type": "ALLOWANCE_ANNUAL", "percentage": 10, "name": "UTILITY"},
+//      {"type": "ALLOWANCE_ANNUAL", "percentage": 10, "name": "ENTERTAINMENT"},
+//      {"type": "ALLOWANCE_ANNUAL", "percentage": 17.08, "name": "PERSONAL OUTFIT"},
+//      {"type": "ALLOWANCE_ANNUAL", "percentage": 10, "name": "LEAVE"},
+//      {"type": "ALLOWANCE_ANNUAL", "percentage": 10, "name": "MEDICAL"},
+//      {"type": "ALLOWANCE_ANNUAL", "percentage": 10, "name": "TRAINING"}
+//    ]
+//    """;
+//
+//        CompanyMetadata xykineCompanyMetadata = CompanyMetadata.builder()
+//                .companyId("682cf69492b07e60fa109911")
+//                .paymentEntryMode(PaymentFrequencyEnum.YEARLY)
+//                .salaryFrequency(PaymentFrequencyEnum.MONTHLY)
+//                .companyName("xykine inc")
+//                .build();
+//
+//
+//        CompanyMetadata xykineCompanyMetadata2 = CompanyMetadata.builder()
+//                .companyId("68dd326d1baabe7296f9624a")
+//                .paymentEntryMode(PaymentFrequencyEnum.YEARLY)
+//                .salaryFrequency(PaymentFrequencyEnum.MONTHLY)
+//                .paymentDistribution(morufoye_international_payment_distribution)
+//                .companyName("xykine")
+//                .build();
+//
+//        CompanyMetadata morufoyeCompanyMetadata = CompanyMetadata.builder()
+//                .companyId("1234567")
+//                .paymentEntryMode(PaymentFrequencyEnum.YEARLY)
+//                .salaryFrequency(PaymentFrequencyEnum.MONTHLY)
+//                .companyName("morufoye international")
+//                .paymentDistribution(morufoye_international_payment_distribution)
+//                .build();
+//
+//        CompanyMetadata moniepointMfbCompanyMetadata = CompanyMetadata.builder()
+//                .companyId("68e6121925592b68310c91cc")
+//                .paymentEntryMode(PaymentFrequencyEnum.YEARLY)
+//                .salaryFrequency(PaymentFrequencyEnum.MONTHLY)
+//                .paymentDistribution(morufoye_international_payment_distribution)
+//                .companyName("MonieWorld")
+//                .build();
+//
+//        companyMetadataRepo.deleteAll();
+//        companyMetadataRepo.save(xykineCompanyMetadata);
+//        companyMetadataRepo.save(xykineCompanyMetadata2);
+//        companyMetadataRepo.save(morufoyeCompanyMetadata);
+//        companyMetadataRepo.save(moniepointMfbCompanyMetadata);
+//
+//        Loan loan = Loan.builder()
+//                .companyId("1234567")
+//                .employeeId("7654321")
+//                .status(LoanStatus.APPROVED)
+//                .principalAmount(BigDecimal.valueOf(1000000))
+//                .outstandingAmount(BigDecimal.valueOf(1000000))
+//                .scheduledRepaymentAmount(BigDecimal.valueOf(10000))
+//                .description("Company Car Loan")
+//                .startDate(LocalDate.parse("2024-01-01"))
+//                .endDate(LocalDate.parse("2024-07-31"))
+//                .active(true)
+//                .build();
+//
+//        Loan staffLoan = Loan.builder()
+//                .companyId("682cf69492b07e60fa109911")
+//                .employeeId("8e3b6e4952e8468a84fd84556f8fdf2a")
+//                .status(LoanStatus.APPROVED)
+//                .scheduledRepaymentAmount(BigDecimal.valueOf(10000))
+//                .description("Staff Loan")
+//                .active(true)
+//                .startDate(LocalDate.parse("2024-01-01"))
+//                .endDate(LocalDate.parse("2099-07-31"))
+//                .endDate(LocalDate.parse("2099-07-31"))
+//                .build();
+//
+//        loanRepo.save(staffLoan);
+//        loanRepo.save(loan);
+//
+//        PaymentSettingMetaData callAllowance = PaymentSettingMetaData.builder()
+//                .companyId("1234567")
+//                .employeeId("7654321")
+//                .paymentType("ALLOWANCE")
+//                .paymentName("CALL/DATA ALLOWANCE")
+//                .paymentAmount(BigDecimal.ZERO)
+//                .startDate(LocalDate.parse("2026-01-01"))
+//                .endDate(LocalDate.parse("2027-07-31"))
+//                .prorated(false)
+//                .taxable(true)
+//                .build();
+//
+//
+//        PaymentSettingMetaData overtime = PaymentSettingMetaData.builder()
+//                .companyId("1234567")
+//                .employeeId("7654321")
+//                .paymentType("ALLOWANCE")
+//                .paymentName("OVERTIME GROSS")
+//                .paymentAmount(BigDecimal.ZERO)
+//                .startDate(LocalDate.parse("2026-01-01"))
+//                .endDate(LocalDate.parse("2027-07-31"))
+//                .prorated(false)
+//                .taxable(true)
+//                .build();
+//
+//        PaymentSettingMetaData abasydoOffcycle = PaymentSettingMetaData.builder()
+//                .companyId("1234567")
+//                .employeeId("7654321")
+//                .paymentType("ALLOWANCE")
+//                .paymentName("13th month")
+//                .startDate(LocalDate.parse("2025-12-23"))
+//                .endDate(LocalDate.parse("2025-12-24"))
+//                .prorated(false)
+//                .taxable(false)
+//                .build();
+//
+//        PaymentSettingMetaData abasydoOffcycle14 = PaymentSettingMetaData.builder()
+//                .companyId("1234567")
+//                .employeeId("7654321")
+//                .paymentType("ALLOWANCE")
+//                .paymentName("14th month")
+//                .startDate(LocalDate.parse("2025-12-23"))
+//                .endDate(LocalDate.parse("2025-12-24"))
+//                .prorated(false)
+//                .taxable(false)
+//                .build();
 
-        Tax taxClassC = Tax.builder()
-                .taxClass("TaxClassC")
-                .description(" > 600,000 NGN and <= 1,100,000 NGN")
-                .percentage(BigDecimal.valueOf(15.0))
-                .build();
+//        paymentSettingMetadataRepo.save(abasydoOffcycle);
+//        paymentSettingMetadataRepo.save(abasydoOffcycle14);
+//        paymentSettingMetadataRepo.save(overtime);
+//        paymentSettingMetadataRepo.save(callAllowance);
+    }
 
-        Tax taxClassD = Tax.builder()
-                .taxClass("TaxClassD")
-                .description(" > 1,100,000 NGN and <= 1,600,000 NGN")
-                .percentage(BigDecimal.valueOf(19.0))
-                .build();
+    private void initializePaymentElementMappings() {
 
-        Tax taxClassE = Tax.builder()
-                .taxClass("TaxClassE")
-                .description(" > 1,600,000 NGN and <= 3,200,000 NGN")
-                .percentage(BigDecimal.valueOf(21.0))
-                .build();
+        save(
+                PayElement.PERFORMANCE_BONUS.getDisplayName(),
+                Nature.GROSS_EARNINGS,
+                false,
+                "7030003",
+                "2100107",
+                true,
+                false,
+                true,
+                true
+        );
 
-        Tax taxClassF = Tax.builder()
-                .taxClass("TaxClassF")
-                .description(" > 3,200,000 NGN")
-                .percentage(BigDecimal.valueOf(24.0))
-                .build();
+        save(
+                PayElement.ARREARS.getDisplayName(),
+                Nature.GROSS_EARNINGS,
+                false,
+                "7010001",
+                "2100107",
+                true,
+                false,
+                true,
+                false
+        );
 
-        taxRepo.save(taxClassA);
-        taxRepo.save(taxClassB);
-        taxRepo.save(taxClassC);
-        taxRepo.save(taxClassD);
-        taxRepo.save(taxClassE);
-        taxRepo.save(taxClassF);
+        save(
+                PayElement.OVERTIME.getDisplayName(),
+                Nature.GROSS_EARNINGS,
+                false,
+                "7030003",
+                "2100107",
+                true,
+                false,
+                true,
+                false
+        );
 
-        ComputationConstants pensionFundPercent = ComputationConstants.builder()
-                .id("pensionFundPercent")
-                .description(" The percentage of basic salary and other relevant allowances that goes into employee´s pension")
-                .value(BigDecimal.valueOf(0.08))
-                .build();
-        ComputationConstants employerPensionContributionPercent = ComputationConstants.builder()
-                .id("employerPensionContributionPercent")
-                .description("Employer pension contribution percentage")
-                .value(BigDecimal.valueOf(0.10))
-                .build();
-        ComputationConstants nationalHousingFund = ComputationConstants.builder()
-                .id("nationalHousingFundPercent")
-                .description("The percentage of basic salary for national housing fund")
-                .value(BigDecimal.valueOf(0.025))
-                .build();
-        ComputationConstants craFraction = ComputationConstants.builder()
-                .id("craFraction")
-                .description("Used to calculate fixed consolidated tax relief")
-                .value(BigDecimal.valueOf(0.01))
-                .build();
-        ComputationConstants variableCRAFraction = ComputationConstants.builder()
-                .id("variableCRAFraction")
-                .description("Used to calculate variable consolidated tax relief")
-                .value(BigDecimal.valueOf(0.20))
-                .build();
-        ComputationConstants craCutOff = ComputationConstants.builder()
-                .id("craCutOff")
-                .description("CRA cut off")
-                .value(BigDecimal.valueOf(200000))
-                .build();
-        computationConstantsRepo.save(pensionFundPercent);
-        computationConstantsRepo.save(nationalHousingFund);
-        computationConstantsRepo.save(craFraction);
-        computationConstantsRepo.save(craCutOff);
-        computationConstantsRepo.save(variableCRAFraction);
-        computationConstantsRepo.save(employerPensionContributionPercent);
+        save(
+                PayElement.OTHER_EARNINGS.getDisplayName(),
+                Nature.GROSS_EARNINGS,
+                false,
+                "7030003",
+                "2100107",
+                true,
+                false,
+                true,
+                false
+        );
 
-        DashboardCard dashboardCard = DashboardCard.builder()
-                .id(UUID.randomUUID().toString())
-                .totalOffCyclePayroll(0L)
-                .totalRegularPayroll(0L)
-                .totalPayrollCost(BigDecimal.ZERO)
-                .averageEmployeeCost(BigDecimal.ZERO)
-                .lastUpdatedAt(LocalDateTime.now())
-                .build();
+        save(
+                PayElement.REPAIR_BONUS.getDisplayName(),
+                Nature.GROSS_EARNINGS,
+                false,
+                "7030003",
+                "2100107",
+                true,
+                false,
+                true,
+                false
+        );
 
-        if (dashboardCardRepo.findAll().size() == 0)
-            dashboardCardRepo.save(dashboardCard);
+        save(
+                PayElement.PILON.getDisplayName(),
+                Nature.GROSS_EARNINGS,
+                false,
+                "7030003",
+                "2100107",
+                true,
+                false,
+                true,
+                false
+        );
+
+        save(
+                PayElement.PER_DIEM.getDisplayName(),
+                Nature.GROSS_EARNINGS,
+                false,
+                "7030003",
+                "2100107",
+                true,
+                false,
+                true,
+                false
+        );
+
+        save(
+                PayElement.SIGN_ON_BONUS.getDisplayName(),
+                Nature.GROSS_EARNINGS,
+                false,
+                "7030003",
+                "2100107",
+                true,
+                false,
+                true,
+                false
+        );
+
+        save(
+                PayElement.ON_CALL.getDisplayName(),
+                Nature.GROSS_EARNINGS,
+                false,
+                "7030003",
+                "2100107",
+                true,
+                false,
+                true,
+                false
+        );
+
+        save(
+                PayElement.REFERRAL_BONUS.getDisplayName(),
+                Nature.GROSS_EARNINGS,
+                false,
+                "7030003",
+                "2100107",
+                true,
+                false,
+                true,
+                false
+        );
+
+        save(
+                PayElement.UNPAID_LEAVE.getDisplayName(),
+                Nature.GROSS_DEDUCTIONS,
+                false,
+                "7010001",
+                "8000001",
+                true,
+                false,
+                true,
+                false
+        );
+
+        save(
+                PayElement.NOTICE_PAY_CLAWBACK.getDisplayName(),
+                Nature.GROSS_DEDUCTIONS,
+                false,
+                "7010001",
+                "8000001",
+                true,
+                false,
+                true,
+                false
+        );
+
+        save(
+                PayElement.MONTHLY_NHF.getDisplayName(),
+                Nature.DEDUCTIONS,
+                false,
+                "7010012",
+                "2100121",
+                false,
+                false,
+                false,
+                false
+        );
+
+        save(
+                PayElement.MONTHLY_EMPLOYEE_PENSION_8_PERCENT.getDisplayName(),
+                Nature.DEDUCTIONS,
+                true,
+                "7040001",
+                "2100106",
+                false,
+                false,
+                false,
+                false
+        );
+
+        save(
+                PayElement.MONTHLY_VOLUNTARY_PENSION.getDisplayName(),
+                Nature.DEDUCTIONS,
+                false,
+                "7040001",
+                "2100106",
+                false,
+                false,
+                false,
+                false
+        );
+
+        save(
+                PayElement.PAYE_TAX.getDisplayName(),
+                null,
+                true,
+                "7010011",
+                "2100105",
+                false,
+                false,
+                false,
+                false
+        );
+
+        save(
+                PayElement.SALARY_ADVANCES.getDisplayName(),
+                Nature.NET_DEDUCTIONS,
+                false,
+                "7010001",
+                "1200007",
+                false,
+                false,
+                false,
+                false
+        );
+
+        save(
+                PayElement.STAFF_LOANS.getDisplayName(),
+                Nature.NET_DEDUCTIONS,
+                false,
+                "7010001",
+                "1200007",
+                false,
+                false,
+                false,
+                false
+        );
+
+        save(
+                PayElement.DEVICE_DAMAGE.getDisplayName(),
+                Nature.NET_DEDUCTIONS,
+                false,
+                "7010001",
+                "7900031",
+                false,
+                false,
+                false,
+                false
+        );
+
+        save(
+                PayElement.OTHER_DEDUCTIONS.getDisplayName(),
+                Nature.GROSS_DEDUCTIONS,
+                false,
+                "7010001",
+                "8000001",
+                true,
+                false,
+                false,
+                false
+        );
+
+        save(
+                PayElement.OTHER_NET_PAYMENTS.getDisplayName(),
+                Nature.NET_EARNINGS,
+                false,
+                "7030003",
+                "2100107",
+                false,
+                false,
+                false,
+                false
+        );
+
+        save(
+                PayElement.CALL_AND_DATA_ALLOWANCE.getDisplayName(),
+                Nature.NET_EARNINGS,
+                false,
+                "7050023",
+                "2100107",
+                false,
+                false,
+                false,
+                true
+        );
+
+        save(
+                PayElement.TRAVEL_ALLOWANCE.getDisplayName(),
+                Nature.NET_EARNINGS,
+                false,
+                "7050023",
+                "2100107",
+                false,
+                false,
+                false,
+                true
+        );
+
+        save(
+                PayElement.NET_SALARY.getDisplayName(),
+                null,
+                true,
+                "7010001",
+                "2100107",
+                false,
+                false,
+                false,
+                false
+        );
+
+        save(
+                PayElement.ER_PENSION.getDisplayName(),
+                null,
+                true,
+                "7040001",
+                "2100106",
+                false,
+                false,
+                false,
+                false
+        );
+
+        save(
+                PayElement.NSITF.getDisplayName(),
+                null,
+                true,
+                "7040019",
+                "2100101",
+                false,
+                false,
+                false,
+                false
+        );
+
+        save(
+                PayElement.ITF.getDisplayName(),
+                null,
+                true,
+                "7040018",
+                "2100203",
+                false,
+                false,
+                false,
+                false
+        );
+    }
+
+    private void save(
+            String payElement,
+            Nature nature,
+            Boolean calculated,
+            String glCodeDebit,
+            String glCodeCredit,
+            Boolean taxable,
+            Boolean pensionable,
+            Boolean nstif,
+            Boolean proration
+    ) {
+
+        PaymentElementGLMapping mapping =
+                repository.findByPayElement(payElement)
+                        .orElseGet(PaymentElementGLMapping::new);
+
+        mapping.setPayElement(payElement);
+        mapping.setNature(nature);
+        mapping.setCalculated(calculated);
+        mapping.setGlCodeDebit(glCodeDebit);
+        mapping.setGlCodeCredit(glCodeCredit);
+        mapping.setTaxable(taxable);
+        mapping.setPensionable(pensionable);
+        mapping.setNstif(nstif);
+        mapping.setProration(proration);
+
+        repository.save(mapping);
     }
 }
+

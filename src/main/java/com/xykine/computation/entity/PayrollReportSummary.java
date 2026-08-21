@@ -26,12 +26,12 @@ public class PayrollReportSummary {
     private String startDate;
     private String endDate;
     private boolean payrollSimulation;
-    private boolean payrollApproved;
-    private boolean payrollCompleted;
+    private PayrollStatus payrollStatus;
     private boolean offCycle;
     private LocalDateTime createdDate;
     private long totalNumberOfEmployees;
     private PaymentFrequencyEnum paymentFrequency;
+    private String code;
     @CreatedBy
     private String createdBy;
 }

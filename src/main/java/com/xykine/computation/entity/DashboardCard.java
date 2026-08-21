@@ -22,7 +22,8 @@ public class DashboardCard {
     private String companyId;
     private long totalOffCyclePayroll;
     private long totalRegularPayroll;
-    private BigDecimal totalPayrollCost;
-    private BigDecimal averageEmployeeCost;
+    private BigDecimal totalPayrollCost = BigDecimal.ZERO;
+    private BigDecimal totalNetPayrollCost = BigDecimal.ZERO;
+    private BigDecimal averageEmployeeCost = BigDecimal.ZERO;
     private LocalDateTime lastUpdatedAt;
 }

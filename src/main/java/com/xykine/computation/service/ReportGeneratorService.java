@@ -4,6 +4,7 @@ import com.xykine.computation.request.ReportRequestPayload;
 import com.xykine.computation.request.RetrievePaymentElementPayload;
 import com.xykine.computation.request.RetrieveSummaryElementRequest;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -11,7 +12,7 @@ import java.util.Set;
 
 public interface ReportGeneratorService {
 
-    void generateReport(ReportRequestPayload reportRequestPayload);
+    byte[] generateReport(ReportRequestPayload reportRequestPayload, String token) throws IOException;
     Set<String> getHeadersForReport(String companyId, String reportId );
     List<Map<String, Object>> retrievePaymentElementFromReport(RetrievePaymentElementPayload retrievePaymentElementPayload);
     Map<String, Object> extractDataFromSummary(RetrieveSummaryElementRequest request);
