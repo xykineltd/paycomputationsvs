@@ -462,6 +462,17 @@ public class PayrollAsyncService {
         List<PaymentElementGLMapping> glMappings =
                 paymentElementGLMappingCustomRepository.findAll();
 
+        boolean hasAssignedEmployees = costCenters != null
+                && costCenters.values().stream().anyMatch(ids -> ids != null && !ids.isEmpty());
+        if (!hasAssignedEmployees) {
+            List<String> allEmployeeIds = ReportUtils.transform(reportDetails).stream()
+                    .map(employee -> employee.getEmployeeId())
+                    .filter(id -> id != null && !id.isBlank())
+                    .toList();
+            costCenters = new HashMap<>();
+            costCenters.put("", allEmployeeIds);
+        }
+
         // ONE map for ALL cost centers
         Map<String, GLSummary> gls = new HashMap<>();
 

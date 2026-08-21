@@ -107,37 +107,47 @@ public class AdminService {
     }
 
     public Map<String, List<String>> getCostCenterDetails(EmployeeFilterRequest employeeFilterRequest, String token) {
-        List<String> emplloyeeList = new ArrayList<>();
-        Map<String, List<String>> costCenterDetails = new HashMap<>();
-        costCenterDetails.put("", emplloyeeList);
-        return webClient
-                .post()
-                .uri("admin/employee/cost-centers")
-                .header(HttpHeaders.AUTHORIZATION, token)
-                .bodyValue(employeeFilterRequest)
-                .exchangeToMono(response ->{
-                    if (response.statusCode().is2xxSuccessful()) {
-                        // Extract the body as a List if the response is successful
-                        return response.bodyToMono(Map.class);
-                    } else {
-                        // Extract error message from the response body and throw custom exception
-                        return response.bodyToMono(ApiException.class)
-                                .flatMap(errorBody -> {
-                                    LOGGER.error("Non-successful response: {}", response.statusCode());
-                                    LOGGER.info("Error Message: {}", errorBody.getErrorMessage());
-                                    LOGGER.info("Error Code: {}", errorBody.getErrorCode());
-
-                                    // Throw custom exception with the error message
-                                    return Mono.error(new EmployeeFilterException(errorBody.getMessage()));
-                                });
-                    }
-                })
-                .onErrorResume(WebClientResponseException.class, ex -> {
-                    // Handle WebClient exceptions, if needed
-                    LOGGER.error("WebClient call failed: {}", ex.getMessage());
-                    return Mono.error(new EmployeeFilterException(ex.getMessage()));
-                })
-                .block(); // Block to wait for the response
+        Map<String, List<String>> noneFound = new HashMap<>();
+        noneFound.put("", new ArrayList<>());
+        String companyId = employeeFilterRequest == null ? null : employeeFilterRequest.getCompanyID();
+        try {
+            Map<String, List<String>> result = webClient
+                    .post()
+                    .uri("admin/employee/cost-centers")
+                    .header(HttpHeaders.AUTHORIZATION, token)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(employeeFilterRequest)
+                    .exchangeToMono(response -> {
+                        if (response.statusCode().is2xxSuccessful()) {
+                            return response.bodyToMono(
+                                            new ParameterizedTypeReference<Map<String, List<String>>>() {})
+                                    .defaultIfEmpty(noneFound);
+                        }
+                        LOGGER.warn(
+                                "Cost centers not found for company {} (status {}). Continuing payroll without cost centers.",
+                                companyId,
+                                response.statusCode());
+                        return response.releaseBody().thenReturn(noneFound);
+                    })
+                    .onErrorResume(ex -> {
+                        LOGGER.warn(
+                                "Cost center lookup failed for company {}: {}. Continuing payroll without cost centers.",
+                                companyId,
+                                ex.getMessage());
+                        return Mono.just(noneFound);
+                    })
+                    .block();
+            if (result == null || result.isEmpty()) {
+                return noneFound;
+            }
+            return result;
+        } catch (Exception ex) {
+            LOGGER.warn(
+                    "Cost center lookup failed for company {}: {}. Continuing payroll without cost centers.",
+                    companyId,
+                    ex.getMessage());
+            return noneFound;
+        }
     }
 
     public Map<String, EmployeeDetail> getEmployeesDetail(EmployeeFilterRequest employeeFilterRequest, String token) {
