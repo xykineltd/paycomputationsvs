@@ -105,6 +105,7 @@ public class ComputeService {
                 .map(paymentCalculator::computeTotalDeduction)
                 .map(paymentCalculator::computeNetPay)
                 .map(paymentCalculator::computeTotalNHF)
+                .map(paymentCalculator::separateEarnings)
                 .collect(Collectors.toList());
         return  payInfos;
     }

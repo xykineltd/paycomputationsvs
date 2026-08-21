@@ -20,6 +20,7 @@ public class GLSummary {
     private BigDecimal debit;
 
     private BigDecimal credit;
-
     private BigDecimal net;
+    private String function;
+
 }

@@ -14,4 +14,5 @@ public interface PaymentCalculator {
     PaymentInfo computeNetPay(PaymentInfo paymentInfo);
     PaymentInfo computeTotalNHF(PaymentInfo paymentInfo);
     PaymentInfo prorateEarnings(PaymentInfo paymentInfo);
+    PaymentInfo separateEarnings(PaymentInfo paymentInfo);
 }
