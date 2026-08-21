@@ -39,6 +39,12 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
 
     protected static final Logger LOGGER = LoggerFactory.getLogger(PaymentCalculatorImpl.class);
 
+    private static final List<String> EARNINGS_TO_SEPARATE = List.of(
+            PayElement.CALL_AND_DATA_ALLOWANCE.getDisplayName(),
+            PayElement.TRAVEL_ALLOWANCE.getDisplayName(),
+            PayElement.OTHER_NET_PAYMENTS.getDisplayName()
+    );
+
     @Override
     public PaymentInfo expandPaymentSettingsFromGrossAnnual(PaymentInfo paymentInfo) {
         String paymentDistributionJson = getCompanyPaymentDistributionJson(paymentInfo.getCompanyID());
@@ -349,48 +355,33 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
 
     @Override
     public PaymentInfo separateEarnings(PaymentInfo paymentInfo) {
-
-        Map<String, BigDecimal> earningMap = new HashMap<>();
         Map<String, BigDecimal> grossMap = paymentInfo.getGrossPay();
+        BigDecimal removedFromGross = BigDecimal.ZERO;
 
-        List<String> earningsToSeparate = List.of(
-                "Call & Data Allowance",
-                "Travel Allowance",
-                "Other Payment"
-        );
-
-        BigDecimal totalEarnings = BigDecimal.ZERO;
-
-        Iterator<Map.Entry<String, BigDecimal>> iterator =
-                grossMap.entrySet().iterator();
-
-        while (iterator.hasNext()) {
-            Map.Entry<String, BigDecimal> entry = iterator.next();
-
-            if (earningsToSeparate.stream()
-                    .anyMatch(name -> name.equalsIgnoreCase(entry.getKey()))) {
-
-                BigDecimal amount = entry.getValue();
-
-                if (amount != null) {
-                    earningMap.put(entry.getKey(), amount);
-                    totalEarnings = totalEarnings.add(amount);
+        if (grossMap != null) {
+            Iterator<Map.Entry<String, BigDecimal>> iterator = grossMap.entrySet().iterator();
+            while (iterator.hasNext()) {
+                Map.Entry<String, BigDecimal> entry = iterator.next();
+                if (isSeparatedNetEarning(entry.getKey())) {
+                    if (entry.getValue() != null) {
+                        removedFromGross = removedFromGross.add(entry.getValue());
+                    }
+                    iterator.remove();
                 }
-
-                iterator.remove();
             }
+
+            BigDecimal toSubtract = removedFromGross;
+            grossMap.computeIfPresent(
+                    "Gross Salary",
+                    (key, grossSalary) -> grossSalary.subtract(toSubtract)
+            );
+            grossMap.computeIfPresent(
+                    MapKeys.GROSS_PAY,
+                    (key, grossPay) -> grossPay.subtract(toSubtract)
+            );
         }
 
-        // Remove the separated earnings from Gross Salary
-        BigDecimal finalTotalEarnings = totalEarnings;
-        grossMap.computeIfPresent(
-                "Gross Salary",
-                (key, grossSalary) -> grossSalary.subtract(finalTotalEarnings)
-        );
-
-        // Store the separated earnings on PaymentInfo
-        paymentInfo.setEarning(earningMap);
-
+        paymentInfo.setEarning(getSeparatedEarnings(paymentInfo));
         return paymentInfo;
     }
 
@@ -518,10 +509,13 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
         int numberOfUnpaidDays = paymentInfo.getNumberOfDaysOfUnpaidAbsence();
         if (paymentInfo.isOffCycle()) {
             PaymentSettingsResponse paymentSettingsResponse = getOffCyclePaymentDetails(paymentInfo);
-            grossMap.put(paymentSettingsResponse.getName(), paymentSettingsResponse.getValue());
+            if (!isSeparatedNetEarning(paymentSettingsResponse.getName())) {
+                grossMap.put(paymentSettingsResponse.getName(), paymentSettingsResponse.getValue());
+            }
         } else {
             Set<PaymentSettingsResponse> allowance = getAllowanceForEmployee(paymentInfo);
             allowance.stream()
+                    .filter(entry -> !isSeparatedNetEarning(entry.getName()))
                     .map(entry ->
                             {
                                 entry.setValue(entry.getType() != PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT ?
@@ -539,7 +533,15 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
         if(paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY) != null) {
             ExchangeInfo exchangeInfo = paymentInfo.getExchangeInfo();
             BigDecimal exchangeRate = exchangeInfo.getExchangeRate();
-            BigDecimal netPay = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).subtract(paymentInfo.getDeduction().get(MapKeys.TOTAL_DEDUCTION));
+            BigDecimal deduction = paymentInfo.getDeduction() != null
+                    ? paymentInfo.getDeduction().get(MapKeys.TOTAL_DEDUCTION)
+                    : null;
+            if (deduction == null) {
+                deduction = BigDecimal.ZERO;
+            }
+            BigDecimal netPay = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY)
+                    .subtract(deduction)
+                    .add(sumSeparatedEarnings(paymentInfo));
             paymentInfo.setNetPay(
                     roundToTwoDecimalPlaces(
                             netPay.divide(exchangeRate, 2, RoundingMode.CEILING)
@@ -580,11 +582,45 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
                 .filter(e -> !"Total PAYE".equalsIgnoreCase(e.getKey()))
                 .filter(e -> !"Gross Salary".equalsIgnoreCase(e.getKey()))
                 .filter(e -> !"Taxable Gross".equalsIgnoreCase(e.getKey()))
+                .filter(e -> !isSeparatedNetEarning(e.getKey()))
 
                 .map(Map.Entry::getValue)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         return roundToTwoDecimalPlaces(total);
+    }
+
+    private boolean isSeparatedNetEarning(String name) {
+        return name != null && EARNINGS_TO_SEPARATE.stream().anyMatch(name::equalsIgnoreCase);
+    }
+
+    private Map<String, BigDecimal> getSeparatedEarnings(PaymentInfo paymentInfo) {
+        Map<String, BigDecimal> earningMap = new HashMap<>();
+        if (paymentInfo.getPaymentSettings() == null) {
+            return earningMap;
+        }
+
+        PaymentFrequencyEnum salaryFrequency = paymentInfo.isOffCycle()
+                ? getOffCyclePaymentFrequency(paymentInfo)
+                : getSalaryFrequency(paymentInfo);
+        int unpaidDays = paymentInfo.isOffCycle() ? 0 : paymentInfo.getNumberOfDaysOfUnpaidAbsence();
+
+        paymentInfo.getPaymentSettings().stream()
+                .filter(setting -> setting.getName() != null && setting.getValue() != null)
+                .filter(setting -> isSeparatedNetEarning(setting.getName()))
+                .forEach(setting -> {
+                    BigDecimal amount = setting.getType() != PaymentTypeEnum.OFF_CYCLE_PAYMENT_AMOUNT
+                            ? prorate(setting.getValue(), unpaidDays, salaryFrequency, paymentInfo.getStartDate())
+                            : prorate(setting.getValue(), 0, salaryFrequency, paymentInfo.getStartDate());
+                    earningMap.merge(setting.getName(), amount, BigDecimal::add);
+                });
+        return earningMap;
+    }
+
+    private BigDecimal sumSeparatedEarnings(PaymentInfo paymentInfo) {
+        return getSeparatedEarnings(paymentInfo).values().stream()
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private Set<PaymentSettingsResponse> getAllowanceForEmployee (PaymentInfo paymentInfo) {

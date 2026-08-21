@@ -6,6 +6,7 @@ import com.xykine.computation.reconciliation.mapping.ReconciliationTolerances;
 import org.xykine.payroll.model.PaymentInfo;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -103,28 +104,48 @@ final class ReconciliationValueSupport {
     static Object lookupSystemValue(Map<String, Object> row, String excelHeader, String systemPath) {
         Object composite = sumMappedComponents(row, excelHeader);
         if (!isAbsent(composite)) {
-            return composite;
+            return toMonthlyIfAnnualRelief(excelHeader, systemPath, composite);
         }
         Object found = lookupKey(row, systemPath);
         if (!isAbsent(found)) {
-            return found;
+            return toMonthlyIfAnnualRelief(excelHeader, systemPath, found);
         }
         found = lookupKey(row, excelHeader);
         if (!isAbsent(found)) {
-            return found;
+            return toMonthlyIfAnnualRelief(excelHeader, systemPath, found);
         }
         found = lookupKey(row, EXCEL_TO_REPORT_KEY.get(normalizeHeader(excelHeader)));
         if (!isAbsent(found)) {
-            return found;
+            return toMonthlyIfAnnualRelief(excelHeader, systemPath, found);
         }
         if (systemPath != null && systemPath.contains(".")) {
             found = getByPath(row, systemPath);
             if (!isAbsent(found)) {
-                return found;
+                return toMonthlyIfAnnualRelief(excelHeader, systemPath, found);
             }
             found = lookupKey(row, systemPath.substring(systemPath.lastIndexOf('.') + 1));
         }
-        return isAbsent(found) ? null : found;
+        return toMonthlyIfAnnualRelief(excelHeader, systemPath, isAbsent(found) ? null : found);
+    }
+
+    /**
+     * Excel RENT RELIEF is monthly (annual / 12). System stores the annual amount.
+     * Convert when the system value is greater than zero so the compare uses the same basis.
+     */
+    private static Object toMonthlyIfAnnualRelief(String excelHeader, String systemPath, Object value) {
+        if (!isRentReliefField(excelHeader, systemPath)) {
+            return value;
+        }
+        BigDecimal amount = toBigDecimal(value);
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return value;
+        }
+        return amount.divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
+    }
+
+    private static boolean isRentReliefField(String excelHeader, String systemPath) {
+        return "RENT RELIEF".equals(normalizeHeader(excelHeader))
+                || "RENT RELIEF".equals(normalizeHeader(systemPath));
     }
 
     private static Object sumMappedComponents(Map<String, Object> row, String excelHeader) {

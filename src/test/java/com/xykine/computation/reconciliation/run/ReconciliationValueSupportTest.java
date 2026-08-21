@@ -4,8 +4,11 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.Map;
 
 class ReconciliationValueSupportTest {
 
@@ -31,5 +34,23 @@ class ReconciliationValueSupportTest {
     @Test
     void moneyTypeStillTreatsScaleAsEqual() {
         assertTrue(ReconciliationValueSupport.valuesEqual("7000", "7000.00", "money", null));
+    }
+
+    @Test
+    void rentReliefConvertsAnnualSystemValueToMonthlyWhenGreaterThanZero() {
+        Map<String, Object> row = Map.of("RENT RELIEF", new BigDecimal("500000"));
+        Object monthly = ReconciliationValueSupport.lookupSystemValue(row, "RENT RELIEF", "RENT RELIEF");
+        assertEquals(new BigDecimal("41666.67"), monthly);
+        assertTrue(ReconciliationValueSupport.valuesEqual("41666.67", monthly, "money", null));
+    }
+
+    @Test
+    void rentReliefDoesNotConvertZeroOrMissingSystemValue() {
+        Map<String, Object> zeroRow = Map.of("RENT RELIEF", BigDecimal.ZERO);
+        assertEquals(BigDecimal.ZERO,
+                ReconciliationValueSupport.lookupSystemValue(zeroRow, "RENT RELIEF", "RENT RELIEF"));
+        Map<String, Object> emptyRow = Map.of();
+        assertTrue(ReconciliationValueSupport.isAbsent(
+                ReconciliationValueSupport.lookupSystemValue(emptyRow, "RENT RELIEF", "RENT RELIEF")));
     }
 }
