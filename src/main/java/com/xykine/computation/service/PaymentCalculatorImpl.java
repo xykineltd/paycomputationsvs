@@ -155,6 +155,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     public PaymentInfo computeGrossPay(PaymentInfo paymentInfo) {
         Map<String, BigDecimal> grossPayMap = new HashMap<>();
         insertRecurrentPaymentMap(grossPayMap, paymentInfo);
+        getGrossDeductionLines(paymentInfo).forEach(grossPayMap::put);
         BigDecimal total = roundToTwoDecimalPlaces(
                 getTotal(grossPayMap).subtract(sumGrossDeductions(paymentInfo)));
         grossPayMap.put(MapKeys.GROSS_PAY, total);
@@ -606,13 +607,20 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
         return name != null && GROSS_DEDUCTIONS.stream().anyMatch(name::equalsIgnoreCase);
     }
 
-    private BigDecimal sumGrossDeductions(PaymentInfo paymentInfo) {
+    private Map<String, BigDecimal> getGrossDeductionLines(PaymentInfo paymentInfo) {
+        Map<String, BigDecimal> lines = new HashMap<>();
         if (paymentInfo.getPaymentSettings() == null) {
-            return BigDecimal.ZERO;
+            return lines;
         }
-        return paymentInfo.getPaymentSettings().stream()
+        paymentInfo.getPaymentSettings().stream()
                 .filter(setting -> isGrossDeduction(setting.getName()))
-                .map(PaymentSettingsResponse::getValue)
+                .filter(setting -> setting.getValue() != null)
+                .forEach(setting -> lines.merge(setting.getName(), setting.getValue(), BigDecimal::add));
+        return lines;
+    }
+
+    private BigDecimal sumGrossDeductions(PaymentInfo paymentInfo) {
+        return getGrossDeductionLines(paymentInfo).values().stream()
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
