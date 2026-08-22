@@ -45,12 +45,6 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
             PayElement.OTHER_NET_PAYMENTS.getDisplayName()
     );
 
-    private static final List<String> GROSS_DEDUCTIONS = List.of(
-            PayElement.NOTICE_PAY_CLAWBACK.getDisplayName(),
-            PayElement.OTHER_DEDUCTIONS.getDisplayName(),
-            PayElement.UNPAID_LEAVES.getDisplayName()
-    );
-
     @Override
     public PaymentInfo expandPaymentSettingsFromGrossAnnual(PaymentInfo paymentInfo) {
         String paymentDistributionJson = getCompanyPaymentDistributionJson(paymentInfo.getCompanyID());
@@ -155,9 +149,7 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     public PaymentInfo computeGrossPay(PaymentInfo paymentInfo) {
         Map<String, BigDecimal> grossPayMap = new HashMap<>();
         insertRecurrentPaymentMap(grossPayMap, paymentInfo);
-        getGrossDeductionLines(paymentInfo).forEach(grossPayMap::put);
-        BigDecimal total = roundToTwoDecimalPlaces(
-                getTotal(grossPayMap).subtract(sumGrossDeductions(paymentInfo)));
+        BigDecimal total = getTotal(grossPayMap);
         grossPayMap.put(MapKeys.GROSS_PAY, total);
 
         if (!paymentInfo.isOffCycle()) {
@@ -591,7 +583,6 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
                 .filter(e -> !"Gross Salary".equalsIgnoreCase(e.getKey()))
                 .filter(e -> !"Taxable Gross".equalsIgnoreCase(e.getKey()))
                 .filter(e -> !isSeparatedNetEarning(e.getKey()))
-                .filter(e -> !isGrossDeduction(e.getKey()))
 
                 .map(Map.Entry::getValue)
                 .filter(Objects::nonNull)
@@ -601,28 +592,6 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
 
     private boolean isSeparatedNetEarning(String name) {
         return name != null && EARNINGS_TO_SEPARATE.stream().anyMatch(name::equalsIgnoreCase);
-    }
-
-    private boolean isGrossDeduction(String name) {
-        return name != null && GROSS_DEDUCTIONS.stream().anyMatch(name::equalsIgnoreCase);
-    }
-
-    private Map<String, BigDecimal> getGrossDeductionLines(PaymentInfo paymentInfo) {
-        Map<String, BigDecimal> lines = new HashMap<>();
-        if (paymentInfo.getPaymentSettings() == null) {
-            return lines;
-        }
-        paymentInfo.getPaymentSettings().stream()
-                .filter(setting -> isGrossDeduction(setting.getName()))
-                .filter(setting -> setting.getValue() != null)
-                .forEach(setting -> lines.merge(setting.getName(), setting.getValue(), BigDecimal::add));
-        return lines;
-    }
-
-    private BigDecimal sumGrossDeductions(PaymentInfo paymentInfo) {
-        return getGrossDeductionLines(paymentInfo).values().stream()
-                .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private Map<String, BigDecimal> getSeparatedEarnings(PaymentInfo paymentInfo) {
@@ -682,7 +651,6 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
                 .filter(setting -> setting.getType() != null
                         && setting.getType().getDescription() != null
                         && setting.getType().getDescription().contains("DEDUCTION"))
-                .filter(setting -> !isGrossDeduction(setting.getName()))
                 .collect(Collectors.toSet());
     }
 
