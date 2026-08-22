@@ -495,7 +495,7 @@ public class LoadComputationConfig{
         );
 
         save(
-                PayElement.UNPAID_LEAVE.getDisplayName(),
+                PayElement.UNPAID_LEAVES.getDisplayName(),
                 Nature.GROSS_DEDUCTIONS,
                 false,
                 "7010001",
