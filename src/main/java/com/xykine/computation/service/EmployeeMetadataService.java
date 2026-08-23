@@ -14,9 +14,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Reads employee metadata from Redis first, Mongo second.
- * Save / update / preload always overwrite the Redis entry so payroll
- * sees the latest custom tax and rent values (same idea as company metadata).
+ * Reads employee metadata from the shared Mongo table, then refreshes Redis.
+ * Save / update always write Mongo once and update Redis (same idea as company metadata).
  */
 @Service
 @RequiredArgsConstructor
@@ -33,10 +32,8 @@ public class EmployeeMetadataService {
         if (employeeId == null || employeeId.isBlank()) {
             return Optional.empty();
         }
-        EmployeeMetadata cached = getFromCache(employeeId);
-        if (cached != null) {
-            return Optional.of(cached);
-        }
+        // Mongo is the shared admin/compute table and the source of truth.
+        // Redis is filled after the read so a stale 0 cannot hide a saved relief.
         Optional<EmployeeMetadata> found = employeeMetadataRepo.findByEmployeeId(employeeId);
         found.ifPresent(this::putInCache);
         return found;
@@ -119,9 +116,15 @@ public class EmployeeMetadataService {
         }
         existing.setNHFSubscribed(incoming.isNHFSubscribed());
         existing.setPensioned(incoming.isPensioned());
-        existing.setCustomTaxReliefApplicable(incoming.getCustomTaxReliefApplicable());
-        existing.setVoluntaryPensionContribution(incoming.getVoluntaryPensionContribution());
-        existing.setRentAllowance(incoming.getRentAllowance());
+        if (incoming.getCustomTaxReliefApplicable() != null) {
+            existing.setCustomTaxReliefApplicable(incoming.getCustomTaxReliefApplicable());
+        }
+        if (incoming.getVoluntaryPensionContribution() != null) {
+            existing.setVoluntaryPensionContribution(incoming.getVoluntaryPensionContribution());
+        }
+        if (incoming.getRentAllowance() != null) {
+            existing.setRentAllowance(incoming.getRentAllowance());
+        }
     }
 
     private EmployeeMetadata getFromCache(String employeeId) {

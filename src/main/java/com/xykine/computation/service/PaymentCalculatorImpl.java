@@ -270,7 +270,7 @@ public PaymentInfo computeNonTaxableIncomeExemptForMFBNewTaxLaw(PaymentInfo paym
     EmployeeMetadata reliefMetadata = getEmployeeMetaData(paymentInfo);
     BigDecimal voluntaryPensionContribution = resolveVoluntaryPension(reliefMetadata);
     BigDecimal annualVoluntaryPensionContribution = voluntaryPensionContribution.multiply(BigDecimal.valueOf(12));
-    BigDecimal customTaxReliefApplicable = resolveCustomTaxRelief(reliefMetadata); // annual amount as stored
+    BigDecimal customTaxReliefApplicable = resolveCustomTaxRelief(reliefMetadata);
     BigDecimal rentAllowance = resolveRentAllowance(reliefMetadata);
 
     BigDecimal annualEmployeePensionAtEightPercent = isIntern(paymentInfo) ? BigDecimal.ZERO : ComputationUtils.roundToTwoDecimalPlaces(
@@ -279,16 +279,35 @@ public PaymentInfo computeNonTaxableIncomeExemptForMFBNewTaxLaw(PaymentInfo paym
     );
 
     annualEmployeePensionAtEightPercent = isIntern(paymentInfo) || !isPensionable(paymentInfo) ? BigDecimal.ZERO : ComputationUtils.roundToTwoDecimalPlaces(annualEmployeePensionAtEightPercent.multiply(BigDecimal.valueOf(0.3292)));
-    BigDecimal reliefAllowance = nationalHousingFund
+    // Rent, NHF, pension are annual. Custom tax relief is entered per cycle — subtract
+    // the full amount from this month's chargeable income (do not divide by 12).
+    BigDecimal annualReliefAllowance = nationalHousingFund
             .add(annualEmployeePensionAtEightPercent)
             .add(annualVoluntaryPensionContribution)
-            .add(rentAllowance)
-            .add(customTaxReliefApplicable);
+            .add(rentAllowance);
 
-    BigDecimal chargeableIncome = annualGrossSalary.subtract(reliefAllowance);
+    BigDecimal chargeableIncome = annualGrossSalary.subtract(annualReliefAllowance);
     BigDecimal callAllowance = paymentInfo.getGrossPay().getOrDefault(PayElement.CALL_AND_DATA_ALLOWANCE.getDisplayName(), BigDecimal.ZERO);
     BigDecimal monthlyChargeable = chargeableIncome.divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP).subtract(callAllowance);
-    monthlyChargeable = monthlyChargeable.subtract(getTotalMonthlyTaxFreeAEntries(paymentInfo)).subtract(nonTaxableMonthly.getOrDefault(paymentInfo.getEmployeeID().toString(), BigDecimal.ZERO));
+    monthlyChargeable = monthlyChargeable
+            .subtract(getTotalMonthlyTaxFreeAEntries(paymentInfo))
+            .subtract(nonTaxableMonthly.getOrDefault(paymentInfo.getEmployeeID().toString(), BigDecimal.ZERO))
+            .subtract(customTaxReliefApplicable);
+    if (monthlyChargeable.compareTo(BigDecimal.ZERO) < 0) {
+        monthlyChargeable = BigDecimal.ZERO;
+    }
+
+//    LOGGER.info(
+//            "Tax relief applied employeeId={} customTaxRelief={} rentRelief={} monthlyChargeable={}",
+//            paymentInfo.getEmployeeID(),
+//            customTaxReliefApplicable,
+//            rentAllowance,
+//            monthlyChargeable
+//    );
+
+    BigDecimal monthlyRelief = annualReliefAllowance
+            .divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP)
+            .add(customTaxReliefApplicable);
 
     nonTaxableIncomeExemptMap.put("ANNUAL EMPLOYEE PENSION @ 8%", annualEmployeePensionAtEightPercent);
     nonTaxableIncomeExemptMap.put("RENT RELIEF", rentAllowance);
@@ -296,7 +315,7 @@ public PaymentInfo computeNonTaxableIncomeExemptForMFBNewTaxLaw(PaymentInfo paym
     nonTaxableIncomeExemptMap.put("ANNUAL NHF ALLOWANCE", nationalHousingFund);
     nonTaxableIncomeExemptMap.put("MONTHLY CHARGEABLE INCOME", monthlyChargeable);
     nonTaxableIncomeExemptMap.put("Annual Voluntary Pension Contribution", annualVoluntaryPensionContribution);
-    nonTaxableIncomeExemptMap.put("MONTHLY RELIEF", reliefAllowance.divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP));
+    nonTaxableIncomeExemptMap.put("MONTHLY RELIEF", monthlyRelief);
     paymentInfo.setTaxRelief(nonTaxableIncomeExemptMap);
     return paymentInfo;
 }
