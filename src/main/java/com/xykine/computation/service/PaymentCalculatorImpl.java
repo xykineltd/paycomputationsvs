@@ -52,6 +52,8 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
             PayElement.NOTICE_PAY_CLAWBACK.getDisplayName()
     );
 
+    private static final BigDecimal DEFAULT_RENT_ALLOWANCE = BigDecimal.valueOf(500_000L);
+
     @Override
     public PaymentInfo expandPaymentSettingsFromGrossAnnual(PaymentInfo paymentInfo) {
         String paymentDistributionJson = getCompanyPaymentDistributionJson(paymentInfo.getCompanyID());
@@ -265,10 +267,11 @@ public PaymentInfo computeNonTaxableIncomeExemptForMFBNewTaxLaw(PaymentInfo paym
     }
 
     BigDecimal annualGrossSalary = paymentInfo.getGrossPay().get(MapKeys.GROSS_PAY).multiply(BigDecimal.valueOf(12L));
-    BigDecimal voluntaryPensionContribution = getEmployeeMetaData(paymentInfo).getVoluntaryPensionContribution();
+    EmployeeMetadata reliefMetadata = getEmployeeMetaData(paymentInfo);
+    BigDecimal voluntaryPensionContribution = resolveVoluntaryPension(reliefMetadata);
     BigDecimal annualVoluntaryPensionContribution = voluntaryPensionContribution.multiply(BigDecimal.valueOf(12));
-    BigDecimal customTaxReliefApplicable = getEmployeeMetaData(paymentInfo).getCustomTaxReliefApplicable(); // Tax relief is updated every cycle. Apply as inputted. No annualisation required.
-    BigDecimal rentAllowance = getEmployeeMetaData(paymentInfo).getRentAllowance();
+    BigDecimal customTaxReliefApplicable = resolveCustomTaxRelief(reliefMetadata); // annual amount as stored
+    BigDecimal rentAllowance = resolveRentAllowance(reliefMetadata);
 
     BigDecimal annualEmployeePensionAtEightPercent = isIntern(paymentInfo) ? BigDecimal.ZERO : ComputationUtils.roundToTwoDecimalPlaces(
             ComputationUtils.prorate(sessionCalculationObject.getComputationConstants().get("pensionFundPercent").multiply(paymentInfo.getBasicSalary()),
@@ -289,6 +292,7 @@ public PaymentInfo computeNonTaxableIncomeExemptForMFBNewTaxLaw(PaymentInfo paym
 
     nonTaxableIncomeExemptMap.put("ANNUAL EMPLOYEE PENSION @ 8%", annualEmployeePensionAtEightPercent);
     nonTaxableIncomeExemptMap.put("RENT RELIEF", rentAllowance);
+    nonTaxableIncomeExemptMap.put("CUSTOM TAX RELIEF", customTaxReliefApplicable);
     nonTaxableIncomeExemptMap.put("ANNUAL NHF ALLOWANCE", nationalHousingFund);
     nonTaxableIncomeExemptMap.put("MONTHLY CHARGEABLE INCOME", monthlyChargeable);
     nonTaxableIncomeExemptMap.put("Annual Voluntary Pension Contribution", annualVoluntaryPensionContribution);
@@ -734,9 +738,31 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
                 .employeeType(EmployeeType.FULL_TIME)
                 .customTaxReliefApplicable(BigDecimal.ZERO)
                 .isPensioned(true)
-                .rentAllowance(BigDecimal.valueOf(500000L))
+                .rentAllowance(DEFAULT_RENT_ALLOWANCE)
                 .build();
         return employeeMetadataService.getByEmployeeId(paymentInfo.getEmployeeID()).orElse(defaultEmployeeMetadata);
+    }
+
+    /** ₦500,000 unless the metadata row stores an explicit amount, including 0. */
+    private BigDecimal resolveRentAllowance(EmployeeMetadata metadata) {
+        if (metadata == null || metadata.getRentAllowance() == null) {
+            return DEFAULT_RENT_ALLOWANCE;
+        }
+        return metadata.getRentAllowance();
+    }
+
+    private BigDecimal resolveCustomTaxRelief(EmployeeMetadata metadata) {
+        if (metadata == null || metadata.getCustomTaxReliefApplicable() == null) {
+            return BigDecimal.ZERO;
+        }
+        return metadata.getCustomTaxReliefApplicable();
+    }
+
+    private BigDecimal resolveVoluntaryPension(EmployeeMetadata metadata) {
+        if (metadata == null || metadata.getVoluntaryPensionContribution() == null) {
+            return BigDecimal.ZERO;
+        }
+        return metadata.getVoluntaryPensionContribution();
     }
 
     private PaymentFrequencyEnum getSalaryFrequency(PaymentInfo paymentInfo) {
