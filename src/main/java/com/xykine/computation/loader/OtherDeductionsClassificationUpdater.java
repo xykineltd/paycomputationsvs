@@ -28,27 +28,31 @@ public class OtherDeductionsClassificationUpdater {
 
     @EventListener(ApplicationReadyEvent.class)
     public void reclassifyOtherDeductions() {
-        int updated = 0;
-        for (PaymentElementGLMapping mapping : repository.findAll()) {
-            if (!isOtherDeductionsName(mapping.getPayElement())) {
-                continue;
+        try {
+            int updated = 0;
+            for (PaymentElementGLMapping mapping : repository.findAll()) {
+                if (!isOtherDeductionsName(mapping.getPayElement())) {
+                    continue;
+                }
+                boolean changed = false;
+                if (mapping.getNature() != Nature.NET_DEDUCTIONS) {
+                    mapping.setNature(Nature.NET_DEDUCTIONS);
+                    changed = true;
+                }
+                if (mapping.isTaxable()) {
+                    mapping.setTaxable(false);
+                    changed = true;
+                }
+                if (changed) {
+                    repository.save(mapping);
+                    updated++;
+                }
             }
-            boolean changed = false;
-            if (mapping.getNature() != Nature.NET_DEDUCTIONS) {
-                mapping.setNature(Nature.NET_DEDUCTIONS);
-                changed = true;
+            if (updated > 0) {
+                log.info("Reclassified {} OTHER DEDUCTIONS GL mapping(s) to NET_DEDUCTIONS, taxable=false", updated);
             }
-            if (mapping.isTaxable()) {
-                mapping.setTaxable(false);
-                changed = true;
-            }
-            if (changed) {
-                repository.save(mapping);
-                updated++;
-            }
-        }
-        if (updated > 0) {
-            log.info("Reclassified {} OTHER DEDUCTIONS GL mapping(s) to NET_DEDUCTIONS, taxable=false", updated);
+        } catch (Exception ex) {
+            log.error("OTHER DEDUCTIONS GL reclassify failed; compute will continue starting", ex);
         }
     }
 
