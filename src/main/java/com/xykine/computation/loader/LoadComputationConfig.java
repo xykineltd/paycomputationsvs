@@ -604,11 +604,11 @@ public class LoadComputationConfig{
 
         save(
                 PayElement.OTHER_DEDUCTIONS.getDisplayName(),
-                Nature.GROSS_DEDUCTIONS,
+                Nature.NET_DEDUCTIONS,
                 false,
                 "7010001",
                 "8000001",
-                true,
+                false,
                 null,
                 null,
                 null

@@ -45,6 +45,13 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
             PayElement.OTHER_NET_PAYMENTS.getDisplayName()
     );
 
+    /** Reduce Gross Income / PAYE base. Not included in Total Deduction. */
+    private static final List<String> GROSS_INCOME_DEDUCTIONS = List.of(
+            PayElement.UNPAID_LEAVES.getDisplayName(),
+            "UNPAID LEAVE",
+            PayElement.NOTICE_PAY_CLAWBACK.getDisplayName()
+    );
+
     @Override
     public PaymentInfo expandPaymentSettingsFromGrossAnnual(PaymentInfo paymentInfo) {
         String paymentDistributionJson = getCompanyPaymentDistributionJson(paymentInfo.getCompanyID());
@@ -149,7 +156,14 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
     public PaymentInfo computeGrossPay(PaymentInfo paymentInfo) {
         Map<String, BigDecimal> grossPayMap = new HashMap<>();
         insertRecurrentPaymentMap(grossPayMap, paymentInfo);
-        BigDecimal total = getTotal(grossPayMap);
+        Map<String, BigDecimal> grossIncomeDeductions = getGrossIncomeDeductionLines(paymentInfo);
+        grossIncomeDeductions.forEach(grossPayMap::put);
+
+        BigDecimal earnings = getTotal(grossPayMap);
+        BigDecimal grossIncomeDeductionTotal = grossIncomeDeductions.values().stream()
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal total = roundToTwoDecimalPlaces(earnings.subtract(grossIncomeDeductionTotal));
         grossPayMap.put(MapKeys.GROSS_PAY, total);
 
         if (!paymentInfo.isOffCycle()) {
@@ -583,6 +597,7 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
                 .filter(e -> !"Gross Salary".equalsIgnoreCase(e.getKey()))
                 .filter(e -> !"Taxable Gross".equalsIgnoreCase(e.getKey()))
                 .filter(e -> !isSeparatedNetEarning(e.getKey()))
+                .filter(e -> !isGrossIncomeDeduction(e.getKey()))
 
                 .map(Map.Entry::getValue)
                 .filter(Objects::nonNull)
@@ -592,6 +607,22 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
 
     private boolean isSeparatedNetEarning(String name) {
         return name != null && EARNINGS_TO_SEPARATE.stream().anyMatch(name::equalsIgnoreCase);
+    }
+
+    private boolean isGrossIncomeDeduction(String name) {
+        return name != null && GROSS_INCOME_DEDUCTIONS.stream().anyMatch(name::equalsIgnoreCase);
+    }
+
+    private Map<String, BigDecimal> getGrossIncomeDeductionLines(PaymentInfo paymentInfo) {
+        Map<String, BigDecimal> lines = new HashMap<>();
+        if (paymentInfo.isOffCycle() || paymentInfo.getPaymentSettings() == null) {
+            return lines;
+        }
+        paymentInfo.getPaymentSettings().stream()
+                .filter(setting -> setting.getName() != null && setting.getValue() != null)
+                .filter(setting -> isGrossIncomeDeduction(setting.getName()))
+                .forEach(setting -> lines.merge(setting.getName(), setting.getValue(), BigDecimal::add));
+        return lines;
     }
 
     private Map<String, BigDecimal> getSeparatedEarnings(PaymentInfo paymentInfo) {
@@ -651,6 +682,7 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
                 .filter(setting -> setting.getType() != null
                         && setting.getType().getDescription() != null
                         && setting.getType().getDescription().contains("DEDUCTION"))
+                .filter(setting -> !isGrossIncomeDeduction(setting.getName()))
                 .collect(Collectors.toSet());
     }
 
