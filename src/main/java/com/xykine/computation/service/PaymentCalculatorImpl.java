@@ -273,12 +273,16 @@ public PaymentInfo computeNonTaxableIncomeExemptForMFBNewTaxLaw(PaymentInfo paym
     BigDecimal customTaxReliefApplicable = resolveCustomTaxRelief(reliefMetadata);
     BigDecimal rentAllowance = resolveRentAllowance(reliefMetadata);
 
-    BigDecimal annualEmployeePensionAtEightPercent = isIntern(paymentInfo) ? BigDecimal.ZERO : ComputationUtils.roundToTwoDecimalPlaces(
-            ComputationUtils.prorate(sessionCalculationObject.getComputationConstants().get("pensionFundPercent").multiply(paymentInfo.getBasicSalary()),
-                    paymentInfo.getNumberOfDaysOfUnpaidAbsence(), PaymentFrequencyEnum.YEARLY, paymentInfo.getStartDate())
-    );
-
-    annualEmployeePensionAtEightPercent = isIntern(paymentInfo) || !isPensionable(paymentInfo) ? BigDecimal.ZERO : ComputationUtils.roundToTwoDecimalPlaces(annualEmployeePensionAtEightPercent.multiply(BigDecimal.valueOf(0.3292)));
+    BigDecimal annualEmployeePensionAtEightPercent = BigDecimal.ZERO;
+    if (!isIntern(paymentInfo) && isPensionable(paymentInfo)) {
+        BigDecimal pensionableAnnualPay = getPensionableAnnualPay(paymentInfo);
+        // Same 8% as the pension deduction. Do not multiply by 0.3292 here:
+        // that factor converts gross → basic, and pensionableAnnualPay is already basic.
+        annualEmployeePensionAtEightPercent = ComputationUtils.roundToTwoDecimalPlaces(
+                sessionCalculationObject.getComputationConstants().get("pensionFundPercent")
+                        .multiply(pensionableAnnualPay)
+        );
+    }
     // Rent, NHF, pension are annual. Custom tax relief is entered per cycle — subtract
     // the full amount from this month's chargeable income (do not divide by 12).
     BigDecimal annualReliefAllowance = nationalHousingFund
@@ -675,6 +679,39 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
         return getSeparatedEarnings(paymentInfo).values().stream()
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private BigDecimal getAnnualBasicSalary(PaymentInfo paymentInfo) {
+        if (paymentInfo.getPaymentSettings() != null) {
+            BigDecimal fromSettings = paymentInfo.getPaymentSettings().stream()
+                    .filter(setting -> setting.getType() == PaymentTypeEnum.BASIC_SALARY_ANNUAL)
+                    .map(PaymentSettingsResponse::getValue)
+                    .filter(Objects::nonNull)
+                    .findFirst()
+                    .orElse(BigDecimal.ZERO);
+            if (fromSettings.compareTo(BigDecimal.ZERO) > 0) {
+                return fromSettings;
+            }
+        }
+        return paymentInfo.getBasicSalary() != null ? paymentInfo.getBasicSalary() : BigDecimal.ZERO;
+    }
+
+    /**
+     * Same pensionable annual base as the 8% employee pension deduction:
+     * BASIC_SALARY_ANNUAL plus pensionable / housing / transport allowances.
+     */
+    private BigDecimal getPensionableAnnualPay(PaymentInfo paymentInfo) {
+        BigDecimal basicSalary = getAnnualBasicSalary(paymentInfo);
+        if (paymentInfo.getPaymentSettings() == null) {
+            return basicSalary;
+        }
+        return getAllowanceForEmployee(paymentInfo).stream()
+                .filter(setting -> setting.isPensionable()
+                        || setting.getType() == PaymentTypeEnum.ALLOWANCE_ANNUAL_HOUSING
+                        || setting.getType() == PaymentTypeEnum.ALLOWANCE_ANNUAL_TRANSPORT)
+                .map(PaymentSettingsResponse::getValue)
+                .filter(Objects::nonNull)
+                .reduce(basicSalary, BigDecimal::add);
     }
 
     private Set<PaymentSettingsResponse> getAllowanceForEmployee (PaymentInfo paymentInfo) {
