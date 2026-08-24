@@ -13,4 +13,7 @@ public class EmployeeDetail {
     private String sex;
     private String stateOfResidence;
     private String taxId;
+    private String companyCode;
+    private String rsaPin;
+    private String pfaCode;
 }

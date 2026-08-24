@@ -233,6 +233,21 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                                 ytdByEmployeeId
                         );
                     }
+                    if ("pension".equals(entityType)) {
+                        String startDate = firstNonBlank(
+                                detail.getStartDate(),
+                                reportRequestPayload.getDateRange() != null
+                                        && reportRequestPayload.getDateRange().getStart() != null
+                                        ? reportRequestPayload.getDateRange().getStart().toString()
+                                        : null
+                        );
+                        return extractPensionDetail(
+                                detail.getDetail().getReport(),
+                                employeeDetailMap,
+                                GROSS_SALARY_COMPONENTS,
+                                startDate
+                        );
+                    }
                     return extractDetail(
                             detail.getDetail().getReport(),
                             reportRequestPayload.getHeaders(),
@@ -716,6 +731,111 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
         return row;
     }
 
+    private Map<String, Object> extractPensionDetail(
+            PaymentInfo paymentInfo,
+            Map<String, EmployeeDetail> employeeDetailMap,
+            List<String> grossSalaryComponent,
+            String startDate
+    ) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        EmployeeDetail employee = employeeDetailMap != null
+                ? employeeDetailMap.get(paymentInfo.getEmployeeID())
+                : null;
+
+        LocalDate reportDate = parseReportDate(startDate);
+        BigDecimal derivedGrossSalary = deriveGrossSalary(paymentInfo.getGrossPay(), grossSalaryComponent);
+        BigDecimal grossPay = amountFrom(paymentInfo, "Gross Pay", MapKeys.GROSS_PAY, "GROSS PAY");
+        BigDecimal monthlyGrossSalary = derivedGrossSalary != null && derivedGrossSalary.compareTo(BigDecimal.ZERO) != 0
+                ? derivedGrossSalary
+                : grossPay;
+
+        BigDecimal monthlyNhf = amountFrom(
+                paymentInfo,
+                MapKeys.NATIONAL_HOUSING_FUND,
+                "National Housing Fund",
+                "NHF"
+        );
+        BigDecimal employeePension = amountFrom(
+                paymentInfo,
+                MapKeys.EMPLOYEE_PENSION_CONTRIBUTION,
+                "Employee Pension Contribution",
+                "EMPLOYEE PENSION"
+        );
+        BigDecimal employerPension = amountFrom(
+                paymentInfo,
+                MapKeys.EMPLOYER_PENSION_CONTRIBUTION,
+                "Employer Pension Contribution",
+                "EMPLOYER PENSION"
+        );
+        BigDecimal voluntaryPension = amountFrom(
+                paymentInfo,
+                "Voluntary Pension Contribution",
+                "VOLUNTARY PENSION CONTRIBUTION"
+        );
+        BigDecimal voluntaryEmployerPension = amountFrom(
+                paymentInfo,
+                "Voluntary Employer Pension",
+                "Employer Voluntary Pension",
+                "VOLUNTARY EMPLOYER PENSION"
+        );
+        BigDecimal otherContribution = amountFrom(
+                paymentInfo,
+                "Other Contribution",
+                "OTHER CONTRIBUTION"
+        );
+        BigDecimal totalAmount = zeroIfNull(employeePension)
+                .add(zeroIfNull(employerPension))
+                .add(zeroIfNull(voluntaryPension))
+                .add(zeroIfNull(voluntaryEmployerPension))
+                .add(zeroIfNull(otherContribution));
+
+        row.put("COMPANY CODE", employee != null ? firstNonBlank(employee.getCompanyCode()) : "");
+        row.put("REPORT MONTH", reportDate != null ? String.valueOf(reportDate.getMonthValue()) : "");
+        row.put("REPORT YEAR", reportDate != null ? String.valueOf(reportDate.getYear()) : "");
+        row.put("EMP ID", employee != null && hasValue(employee.getMappedId())
+                ? employee.getMappedId()
+                : paymentInfo.getEmployeeID());
+        row.put("RSA PIN", employee != null ? firstNonBlank(employee.getRsaPin()) : "");
+        row.put("EMPLOYEE NAME", firstNonBlank(
+                employee != null ? employee.getName() : null,
+                paymentInfo.getFullName()
+        ));
+        row.put("STATE OF RESIDENCE", employee != null ? firstNonBlank(employee.getStateOfResidence()) : "");
+        row.put("TAX ID", employee != null ? firstNonBlank(employee.getTaxId()) : "");
+        row.put("GROSS SALARY", moneyOrBlank(monthlyGrossSalary));
+        row.put("GROSS SALARY (MONTHLY)", moneyOrBlank(monthlyGrossSalary));
+        row.put("NHF", moneyOrBlank(monthlyNhf));
+        row.put("EMPLOYEE PENSION", moneyOrBlank(employeePension));
+        row.put("EMPLOYER PENSION", moneyOrBlank(employerPension));
+        row.put("EMPLOYER PENSION CONTRIBUTION", moneyOrBlank(employerPension));
+        row.put("VOLUNTARY PENSION CONTRIBUTION", moneyOrBlank(voluntaryPension));
+        row.put("VOLUNTARY EMPLOYER PENSION", moneyOrBlank(voluntaryEmployerPension));
+        row.put("OTHER CONTRIBUTION", moneyOrBlank(otherContribution));
+        row.put("TOTAL AMOUNT", moneyOrBlank(totalAmount));
+        row.put("PFA CODE", employee != null ? firstNonBlank(employee.getPfaCode()) : "");
+
+        return row;
+    }
+
+    private static LocalDate parseReportDate(String startDate) {
+        if (startDate == null || startDate.isBlank()) {
+            return null;
+        }
+        String value = startDate.trim();
+        if (value.length() >= 10) {
+            value = value.substring(0, 10);
+        }
+        try {
+            return LocalDate.parse(value, DateTimeFormatter.ISO_LOCAL_DATE);
+        } catch (DateTimeParseException e) {
+            return null;
+        }
+    }
+
+    private static BigDecimal zeroIfNull(BigDecimal value) {
+        return value != null ? value : BigDecimal.ZERO;
+    }
+
     private static Object moneyOrBlank(BigDecimal value) {
         return value != null ? value : " ";
     }
@@ -1142,6 +1262,18 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
             case "PAYE Tax" -> List.of("PAYE TAX", "PAYE", "TOTAL PAYE");
             case "Net Pay" -> List.of("NETPAY", "NET PAY");
             case "Employer Pension" -> List.of("EMPLOYER PENSION");
+            case "Employer Pension Contribution" -> List.of(
+                    "EMPLOYER PENSION CONTRIBUTION",
+                    "EMPLOYER PENSION"
+            );
+            case "Voluntary Employer Pension" -> List.of("VOLUNTARY EMPLOYER PENSION", "EMPLOYER VOLUNTARY PENSION");
+            case "Other Contribution" -> List.of("OTHER CONTRIBUTION");
+            case "Total amount" -> List.of("TOTAL AMOUNT", "TOTAL EMPLOYEE PENSION");
+            case "Company Code" -> List.of("COMPANY CODE");
+            case "Report Month" -> List.of("REPORT MONTH");
+            case "Report Year" -> List.of("REPORT YEAR");
+            case "RSA Pin" -> List.of("RSA PIN", "RSA PIN NUMBER");
+            case "PFA Code" -> List.of("PFA CODE");
             case "Deductions" -> List.of("DEDUCTIONS", "TOTAL DEDUCTION", "TOTAL DEDUCTIONS");
             default -> List.of(header.toUpperCase(Locale.ROOT));
         };
