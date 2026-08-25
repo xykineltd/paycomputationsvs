@@ -4,6 +4,8 @@ import com.xykine.computation.dto.EmployeeDetail;
 import com.xykine.computation.exceptions.ApiException;
 import com.xykine.computation.exceptions.EmployeeFilterException;
 import com.xykine.computation.exceptions.PayrollValidationException;
+import com.xykine.computation.reconciliation.run.ApplyExcelReconciliationRequest;
+import com.xykine.computation.reconciliation.run.ApplyExcelReconciliationResponse;
 import com.xykine.computation.request.EmployeeFilterRequest;
 import com.xykine.computation.request.PaymentInfoRequest;
 import com.xykine.computation.response.PaginatedSelectedEmployeeField;
@@ -165,5 +167,41 @@ public class AdminService {
                 )
                 .bodyToMono(new ParameterizedTypeReference<Map<String, EmployeeDetail>>() {})
                 .block(); // keep blocking since method returns Map; consider returning Mono instead
+    }
+
+    public ApplyExcelReconciliationResponse applyExcelValues(
+            ApplyExcelReconciliationRequest request,
+            String token
+    ) {
+        return webClient
+                .post()
+                .uri("/admin/payroll-reconciliation/apply-excel-values")
+                .header(HttpHeaders.AUTHORIZATION, token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(request)
+                .exchangeToMono(response -> {
+                    if (response.statusCode().is2xxSuccessful()) {
+                        return response.bodyToMono(ApplyExcelReconciliationResponse.class);
+                    }
+                    return response.bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
+                            .defaultIfEmpty(Map.of())
+                            .flatMap(body -> {
+                                Object message = body.get("message");
+                                if (message == null) {
+                                    message = body.get("errorMessage");
+                                }
+                                String text = message != null
+                                        ? String.valueOf(message)
+                                        : "Failed to apply Excel values to employee records";
+                                LOGGER.error("Apply Excel values failed: {}", text);
+                                return Mono.error(new PayrollValidationException(text));
+                            });
+                })
+                .onErrorResume(WebClientResponseException.class, ex -> {
+                    LOGGER.error("Apply Excel values call failed: {}", ex.getResponseBodyAsString());
+                    return Mono.error(new PayrollValidationException(
+                            ex.getMessage() != null ? ex.getMessage() : "Failed to apply Excel values"));
+                })
+                .block();
     }
 }

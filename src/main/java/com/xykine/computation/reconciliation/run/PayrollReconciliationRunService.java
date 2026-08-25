@@ -168,6 +168,112 @@ public class PayrollReconciliationRunService {
         return executeStage(run, mapping, rows, "outcome", bearerToken);
     }
 
+    @Transactional
+    public UpdateSystemResponse updateSystem(
+            String reconciliationId,
+            UpdateSystemRequest request,
+            String bearerToken
+    ) {
+        PayrollReconciliationTemp run = getRun(reconciliationId);
+        if (run.getInputAnalytics() == null && !"INPUT_DONE".equalsIgnoreCase(run.getStatus())) {
+            throw new IllegalArgumentException("Run input alignment before updating the system from Excel");
+        }
+
+        String employeeCode = request != null
+                ? ReconciliationValueSupport.normalizeEmpId(request.getEmployeeCode())
+                : "";
+        if (employeeCode.isBlank()) {
+            throw new IllegalArgumentException("employeeCode is required");
+        }
+
+        List<String> selected = request != null && request.getFields() != null
+                ? request.getFields().stream().filter(f -> f != null && !f.isBlank()).toList()
+                : List.of();
+        if (selected.isEmpty()) {
+            throw new IllegalArgumentException("Select at least one mismatched field to update");
+        }
+
+        ReconciliationMapping mapping = mappingService.getByCompanyId(run.getCompanyId());
+        List<ReconciliationColumnMapping> columns = selectedInputColumns(mapping, selected);
+        if (columns.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "None of the selected fields are enabled input mappings");
+        }
+
+        List<PayrollReconciliationTempRow> allRows = tempRowRepository.findByReconciliationId(reconciliationId);
+        List<PayrollReconciliationTempRow> rows = allRows.stream()
+                .filter(row -> employeeCode.equals(
+                        ReconciliationValueSupport.normalizeEmpId(row.getMatchKeyValue())))
+                .toList();
+        if (rows.isEmpty()) {
+            throw new IllegalArgumentException("No uploaded Excel row found for employee " + employeeCode);
+        }
+
+        List<ExcelFieldUpdate> updates = new ArrayList<>();
+        for (PayrollReconciliationTempRow row : rows) {
+            for (ReconciliationColumnMapping col : columns) {
+                Object excelVal = ReconciliationExcelParser.cellForHeader(row.getCells(), col.getExcelHeader());
+                if (ReconciliationValueSupport.isAbsent(excelVal)) {
+                    continue;
+                }
+                updates.add(ExcelFieldUpdate.builder()
+                        .employeeCode(employeeCode)
+                        .field(col.getExcelHeader())
+                        .systemPath(col.getSystemPath())
+                        .value(excelVal)
+                        .valueType(col.getValueType())
+                        .build());
+            }
+        }
+        if (updates.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "No Excel values found for the selected fields on this employee");
+        }
+
+        ApplyExcelReconciliationResponse applied;
+        try {
+            applied = adminService.applyExcelValues(
+                    ApplyExcelReconciliationRequest.builder()
+                            .companyId(run.getCompanyId())
+                            .updates(updates)
+                            .build(),
+                    bearerToken
+            );
+        } catch (Exception ex) {
+            throw new IllegalArgumentException(
+                    ex.getMessage() != null ? ex.getMessage() : "Failed to apply Excel values",
+                    ex
+            );
+        }
+
+        diffRepository.deleteByReconciliationIdAndStage(reconciliationId, "input");
+        StageRunResponse rerun = executeStage(run, mapping, allRows, "input", bearerToken);
+
+        String message = buildUpdateMessage(applied);
+        List<UpdateSystemResponse.SkippedEmployee> skipped = new ArrayList<>();
+        if (applied != null && applied.getSkippedEmployees() != null) {
+            for (ApplyExcelReconciliationResponse.SkippedEmployee item : applied.getSkippedEmployees()) {
+                skipped.add(UpdateSystemResponse.SkippedEmployee.builder()
+                        .employeeCode(item.getEmployeeCode())
+                        .reason(item.getReason())
+                        .build());
+            }
+        }
+
+        return UpdateSystemResponse.builder()
+                .reconciliationId(run.getId())
+                .employeesUpdated(applied != null ? applied.getEmployeesUpdated() : 0)
+                .cellsUpdated(applied != null ? applied.getCellsUpdated() : 0)
+                .fieldsApplied(applied != null ? applied.getFieldsApplied() : List.of())
+                .unsupportedFields(applied != null ? applied.getUnsupportedFields() : List.of())
+                .skippedEmployees(skipped)
+                .inputPassed(rerun.isPassed())
+                .input(rerun.getSummary())
+                .status(rerun.getStatus())
+                .message(message)
+                .build();
+    }
+
     public ReconciliationAnalyticsResponse getAnalytics(String reconciliationId) {
         PayrollReconciliationTemp run = getRun(reconciliationId);
         return ReconciliationAnalyticsResponse.builder()
@@ -407,6 +513,51 @@ public class PayrollReconciliationRunService {
         }
         Object lookedUp = ReconciliationValueSupport.lookupSystemValue(row, "EMP ID", "EMP ID");
         return lookedUp == null ? "" : ReconciliationValueSupport.normalizeEmpId(String.valueOf(lookedUp));
+    }
+
+    private List<ReconciliationColumnMapping> selectedInputColumns(
+            ReconciliationMapping mapping,
+            List<String> selected
+    ) {
+        Set<String> wanted = selected.stream()
+                .map(ReconciliationExcelParser::normalizeHeader)
+                .filter(s -> s != null && !s.isBlank())
+                .collect(Collectors.toCollection(HashSet::new));
+        String matchKey = mapping.getExcelMatchKey();
+        return ReconciliationExcelParser.enabledColumns(mapping, "input").stream()
+                .filter(c -> !Boolean.TRUE.equals(c.getIsMatchKey()))
+                .filter(c -> matchKey == null
+                        || !ReconciliationExcelParser.normalizeHeader(c.getExcelHeader())
+                        .equals(ReconciliationExcelParser.normalizeHeader(matchKey)))
+                .filter(c -> {
+                    String header = ReconciliationExcelParser.normalizeHeader(c.getExcelHeader());
+                    String path = ReconciliationExcelParser.normalizeHeader(c.getSystemPath());
+                    return wanted.contains(header) || wanted.contains(path);
+                })
+                .toList();
+    }
+
+    private static String buildUpdateMessage(ApplyExcelReconciliationResponse applied) {
+        int employees = applied != null ? applied.getEmployeesUpdated() : 0;
+        int cells = applied != null ? applied.getCellsUpdated() : 0;
+        int unsupported = applied != null && applied.getUnsupportedFields() != null
+                ? applied.getUnsupportedFields().size()
+                : 0;
+        StringBuilder sb = new StringBuilder();
+        sb.append("Updated ")
+                .append(employees)
+                .append(" employee record (")
+                .append(cells)
+                .append(" value")
+                .append(cells == 1 ? "" : "s")
+                .append(") from Excel.");
+        if (unsupported > 0) {
+            sb.append(" ")
+                    .append(unsupported)
+                    .append(" selected field(s) cannot be written to employee records.");
+        }
+        sb.append(" Recompute payroll so earning amounts refresh in this report, then re-run Input Alignment.");
+        return sb.toString();
     }
 
     private List<ReconciliationColumnMapping> compareColumns(ReconciliationMapping mapping, String stage) {

@@ -4,12 +4,15 @@ import com.xykine.computation.reconciliation.run.PayrollReconciliationRunService
 import com.xykine.computation.reconciliation.run.ReconciliationAnalyticsResponse;
 import com.xykine.computation.reconciliation.run.ReconciliationDetailsResponse;
 import com.xykine.computation.reconciliation.run.StageRunResponse;
+import com.xykine.computation.reconciliation.run.UpdateSystemRequest;
+import com.xykine.computation.reconciliation.run.UpdateSystemResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -52,6 +55,19 @@ public class PayrollReconciliationRunController {
     ) {
         log.info("Run outcome variance reconciliationId={}", reconciliationId);
         return runService.runOutcomeVariance(reconciliationId, token);
+    }
+
+    @PostMapping("/{reconciliationId}/update-system")
+    public UpdateSystemResponse updateSystem(
+            @PathVariable String reconciliationId,
+            @RequestBody UpdateSystemRequest request,
+            @RequestHeader("Authorization") String token
+    ) {
+        log.info("Update system from Excel reconciliationId={} employeeCode={} fields={}",
+                reconciliationId,
+                request != null ? request.getEmployeeCode() : null,
+                request != null ? request.getFields() : null);
+        return runService.updateSystem(reconciliationId, request, token);
     }
 
     @GetMapping("/{reconciliationId}/analytics")
