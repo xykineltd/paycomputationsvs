@@ -92,6 +92,18 @@ public class EmployeeMetadataService {
         evictFromCache(employeeId);
     }
 
+    public void deleteByCompanyId(String companyId) {
+        if (companyId == null || companyId.isBlank()) {
+            return;
+        }
+        List<EmployeeMetadata> existing = employeeMetadataRepo.findByCompanyId(companyId);
+        long deleted = employeeMetadataRepo.deleteByCompanyId(companyId);
+        for (EmployeeMetadata employee : existing) {
+            evictFromCache(employee.getEmployeeId());
+        }
+        log.info("Deleted {} employee metadata row(s) for companyId={}", deleted, companyId);
+    }
+
     private EmployeeMetadata upsert(EmployeeMetadata incoming) {
         if (incoming == null) {
             throw new IllegalArgumentException("employee metadata is required");

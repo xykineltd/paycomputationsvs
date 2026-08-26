@@ -116,4 +116,10 @@ public class Metadata {
         employeeMetadataService.deleteByEmployeeId(employeeId);
         return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping("/employees/company/{companyId}")
+    public ResponseEntity<Void> deleteEmployeesByCompanyId(@PathVariable String companyId) {
+        employeeMetadataService.deleteByCompanyId(companyId);
+        return ResponseEntity.noContent().build();
+    }
 }
