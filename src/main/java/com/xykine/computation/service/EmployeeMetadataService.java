@@ -97,10 +97,11 @@ public class EmployeeMetadataService {
             return;
         }
         List<EmployeeMetadata> existing = employeeMetadataRepo.findByCompanyId(companyId);
+
+        long deleted = employeeMetadataRepo.deleteByCompanyId(companyId);
         for (EmployeeMetadata employee : existing) {
             evictFromCache(employee.getEmployeeId());
         }
-        long deleted = employeeMetadataRepo.deleteByCompanyId(companyId);
         log.info("Deleted {} employee metadata row(s) for companyId={}", deleted, companyId);
     }
 
