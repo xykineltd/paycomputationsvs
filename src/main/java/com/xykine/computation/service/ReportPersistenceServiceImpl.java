@@ -88,9 +88,28 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             }
 
             LOGGER.info("PaymentInfoList size: {}", paymentInfoList.size());
+            boolean employeeSubsetRun = paymentRequest.getEmployeeId() != null
+                    && !paymentRequest.getEmployeeId().isEmpty();
+            if (employeeSubsetRun) {
+                int requested = paymentRequest.getEmployeeId().size();
+                int distinctEmployees = countDistinctEmployeeIds(paymentInfoList);
+                LOGGER.info("Subset payroll requested={} distinctReturned={} ids={}",
+                        requested, distinctEmployees, paymentRequest.getEmployeeId());
+                if (distinctEmployees > requested
+                        || (distinctEmployees == 0 && paymentInfoList.size() > requested * 24)) {
+                    throw new PayrollValidationException(
+                            "Final Pay was requested for " + requested
+                                    + " employee(s), but payment info was generated for "
+                                    + Math.max(distinctEmployees, paymentInfoList.size())
+                                    + " rows. Restart admin-svc so selected employee IDs are used.");
+                }
+            }
             PayrollReportSummary simulatedSummary = payrollReportSummaryRepo
                     .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(String.valueOf(paymentRequest.getStart()), paymentRequest.getCompanyId(), true);
-            if (simulatedSummary != null && !paymentRequest.isPayrollSimulation()) {
+            boolean matchingSimulation = simulatedSummary != null
+                    && simulatedSummary.isOffCycle() == paymentRequest.isOffCycle()
+                    && !employeeSubsetRun;
+            if (matchingSimulation && !paymentRequest.isPayrollSimulation()) {
                 jobStatusStore.updateJob(jobId, "COMPLETED", "Payroll computation complete", String.valueOf(simulatedSummary.getId()));
                 progressCallback.accept(jobStatusStore);
                 PayrollReportSummary payrollReportSummary = payrollReportSummaryRepo.findPayrollReportSummaryById(UUID.fromString(String.valueOf(simulatedSummary.getId())));
@@ -99,27 +118,12 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 payrollReportSummaryRepo.save(payrollReportSummary);
 
                 payrollAsyncService.updateDetailStatusToPendingAsync(String.valueOf(simulatedSummary.getId()));
-
-                StartWorkflowRequest startWorkflowRequest = new StartWorkflowRequest();
-                startWorkflowRequest.setEntity("PAYROLL");
-                startWorkflowRequest.setPayrollType("PAYROLL");
-                startWorkflowRequest.setPayPeriod(formatToMonthYear(payrollReportSummary.getStartDate()));
-                startWorkflowRequest.setPayrollId(payrollReportSummary.getId().toString());
-                startWorkflowRequest.setUserId(AuthUtility.getCurrentUser());
-                startWorkflowRequest.setCompanyId(paymentRequest.getCompanyId());
-                startWorkflowRequest.setPayrollType(payrollReportSummary.isOffCycle() ? "OffCycle" : "Regular");
-                startWorkflowRequest.setNumberOfPays(paymentInfoList.size());
-                startWorkflowRequest.setNumberOfEmployees(payrollReportSummary.getTotalNumberOfEmployees());
-                //This is intentional to display the total gross on the payroll card instead of the net pay, so we are setting TOTAL_GROSS_PAY
-                startWorkflowRequest.setNetPay(ReportUtils.transform(payrollReportSummary).getSummary().getSummary().get(MapKeys.TOTAL_GROSS_PAY));
-                startWorkflowRequest.setCreatedBy(payrollReportSummary.getCreatedBy());
-
-                workflowService.startWorkflow(startWorkflowRequest, authorizationHeader);
+                startPayrollWorkflow(payrollReportSummary, paymentRequest, paymentInfoList.size(), authorizationHeader);
 
                 return;
             }
 
-            if (simulatedSummary != null && paymentRequest.isPayrollSimulation()) {
+            if (matchingSimulation && paymentRequest.isPayrollSimulation()) {
                 payrollReportSummaryRepo.deleteById(simulatedSummary.getId());
                 payrollReportDetailRepo.deleteAllBySummaryId(simulatedSummary.getId().toString());
             }
@@ -162,6 +166,17 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
             computeResponse = OperationUtils.refineResponse(computeResponse, sessionCalculationObject, paymentRequest);
             ReportResponse reportResponse = serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
+
+            if (!paymentRequest.isPayrollSimulation() && (paymentRequest.isOffCycle() || employeeSubsetRun)) {
+                PayrollReportSummary payrollReportSummary = payrollReportSummaryRepo
+                        .findPayrollReportSummaryById(UUID.fromString(reportResponse.getReportId()));
+                payrollReportSummary.setPayrollSimulation(false);
+                payrollReportSummary.setPayrollStatus(PayrollStatus.PENDING);
+                payrollReportSummaryRepo.save(payrollReportSummary);
+                payrollAsyncService.updateDetailStatusToPendingAsync(reportResponse.getReportId());
+                startPayrollWorkflow(payrollReportSummary, paymentRequest, paymentInfoList.size(), authorizationHeader);
+            }
+
             jobStatusStore.updateJob(jobId, "COMPLETED", "Payroll computation complete", reportResponse.getReportId());
             progressCallback.accept(jobStatusStore);
 
@@ -174,6 +189,67 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             jobStatusStore.updateJob(jobId, "FAILED", e.getMessage(), "");
             progressCallback.accept(jobStatusStore);
         }
+    }
+
+    private void startPayrollWorkflow(PayrollReportSummary payrollReportSummary,
+                                      PaymentInfoRequest paymentRequest,
+                                      int numberOfPays,
+                                      String authorizationHeader) {
+        StartWorkflowRequest startWorkflowRequest = new StartWorkflowRequest();
+        startWorkflowRequest.setEntity("PAYROLL");
+        startWorkflowRequest.setPayPeriod(formatToMonthYear(payrollReportSummary.getStartDate()));
+        startWorkflowRequest.setPayrollId(payrollReportSummary.getId().toString());
+        startWorkflowRequest.setUserId(AuthUtility.getCurrentUser());
+        startWorkflowRequest.setCompanyId(paymentRequest.getCompanyId());
+        startWorkflowRequest.setPayrollType(resolvePayrollType(payrollReportSummary, paymentRequest));
+        startWorkflowRequest.setNumberOfPays(numberOfPays);
+        startWorkflowRequest.setNumberOfEmployees(payrollReportSummary.getTotalNumberOfEmployees());
+        // Display total gross on the payroll card instead of net pay
+        startWorkflowRequest.setNetPay(ReportUtils.transform(payrollReportSummary).getSummary().getSummary().get(MapKeys.TOTAL_GROSS_PAY));
+        startWorkflowRequest.setCreatedBy(payrollReportSummary.getCreatedBy());
+        workflowService.startWorkflow(startWorkflowRequest, authorizationHeader);
+    }
+
+    private static String resolvePayrollType(PayrollReportSummary payrollReportSummary,
+                                             PaymentInfoRequest paymentRequest) {
+        if (payrollReportSummary.isOffCycle()) {
+            return "OffCycle";
+        }
+        if (paymentRequest.getEmployeeId() != null && !paymentRequest.getEmployeeId().isEmpty()) {
+            return "Final Pay";
+        }
+        return "Regular";
+    }
+
+    private static int countDistinctEmployeeIds(List<?> paymentInfoList) {
+        if (paymentInfoList == null || paymentInfoList.isEmpty()) {
+            return 0;
+        }
+        Set<String> ids = new LinkedHashSet<>();
+        for (Object row : paymentInfoList) {
+            String employeeId = extractEmployeeId(row);
+            if (employeeId != null && !employeeId.isBlank()) {
+                ids.add(employeeId);
+            }
+        }
+        return ids.size();
+    }
+
+    private static String extractEmployeeId(Object row) {
+        if (row == null) {
+            return null;
+        }
+        if (row instanceof PaymentInfo paymentInfo) {
+            return paymentInfo.getEmployeeID();
+        }
+        if (row instanceof Map<?, ?> map) {
+            Object id = map.get("employeeID");
+            if (id == null) {
+                id = map.get("employeeId");
+            }
+            return id != null ? String.valueOf(id) : null;
+        }
+        return null;
     }
 
     private static String formatToMonthYear(String inputDate) {

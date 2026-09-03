@@ -92,6 +92,12 @@ public class Metadata {
         return ResponseEntity.ok(employeeMetadataService.findByCompanyId(companyId));
     }
 
+    @DeleteMapping("/employees/company/{companyId}")
+    public ResponseEntity<Void> deleteEmployeesByCompanyId(@PathVariable String companyId) {
+        employeeMetadataService.deleteByCompanyId(companyId);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/employees")
     public ResponseEntity<List<EmployeeMetadata>> getAllEmployees() {
         return ResponseEntity.ok(employeeMetadataService.findAll());
