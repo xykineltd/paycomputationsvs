@@ -47,11 +47,53 @@ public class ComputationUtils {
 
         if (numberOfUnPaiAbsence == 0)
             return rawValue;
-//      if numberOfDaysOfUnpaidAbsence is not 0, remove the daily wage equivalent multiplied by the number of unpaid absences
-        // Use actual working days in the current month (Mon–Fri)
-        int workingDaysInMonth = getWorkingDaysForPeriod(payrollRunStartDate);
-        BigDecimal dailyEquivalent = rawValue.divide(BigDecimal.valueOf(workingDaysInMonth), 2,  RoundingMode.CEILING); // To do ==> verify number of working days in the month
+        int workingDaysInMonth = resolveWorkingDays(payrollRunStartDate);
+        BigDecimal dailyEquivalent = rawValue.divide(BigDecimal.valueOf(workingDaysInMonth), 2,  RoundingMode.CEILING);
         return roundToTwoDecimalPlaces(rawValue.subtract(dailyEquivalent.multiply(BigDecimal.valueOf(numberOfUnPaiAbsence))));
+    }
+
+    private static final ThreadLocal<Integer> WORKING_DAYS_OVERRIDE = new ThreadLocal<>();
+
+    public static void setWorkingDaysOverride(Integer workingDays) {
+        if (workingDays == null || workingDays <= 0) {
+            WORKING_DAYS_OVERRIDE.remove();
+        } else {
+            WORKING_DAYS_OVERRIDE.set(workingDays);
+        }
+    }
+
+    public static void clearWorkingDaysOverride() {
+        WORKING_DAYS_OVERRIDE.remove();
+    }
+
+    public static Integer getWorkingDaysOverride() {
+        return WORKING_DAYS_OVERRIDE.get();
+    }
+
+    private static final ThreadLocal<Boolean> CUSTOM_PAY = new ThreadLocal<>();
+
+    public static void setCustomPay(boolean customPay) {
+        if (customPay) {
+            CUSTOM_PAY.set(true);
+        } else {
+            CUSTOM_PAY.remove();
+        }
+    }
+
+    public static boolean isCustomPay() {
+        return Boolean.TRUE.equals(CUSTOM_PAY.get());
+    }
+
+    public static void clearCustomPay() {
+        CUSTOM_PAY.remove();
+    }
+
+    private static int resolveWorkingDays(String payrollRunStartDate) {
+        Integer override = WORKING_DAYS_OVERRIDE.get();
+        if (override != null && override > 0) {
+            return override;
+        }
+        return getWorkingDaysForPeriod(payrollRunStartDate);
     }
 
     public static BigDecimal roundToTwoDecimalPlaces(BigDecimal input){

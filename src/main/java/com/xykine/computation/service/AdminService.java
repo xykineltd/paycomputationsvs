@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -167,6 +168,39 @@ public class AdminService {
                 )
                 .bodyToMono(new ParameterizedTypeReference<Map<String, EmployeeDetail>>() {})
                 .block(); // keep blocking since method returns Map; consider returning Mono instead
+    }
+
+    /**
+     * After a successful Final Pay run, lock recipients so they cannot be paid again.
+     */
+    public void lockEmployeesAfterFinalPay(Set<String> employeeIds, String token) {
+        if (employeeIds == null || employeeIds.isEmpty()) {
+            return;
+        }
+        Map<String, Object> body = new HashMap<>();
+        body.put("employeeIds", new ArrayList<>(employeeIds));
+        body.put("employeeIsLocked", true);
+        body.put("reason", "Final Pay");
+
+        try {
+            Map<String, Object> result = webClient
+                    .post()
+                    .uri("admin/employee/lock-status/bulk")
+                    .header(HttpHeaders.AUTHORIZATION, token)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(body)
+                    .retrieve()
+                    .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
+                    .block();
+            LOGGER.info("Final Pay lock update result: {}", result);
+        } catch (Exception ex) {
+            LOGGER.error(
+                    "Failed to lock {} Final Pay employee(s): {}. Lock them manually so they are not paid again.",
+                    employeeIds.size(),
+                    ex.getMessage(),
+                    ex
+            );
+        }
     }
 
     public ApplyExcelReconciliationResponse applyExcelValues(

@@ -75,11 +75,22 @@ public class ComputeService {
         }
 
         List<CompletableFuture<List<PaymentInfo>>> futures = new ArrayList<>();
+        Integer workingDaysOverride = ComputationUtils.getWorkingDaysOverride();
+        boolean customPay = ComputationUtils.isCustomPay();
 
         futures.addAll(
                 chunks.stream()
                         //.map(chunk -> addAdditionalPaymentsIfApplicable(chunk))
-                        .map(finalChunk -> CompletableFuture.supplyAsync(() -> processReport(finalChunk)))
+                        .map(finalChunk -> CompletableFuture.supplyAsync(() -> {
+                            try {
+                                ComputationUtils.setWorkingDaysOverride(workingDaysOverride);
+                                ComputationUtils.setCustomPay(customPay);
+                                return processReport(finalChunk);
+                            } finally {
+                                ComputationUtils.clearWorkingDaysOverride();
+                                ComputationUtils.clearCustomPay();
+                            }
+                        }))
                         .toList()
         );
 

@@ -66,10 +66,47 @@ public class PaymentCalculatorImpl implements PaymentCalculator{
                         ? paymentInfo.getPaymentSettings()
                         : new HashSet<>();
 
+        if (ComputationUtils.isCustomPay() && !paymentSettingsFromPaymentDistributionList.isEmpty()) {
+            // New hires often have hire-date-prorated setting amounts. Custom Pay must
+            // start from full annual basic, then prorate by the selected period.
+            paymentInfo.setPaymentSettings(new HashSet<>(paymentSettingsFromPaymentDistributionList));
+            return paymentInfo;
+        }
+
         // TODO we need to throw proper error if the payment settings is not present for both custom or the company metadata payment distribution
         originalSettingsList.addAll(paymentSettingsFromPaymentDistributionList);
         paymentInfo.setPaymentSettings(originalSettingsList);
+        if (ComputationUtils.isCustomPay()) {
+            scaleSettingsToAnnualBasic(paymentInfo);
+        }
         return paymentInfo;
+    }
+
+    private void scaleSettingsToAnnualBasic(PaymentInfo paymentInfo) {
+        if (paymentInfo.getPaymentSettings() == null || paymentInfo.getBasicSalary() == null) {
+            return;
+        }
+        BigDecimal targetBasic = paymentInfo.getBasicSalary();
+        if (targetBasic.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        BigDecimal currentBasic = paymentInfo.getPaymentSettings().stream()
+                .filter(setting -> setting.getType() == PaymentTypeEnum.BASIC_SALARY_ANNUAL
+                        || (setting.getName() != null && setting.getName().toLowerCase().contains("basic")))
+                .map(PaymentSettingsResponse::getValue)
+                .filter(Objects::nonNull)
+                .filter(value -> value.compareTo(BigDecimal.ZERO) > 0)
+                .findFirst()
+                .orElse(null);
+        if (currentBasic == null || currentBasic.compareTo(targetBasic) == 0) {
+            return;
+        }
+        BigDecimal ratio = targetBasic.divide(currentBasic, 10, RoundingMode.HALF_UP);
+        paymentInfo.getPaymentSettings().forEach(setting -> {
+            if (setting.getValue() != null) {
+                setting.setValue(setting.getValue().multiply(ratio).setScale(2, RoundingMode.HALF_UP));
+            }
+        });
     }
 
     @Override
@@ -551,6 +588,13 @@ private PaymentInfo computeNonTaxableIncomeExemptForOffCycle(PaymentInfo payment
             }
         } else {
             Set<PaymentSettingsResponse> allowance = getAllowanceForEmployee(paymentInfo);
+            LOGGER.info(
+                    "Prorating earnings employee={} unpaidDays={} start={} customPay={}",
+                    paymentInfo.getEmployeeID(),
+                    numberOfUnpaidDays,
+                    paymentInfo.getStartDate(),
+                    ComputationUtils.isCustomPay()
+            );
             allowance.stream()
                     .filter(entry -> !isSeparatedNetEarning(entry.getName()))
                     .map(entry ->

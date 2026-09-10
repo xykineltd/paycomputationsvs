@@ -71,6 +71,8 @@ public class OperationUtils {
         });
 
         sessionCalculationObject.setComputationConstants(computationConstants);
+        ComputationUtils.clearWorkingDaysOverride();
+        ComputationUtils.setCustomPay(paymentRequest != null && paymentRequest.isCustomPay());
         return sessionCalculationObject;
     }
 

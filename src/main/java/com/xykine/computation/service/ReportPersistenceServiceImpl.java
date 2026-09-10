@@ -98,7 +98,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 if (distinctEmployees > requested
                         || (distinctEmployees == 0 && paymentInfoList.size() > requested * 24)) {
                     throw new PayrollValidationException(
-                            "Final Pay was requested for " + requested
+                            "Subset payroll was requested for " + requested
                                     + " employee(s), but payment info was generated for "
                                     + Math.max(distinctEmployees, paymentInfoList.size())
                                     + " rows. Restart admin-svc so selected employee IDs are used.");
@@ -177,6 +177,10 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 startPayrollWorkflow(payrollReportSummary, paymentRequest, paymentInfoList.size(), authorizationHeader);
             }
 
+            if (!paymentRequest.isPayrollSimulation() && isFinalPayRun(paymentRequest)) {
+                lockFinalPayEmployees(paymentRequest, authorizationHeader);
+            }
+
             jobStatusStore.updateJob(jobId, "COMPLETED", "Payroll computation complete", reportResponse.getReportId());
             progressCallback.accept(jobStatusStore);
 
@@ -188,7 +192,27 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             LOGGER.error("Exception occurred while computing payroll for companyId: {}", paymentRequest.getCompanyId(), e);
             jobStatusStore.updateJob(jobId, "FAILED", e.getMessage(), "");
             progressCallback.accept(jobStatusStore);
+        } finally {
+            ComputationUtils.clearWorkingDaysOverride();
+            ComputationUtils.clearCustomPay();
         }
+    }
+
+    private void lockFinalPayEmployees(PaymentInfoRequest paymentRequest, String authorizationHeader) {
+        Set<String> ids = paymentRequest.getEmployeeId();
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        LOGGER.info("Locking {} Final Pay employee(s) so they cannot be paid again", ids.size());
+        adminService.lockEmployeesAfterFinalPay(ids, authorizationHeader);
+    }
+
+    private static boolean isFinalPayRun(PaymentInfoRequest paymentRequest) {
+        return paymentRequest != null
+                && !paymentRequest.isOffCycle()
+                && !paymentRequest.isCustomPay()
+                && paymentRequest.getEmployeeId() != null
+                && !paymentRequest.getEmployeeId().isEmpty();
     }
 
     private void startPayrollWorkflow(PayrollReportSummary payrollReportSummary,
@@ -214,6 +238,9 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                                              PaymentInfoRequest paymentRequest) {
         if (payrollReportSummary.isOffCycle()) {
             return "OffCycle";
+        }
+        if (paymentRequest.isCustomPay()) {
+            return "Custom Pay";
         }
         if (paymentRequest.getEmployeeId() != null && !paymentRequest.getEmployeeId().isEmpty()) {
             return "Final Pay";
