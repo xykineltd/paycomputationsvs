@@ -45,12 +45,13 @@ public class Compute extends TextWebSocketHandler {
 
         computeService.ensurePayrollConfiguration(paymentRequest.getCompanyId());
 
-        if (!paymentRequest.isPayrollSimulation() || !paymentRequest.isOffCycle()) {
-            computeService.validatePayrollIsNotCompleted(
-                    String.valueOf(paymentRequest.getStart()),
-                    paymentRequest.getCompanyId()
-            );
-        }
+        //TODO fixed this logic properly then uncomment, we could not process offcycle Final pay due to startDate equal to final pay start date
+//        if (!paymentRequest.isPayrollSimulation() || !paymentRequest.isOffCycle()) {
+//            computeService.validatePayrollIsNotCompleted(
+//                    String.valueOf(paymentRequest.getStart()),
+//                    paymentRequest.getCompanyId()
+//            );
+//        }
 
         String jobId = UUID.randomUUID().toString();
         jobStatusStore.createJob(jobId);
