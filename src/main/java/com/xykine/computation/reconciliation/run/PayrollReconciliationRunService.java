@@ -246,6 +246,19 @@ public class PayrollReconciliationRunService {
             );
         }
 
+        if (applied != null && applied.getCellsUpdated() > 0 && applied.getFieldsApplied() != null) {
+            Map<String, List<String>> history = run.getUpdatedSystemFields();
+            if (history == null) history = new LinkedHashMap<>();
+            List<String> fields = new ArrayList<>(history.getOrDefault(employeeCode, List.of()));
+            for (String field : applied.getFieldsApplied()) {
+                if (field != null && !fields.contains(field)) fields.add(field);
+            }
+            history.put(employeeCode, fields);
+            run.setUpdatedSystemFields(history);
+            // Persist the successful writes before refreshing the comparison.
+            tempRepository.save(run);
+        }
+
         diffRepository.deleteByReconciliationIdAndStage(reconciliationId, "input");
         StageRunResponse rerun = executeStage(run, mapping, allRows, "input", bearerToken);
 
@@ -366,18 +379,23 @@ public class PayrollReconciliationRunService {
                         systemRow, col.getExcelHeader(), col.getSystemPath());
                 boolean equal = ReconciliationValueSupport.valuesEqual(
                         excelVal, systemVal, col.getValueType(), mapping.getTolerances());
-                if (equal) {
+                boolean updatedSystem = "input".equals(stage)
+                        && run.getUpdatedSystemFields() != null
+                        && run.getUpdatedSystemFields().getOrDefault(code, List.of()).stream()
+                        .anyMatch(field -> field.equalsIgnoreCase(col.getExcelHeader()));
+                if (equal && !updatedSystem) {
                     continue;
                 }
-                employeeMismatch = true;
+                employeeMismatch |= !equal;
                 String severity = col.getSeverity() != null ? col.getSeverity() : "soft";
-                if ("hard".equalsIgnoreCase(severity)) {
+                if (!equal && "hard".equalsIgnoreCase(severity)) {
                     hardFailures++;
                 }
                 diffs.add(PayrollReconciliationDiff.builder()
                         .reconciliationId(run.getId())
                         .stage(stage)
-                        .status("MISMATCH")
+                        .status(equal ? "MATCH" : "MISMATCH")
+                        .updatedSystem(updatedSystem)
                         .employeeCode(code)
                         .employeeName(employeeName)
                         .field(col.getExcelHeader())
@@ -427,7 +445,7 @@ public class PayrollReconciliationRunService {
                 .excelOnly(excelOnly)
                 .systemOnly(systemOnly)
                 .hardFailures(hardFailures)
-                .totalDiffRows(diffs.size())
+                .totalDiffRows(diffs.stream().filter(diff -> !"MATCH".equals(diff.getStatus())).count())
                 .build();
 
         boolean passed = hardFailures == 0;

@@ -31,6 +31,7 @@ public class PayrollReconciliationDiff {
     private String employeeCode;
     private String employeeName;
     private String field;
+    private boolean updatedSystem;
     private Object excelValue;
     private Object systemValue;
     private String valueType;

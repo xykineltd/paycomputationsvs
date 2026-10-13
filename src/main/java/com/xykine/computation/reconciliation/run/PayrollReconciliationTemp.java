@@ -56,6 +56,9 @@ public class PayrollReconciliationTemp {
     private StageAnalytics inputAnalytics;
     private StageAnalytics outcomeAnalytics;
 
+    /** Applied Excel headers by employee, retained across input comparisons. */
+    private Map<String, List<String>> updatedSystemFields;
+
     private String errorMessage;
 
     @CreatedDate
