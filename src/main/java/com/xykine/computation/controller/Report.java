@@ -172,6 +172,17 @@ public class Report {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    /**
+     * Cheap readiness check for report-detail persistence.
+     * Returns only counts — does not load or deserialize report blobs.
+     */
+    @GetMapping("/paymentDetails/ready-status")
+    public ResponseEntity<Map<String, Object>> getPaymentDetailsReadyStatus(
+            @RequestParam String id,
+            @RequestParam String companyId) {
+        return ResponseEntity.ok(reportPersistenceService.getPaymentDetailsReadyStatus(id, companyId));
+    }
+
     @GetMapping("/paymentDetails/get-by-employee/by-end-dates")
     public ResponseEntity<?> getPaymentDetailsByEmployeeByDates(
             @RequestParam() String employeeId,

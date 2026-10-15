@@ -30,6 +30,8 @@ public interface ReportPersistenceService {
 //    boolean deleteReport(UpdateReportRequest updateReportRequest, String token);
 //    CompletePayrollResponse completeReport(CompletePayrollRequest updateReportRequest);
     Map<String, Object> getPaymentDetails(String id, String companyId, String fullName, int page, int size);
+    /** Lightweight readiness probe: detail count vs summary employee count (no blob hydration). */
+    Map<String, Object> getPaymentDetailsReadyStatus(String summaryId, String companyId);
     ReportResponse getPaymentDetailsByEmployee(String employeeId, String startDate, String companyId);
     List<ReportAnalytics> getReportAnalytics(String companyId, int page, int size);
     YTDReport getYTDReport(String employeeId, String companyId);

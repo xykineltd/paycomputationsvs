@@ -956,6 +956,38 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     }
 
     @Override
+    public Map<String, Object> getPaymentDetailsReadyStatus(String summaryId, String companyId) {
+        Map<String, Object> response = new HashMap<>();
+        if (summaryId == null || summaryId.isBlank() || companyId == null || companyId.isBlank()) {
+            response.put("ready", false);
+            response.put("saved", 0L);
+            response.put("expected", 0L);
+            return response;
+        }
+
+        UUID id;
+        try {
+            id = UUID.fromString(summaryId);
+        } catch (IllegalArgumentException ex) {
+            response.put("ready", false);
+            response.put("saved", 0L);
+            response.put("expected", 0L);
+            return response;
+        }
+
+        PayrollReportSummary summary =
+                payrollReportSummaryRepo.findPayrollReportSummaryByIdAndCompanyId(id, companyId).orElse(null);
+        long expected = summary != null ? summary.getTotalNumberOfEmployees() : 0L;
+        long saved = payrollReportDetailRepo.countBySummaryId(summaryId);
+        boolean ready = expected > 0 && saved >= expected;
+
+        response.put("ready", ready);
+        response.put("saved", saved);
+        response.put("expected", expected);
+        return response;
+    }
+
+    @Override
     public Map<String, Object> getPaymentDetailForDates(String employeeId, String companyId, List<String> endDates, int page, int size) {
         Pageable paging = PageRequest.of(page, size);
         Page<PayrollReportDetail> payrollReportDetailPage = payrollReportDetailRepo
