@@ -1,6 +1,7 @@
 package com.xykine.computation.service;
 
-import com.xykine.computation.exceptions.ApiException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xykine.computation.exceptions.PayrollValidationException;
 import com.xykine.computation.request.DeleteStageInstanceRequest;
 import com.xykine.computation.request.StartWorkflowRequest;
@@ -21,9 +22,11 @@ public class WorkflowService {
     private static final Logger LOGGER = LoggerFactory.getLogger(AdminService.class);
 
     private final WebClient webClient;
+    private final ObjectMapper objectMapper;
 
-    public WorkflowService(@Qualifier("workflowWebClient") WebClient webClient) {
+    public WorkflowService(@Qualifier("workflowWebClient") WebClient webClient, ObjectMapper objectMapper) {
         this.webClient = webClient;
+        this.objectMapper = objectMapper;
     }
 
 
@@ -35,23 +38,26 @@ public class WorkflowService {
                 .exchangeToMono(response -> {
                     if (response.statusCode().is2xxSuccessful()) {
                         LOGGER.info("Workflow started successfully");
-                        return Mono.empty(); // nothing to return on success
-                    } else {
-                        // Extract error message and throw a custom exception
-                        return response.bodyToMono(ApiException.class)
-                                .flatMap(errorBody -> {
-                                    LOGGER.error("Non-successful response: {}", response.statusCode());
-                                    LOGGER.error("Error Message: {}", errorBody.getErrorMessage());
-                                    LOGGER.error("Error Code: {}", errorBody.getErrorCode());
-                                    return Mono.error(new PayrollValidationException(errorBody.getErrorMessage()));
-                                });
+                        return Mono.empty();
                     }
+                    return response.bodyToMono(String.class)
+                            .defaultIfEmpty("")
+                            .flatMap(body -> {
+                                String message = extractErrorMessage(body, "Failed to start payroll workflow");
+                                LOGGER.error(
+                                        "Workflow start failed status={} payrollId={} body={}",
+                                        response.statusCode(),
+                                        startWorkflowRequest.getPayrollId(),
+                                        body
+                                );
+                                return Mono.error(new PayrollValidationException(message));
+                            });
                 })
                 .onErrorResume(WebClientResponseException.class, ex -> {
                     LOGGER.error("WebClient call failed: {}", ex.getMessage());
                     return Mono.error(new PayrollValidationException(ex.getMessage()));
                 })
-                .block(); // Block to make the call synchronous
+                .block();
     }
 
     public void deleteWorkflowByReportId(DeleteStageInstanceRequest request, String token) {
@@ -62,24 +68,73 @@ public class WorkflowService {
                 .exchangeToMono(response -> {
                     if (response.statusCode().is2xxSuccessful()) {
                         LOGGER.info("Workflow deleted successfully");
-                        return Mono.empty(); // nothing to return on success
-                    } else {
-                        // Extract error message and throw a custom exception
-                        return response.bodyToMono(ApiException.class)
-                                .flatMap(errorBody -> {
-                                    LOGGER.error("Non-successful response: {}", response.statusCode());
-                                    LOGGER.error("Error Message: {}", errorBody.getErrorMessage());
-                                    LOGGER.error("Error Code: {}", errorBody.getErrorCode());
-                                    return Mono.error(new PayrollValidationException(errorBody.getErrorMessage()));
-                                });
+                        return Mono.empty();
                     }
+                    return response.bodyToMono(String.class)
+                            .defaultIfEmpty("")
+                            .flatMap(body -> {
+                                String message = extractErrorMessage(body, "Failed to delete payroll workflow");
+                                LOGGER.error(
+                                        "Workflow delete failed status={} reportId={} body={}",
+                                        response.statusCode(),
+                                        request.getReportId(),
+                                        body
+                                );
+                                return Mono.error(new PayrollValidationException(message));
+                            });
                 })
                 .onErrorResume(WebClientResponseException.class, ex -> {
                     LOGGER.error("WebClient call failed: {}", ex.getMessage());
                     return Mono.error(new PayrollValidationException(ex.getMessage()));
                 })
-                .block(); // Block to make the call synchronous
+                .block();
     }
 
+    private String extractErrorMessage(String body, String fallback) {
+        if (body == null || body.isBlank()) {
+            return fallback;
+        }
+        try {
+            JsonNode root = objectMapper.readTree(body);
+            String message = textOrNull(root, "message");
+            if (message == null) {
+                message = textOrNull(root, "errorMessage");
+            }
+            if (message == null) {
+                message = textOrNull(root, "error");
+            }
+            JsonNode details = root.get("details");
+            if (details != null && details.isArray() && details.size() > 0) {
+                StringBuilder detailText = new StringBuilder();
+                details.forEach(d -> {
+                    if (d != null && !d.isNull()) {
+                        if (detailText.length() > 0) {
+                            detailText.append("; ");
+                        }
+                        detailText.append(d.asText());
+                    }
+                });
+                if (detailText.length() > 0) {
+                    message = (message == null || message.isBlank())
+                            ? detailText.toString()
+                            : message + " (" + detailText + ")";
+                }
+            }
+            if (message != null && !message.isBlank()) {
+                return message;
+            }
+        } catch (Exception ignored) {
+            // fall through to raw body
+        }
+        return body.length() > 500 ? body.substring(0, 500) : body;
+    }
 
+    private static String textOrNull(JsonNode root, String field) {
+        JsonNode node = root.get(field);
+        if (node == null || node.isNull()) {
+            return null;
+        }
+        String value = node.asText();
+        return value == null || value.isBlank() ? null : value;
+    }
 }

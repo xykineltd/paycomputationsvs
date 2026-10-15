@@ -17,6 +17,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.xykine.payroll.model.*;
@@ -64,6 +66,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     private final PaymentElementGLMappingRepository paymentElementGLMappingRepository;
     private final PayrollGLReportRepository payrollGLReportRepository;
     private final PaymentElementGLMappingRepository paymentElementGLMappingCustomRepository;
+    private final JwtDecoder jwtDecoder;
 //    private final PayrollReportHydrateRepo payrollReportSearchRepo;
 
     @Autowired
@@ -169,7 +172,9 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             computeResponse = OperationUtils.refineResponse(computeResponse, sessionCalculationObject, paymentRequest);
             ReportResponse reportResponse = serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
 
-            if (!paymentRequest.isPayrollSimulation() && (paymentRequest.isOffCycle() || employeeSubsetRun)) {
+            // Approvals cards come from workflow stage instances. Any real (non-simulation)
+            // submit must start a workflow — not only off-cycle / employee-subset runs.
+            if (!paymentRequest.isPayrollSimulation()) {
                 PayrollReportSummary payrollReportSummary = payrollReportSummaryRepo
                         .findPayrollReportSummaryById(UUID.fromString(reportResponse.getReportId()));
                 payrollReportSummary.setPayrollSimulation(false);
@@ -279,11 +284,12 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                                       PaymentInfoRequest paymentRequest,
                                       int numberOfPays,
                                       String authorizationHeader) {
+        String userId = resolveInitiatorUserId(authorizationHeader);
         StartWorkflowRequest startWorkflowRequest = new StartWorkflowRequest();
         startWorkflowRequest.setEntity("PAYROLL");
         startWorkflowRequest.setPayPeriod(formatToMonthYear(payrollReportSummary.getStartDate()));
         startWorkflowRequest.setPayrollId(payrollReportSummary.getId().toString());
-        startWorkflowRequest.setUserId(AuthUtility.getCurrentUser());
+        startWorkflowRequest.setUserId(userId);
         startWorkflowRequest.setCompanyId(paymentRequest.getCompanyId());
         startWorkflowRequest.setPayrollType(resolvePayrollType(payrollReportSummary, paymentRequest));
         startWorkflowRequest.setNumberOfPays(numberOfPays);
@@ -291,7 +297,39 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         // Display total gross on the payroll card instead of net pay
         startWorkflowRequest.setNetPay(ReportUtils.transform(payrollReportSummary).getSummary().getSummary().get(MapKeys.TOTAL_GROSS_PAY));
         startWorkflowRequest.setCreatedBy(payrollReportSummary.getCreatedBy());
+        LOGGER.info(
+                "Starting payroll workflow payrollId={} companyId={} userId={} payrollType={}",
+                startWorkflowRequest.getPayrollId(),
+                startWorkflowRequest.getCompanyId(),
+                userId,
+                startWorkflowRequest.getPayrollType()
+        );
         workflowService.startWorkflow(startWorkflowRequest, authorizationHeader);
+    }
+
+    /**
+     * Payroll compute runs on {@code @Async} threads where SecurityContext is usually empty.
+     * Prefer the request JWT (always forwarded) over AuthUtility.
+     */
+    private String resolveInitiatorUserId(String authorizationHeader) {
+        String fromContext = AuthUtility.getCurrentUser();
+        if (fromContext != null && !fromContext.isBlank()) {
+            return fromContext;
+        }
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            try {
+                Jwt jwt = jwtDecoder.decode(authorizationHeader.substring(7));
+                String employeeId = jwt.getClaimAsString("EmployeeID");
+                if (employeeId != null && !employeeId.isBlank()) {
+                    return employeeId;
+                }
+            } catch (Exception e) {
+                LOGGER.warn("Could not extract EmployeeID from Authorization token for workflow start", e);
+            }
+        }
+        throw new PayrollValidationException(
+                "Cannot start payroll workflow: authenticated user id is missing"
+        );
     }
 
     private static String resolvePayrollType(PayrollReportSummary payrollReportSummary,
