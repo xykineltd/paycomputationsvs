@@ -13,9 +13,21 @@ import java.util.UUID;
 public interface PayrollReportSummaryRepo extends MongoRepository<PayrollReportSummary, UUID> {
 
     PayrollReportSummary findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(String startDate, String companyId, boolean simulation);
+
+    /**
+     * All simulated (or non-simulated) summaries for a period + payroll type.
+     * Regular and off-cycle are separate ({@code offCycle} flag).
+     */
+    List<PayrollReportSummary> findAllByStartDateAndCompanyIdAndPayrollSimulationAndOffCycle(
+            String startDate, String companyId, boolean simulation, boolean offCycle);
+
     Page<PayrollReportSummary> findPayrollReportSummaryByCompanyIdAndPayrollSimulationOrderByCreatedDateDesc(String companyId, boolean simulation, Pageable pageable);
     Page<PayrollReportSummary> findPayrollReportSummaryByCompanyIdOrderByCreatedDateDesc(String companyId, Pageable pageable);
     PayrollReportSummary findPayrollReportSummaryByStartDateAndCompanyIdAndOffCycleIdAndPayrollSimulation(String startDate, String companyId, String offCycleId, boolean simulation);
+
+    List<PayrollReportSummary> findAllByStartDateAndCompanyIdAndOffCycleIdAndPayrollSimulation(
+            String startDate, String companyId, String offCycleId, boolean simulation);
+
     List<PayrollReportSummary> findAllByCompanyIdAndPayrollSimulationAndOffCycle(String companyId, boolean simulation, boolean offCycle);
     Page<PayrollReportSummary> findAllByCompanyIdAndStartDateBetweenAndOffCycle(String companyId, String startDateLow, String startDateHigh, boolean offCycle, Pageable pageable);
     Page<PayrollReportSummary> findAllByCompanyIdAndStartDateBetween(String companyId, String startDateLow, String startDateHigh, Pageable pageable);

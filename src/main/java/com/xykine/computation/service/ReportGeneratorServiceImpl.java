@@ -40,7 +40,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -1006,6 +1005,25 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
                 ));
     }
 
+    private static final Set<String> BASE_DEDUCTION_KEYS = Set.of(
+            "Total Deduction",
+            "Total PAYE",
+            "Pay-As-You-Earn (PAYE)",
+            "PAYE",
+            "National Housing Fund",
+            "Pension Fund",
+            "Employee Pension Contribution",
+            "Voluntary Pension Contribution",
+            "Employer Pension Contribution",
+            "Net Pay",
+            "NETPAY"
+    );
+
+    /**
+     * Extra deduction columns for detail Excel: every non-statutory deduction line
+     * (wage-type net deductions, loans, custom lines). Previously only loan
+     * descriptions were included, which dropped DEVICE DAMAGE / STAFF LOANS / etc.
+     */
     private Map<String, BigDecimal> getRemainingDeductions(
             Map<String, BigDecimal> deductionMap,
             List<String> deductionComponents) {
@@ -1016,12 +1034,26 @@ public class ReportGeneratorServiceImpl implements ReportGeneratorService {
 
         return deductionMap.entrySet().stream()
                 .filter(e -> e.getKey() != null)
-                .filter(e -> deductionComponents.contains(e.getKey().trim()))  // not in base list
                 .filter(e -> e.getValue() != null)
+                .filter(e -> !isBaseDeductionKey(e.getKey().trim()))
                 .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        Map.Entry::getValue
+                        e -> e.getKey().trim(),
+                        Map.Entry::getValue,
+                        (a, b) -> a,
+                        LinkedHashMap::new
                 ));
+    }
+
+    private static boolean isBaseDeductionKey(String key) {
+        if (key == null) {
+            return true;
+        }
+        for (String base : BASE_DEDUCTION_KEYS) {
+            if (base.equalsIgnoreCase(key)) {
+                return true;
+            }
+        }
+        return false;
     }
 
 

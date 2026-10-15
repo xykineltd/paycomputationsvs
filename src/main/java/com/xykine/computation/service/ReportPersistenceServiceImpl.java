@@ -104,12 +104,14 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                                     + " rows. Restart admin-svc so selected employee IDs are used.");
                 }
             }
-            PayrollReportSummary simulatedSummary = payrollReportSummaryRepo
-                    .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(String.valueOf(paymentRequest.getStart()), paymentRequest.getCompanyId(), true);
-            boolean matchingSimulation = simulatedSummary != null
-                    && simulatedSummary.isOffCycle() == paymentRequest.isOffCycle()
-                    && !employeeSubsetRun;
+            List<PayrollReportSummary> simulatedSummaries = findMatchingSimulatedSummaries(paymentRequest);
+            boolean matchingSimulation = !simulatedSummaries.isEmpty() && !employeeSubsetRun;
+
             if (matchingSimulation && !paymentRequest.isPayrollSimulation()) {
+                PayrollReportSummary simulatedSummary = pickLatestSummary(simulatedSummaries);
+                // Collapse duplicate sims for this period/type so only one row remains.
+                deleteSimulatedSummariesExcept(simulatedSummaries, simulatedSummary.getId());
+
                 jobStatusStore.updateJob(jobId, "COMPLETED", "Payroll computation complete", String.valueOf(simulatedSummary.getId()));
                 progressCallback.accept(jobStatusStore);
                 PayrollReportSummary payrollReportSummary = payrollReportSummaryRepo.findPayrollReportSummaryById(UUID.fromString(String.valueOf(simulatedSummary.getId())));
@@ -124,8 +126,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             }
 
             if (matchingSimulation && paymentRequest.isPayrollSimulation()) {
-                payrollReportSummaryRepo.deleteById(simulatedSummary.getId());
-                payrollReportDetailRepo.deleteAllBySummaryId(simulatedSummary.getId().toString());
+                // Re-simulate: replace all existing sims for this period + payroll type (regular XOR off-cycle).
+                deleteSimulatedSummaries(simulatedSummaries);
             }
 
             EmployeeFilterRequest employeeFilterRequest = new EmployeeFilterRequest();
@@ -196,6 +198,64 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             ComputationUtils.clearWorkingDaysOverride();
             ComputationUtils.clearCustomPay();
         }
+    }
+
+    /**
+     * Simulated drafts are scoped by period + payroll type.
+     * Regular and off-cycle each keep their own row; off-cycle is further keyed by offCycleId when present.
+     */
+    private List<PayrollReportSummary> findMatchingSimulatedSummaries(PaymentInfoRequest paymentRequest) {
+        String startDate = String.valueOf(paymentRequest.getStart());
+        String companyId = paymentRequest.getCompanyId();
+        List<PayrollReportSummary> found;
+
+        if (paymentRequest.isOffCycle()
+                && paymentRequest.getOffCycleID() != null
+                && !paymentRequest.getOffCycleID().isBlank()) {
+            found = payrollReportSummaryRepo
+                    .findAllByStartDateAndCompanyIdAndOffCycleIdAndPayrollSimulation(
+                            startDate, companyId, paymentRequest.getOffCycleID(), true);
+        } else {
+            found = payrollReportSummaryRepo
+                    .findAllByStartDateAndCompanyIdAndPayrollSimulationAndOffCycle(
+                            startDate, companyId, true, paymentRequest.isOffCycle());
+        }
+
+        return found == null ? List.of() : found;
+    }
+
+    private static PayrollReportSummary pickLatestSummary(List<PayrollReportSummary> summaries) {
+        return summaries.stream()
+                .filter(Objects::nonNull)
+                .max(Comparator.comparing(
+                        PayrollReportSummary::getCreatedDate,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
+                .orElse(summaries.get(0));
+    }
+
+    private void deleteSimulatedSummaries(List<PayrollReportSummary> summaries) {
+        if (summaries == null || summaries.isEmpty()) {
+            return;
+        }
+        for (PayrollReportSummary summary : summaries) {
+            if (summary == null || summary.getId() == null) {
+                continue;
+            }
+            payrollReportSummaryRepo.deleteById(summary.getId());
+            payrollReportDetailRepo.deleteAllBySummaryId(summary.getId().toString());
+        }
+        LOGGER.info("Deleted {} simulated payroll summary row(s) before re-simulation", summaries.size());
+    }
+
+    private void deleteSimulatedSummariesExcept(List<PayrollReportSummary> summaries, UUID keepId) {
+        if (summaries == null || summaries.isEmpty() || keepId == null) {
+            return;
+        }
+        List<PayrollReportSummary> extras = summaries.stream()
+                .filter(Objects::nonNull)
+                .filter(s -> s.getId() != null && !keepId.equals(s.getId()))
+                .toList();
+        deleteSimulatedSummaries(extras);
     }
 
     private void lockFinalPayEmployees(PaymentInfoRequest paymentRequest, String authorizationHeader) {
