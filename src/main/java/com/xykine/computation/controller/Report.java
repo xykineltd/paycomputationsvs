@@ -51,7 +51,16 @@ public class Report {
 
     @PostMapping("/by-reportId")
     public ReportResponse getReport( @RequestBody RetrieveSummaryElementRequest request) {
-        return reportPersistenceService.getPayRollReport(UUID.fromString(request.getReportId()));
+        if (request.getReportId() == null || request.getReportId().isBlank()
+                || "undefined".equalsIgnoreCase(request.getReportId())
+                || "null".equalsIgnoreCase(request.getReportId())) {
+            throw new PayrollValidationException("reportId is required");
+        }
+        try {
+            return reportPersistenceService.getPayRollReport(UUID.fromString(request.getReportId()));
+        } catch (IllegalArgumentException ex) {
+            throw new PayrollValidationException("Invalid reportId: " + request.getReportId());
+        }
     }
 
     @PostMapping("/report-summary-by-filter")
@@ -168,6 +177,11 @@ public class Report {
             @RequestParam(defaultValue = "") String fullName,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "3") int size) {
+        if (id == null || id.isBlank()
+                || "undefined".equalsIgnoreCase(id)
+                || "null".equalsIgnoreCase(id)) {
+            throw new PayrollValidationException("report id is required");
+        }
         Map<String, Object> response = reportPersistenceService.getPaymentDetails(id, companyId, fullName, page, size);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

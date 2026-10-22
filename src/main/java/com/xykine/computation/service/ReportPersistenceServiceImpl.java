@@ -16,6 +16,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -67,6 +70,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     private final PayrollGLReportRepository payrollGLReportRepository;
     private final PaymentElementGLMappingRepository paymentElementGLMappingCustomRepository;
     private final JwtDecoder jwtDecoder;
+    private final MongoTemplate mongoTemplate;
 //    private final PayrollReportHydrateRepo payrollReportSearchRepo;
 
     @Autowired
@@ -639,19 +643,28 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         return getPayRollReport(paymentComputeResponse.getId());
     }
 
+    /**
+     * One document only — do not load all COMPLETED summaries (full report blobs) into memory.
+     * Legacy rows with no payrollRunType are treated as Regular.
+     */
     private PayrollReportSummary findLatestCompletedRegularSummary(String companyId) {
-        return payrollReportSummaryRepo
-                .findAllByPayrollStatusAndCompanyIdOrderByCreatedDateAsc(PayrollStatus.COMPLETED, companyId)
-                .stream()
-                .filter(s -> !s.isOffCycle())
-                .filter(s -> PayrollRunType.isRegular(s.getPayrollRunType()))
-                .max(Comparator.comparing(
-                        PayrollReportSummary::getEndDate,
-                        Comparator.nullsLast(Comparator.naturalOrder()))
-                        .thenComparing(
-                                PayrollReportSummary::getCreatedDate,
-                                Comparator.nullsLast(Comparator.naturalOrder())))
-                .orElse(null);
+        if (companyId == null || companyId.isBlank()) {
+            return null;
+        }
+        Criteria regularOrLegacy = new Criteria().orOperator(
+                Criteria.where("payrollRunType").is(PayrollRunType.REGULAR),
+                Criteria.where("payrollRunType").exists(false),
+                Criteria.where("payrollRunType").is(null)
+        );
+        Query query = new Query(new Criteria().andOperator(
+                Criteria.where("companyId").is(companyId),
+                Criteria.where("payrollStatus").is(PayrollStatus.COMPLETED),
+                Criteria.where("offCycle").is(false),
+                regularOrLegacy
+        ));
+        query.with(Sort.by(Sort.Direction.DESC, "endDate", "createdDate"));
+        query.limit(1);
+        return mongoTemplate.findOne(query, PayrollReportSummary.class);
     }
 
     private static ConcurrentHashMap<String, Set<SummaryDetail>> processSummaryDetailsVariance(
