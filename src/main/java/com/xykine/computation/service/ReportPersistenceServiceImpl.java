@@ -120,6 +120,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 PayrollReportSummary payrollReportSummary = payrollReportSummaryRepo.findPayrollReportSummaryById(UUID.fromString(String.valueOf(simulatedSummary.getId())));
                 payrollReportSummary.setPayrollSimulation(false);
                 payrollReportSummary.setPayrollStatus(PayrollStatus.PENDING);
+                payrollReportSummary.setPayrollRunType(resolvePayrollRunType(paymentRequest));
                 payrollReportSummaryRepo.save(payrollReportSummary);
 
                 payrollAsyncService.updateDetailStatusToPendingAsync(String.valueOf(simulatedSummary.getId()));
@@ -170,7 +171,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
             LOGGER.info("Total computePayroll processing time--------> {} ms", endTimeC - startTimeC);
 
             computeResponse = OperationUtils.refineResponse(computeResponse, sessionCalculationObject, paymentRequest);
-            ReportResponse reportResponse = serializeAndSaveReport(computeResponse, paymentRequest.getCompanyId());
+            ReportResponse reportResponse = serializeAndSaveReport(computeResponse, paymentRequest);
 
             // Approvals cards come from workflow stage instances. Any real (non-simulation)
             // submit must start a workflow — not only off-cycle / employee-subset runs.
@@ -179,6 +180,9 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                         .findPayrollReportSummaryById(UUID.fromString(reportResponse.getReportId()));
                 payrollReportSummary.setPayrollSimulation(false);
                 payrollReportSummary.setPayrollStatus(PayrollStatus.PENDING);
+                if (payrollReportSummary.getPayrollRunType() == null) {
+                    payrollReportSummary.setPayrollRunType(resolvePayrollRunType(paymentRequest));
+                }
                 payrollReportSummaryRepo.save(payrollReportSummary);
                 payrollAsyncService.updateDetailStatusToPendingAsync(reportResponse.getReportId());
                 startPayrollWorkflow(payrollReportSummary, paymentRequest, paymentInfoList.size(), authorizationHeader);
@@ -213,6 +217,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         String startDate = String.valueOf(paymentRequest.getStart());
         String companyId = paymentRequest.getCompanyId();
         List<PayrollReportSummary> found;
+        PayrollRunType requestedType = resolvePayrollRunType(paymentRequest);
 
         if (paymentRequest.isOffCycle()
                 && paymentRequest.getOffCycleID() != null
@@ -226,7 +231,19 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                             startDate, companyId, true, paymentRequest.isOffCycle());
         }
 
-        return found == null ? List.of() : found;
+        if (found == null || found.isEmpty()) {
+            return List.of();
+        }
+        // Keep Regular sims separate from Custom/Final sims that also use offCycle=false.
+        return found.stream()
+                .filter(s -> sameRunType(s.getPayrollRunType(), requestedType))
+                .toList();
+    }
+
+    private static boolean sameRunType(PayrollRunType stored, PayrollRunType requested) {
+        PayrollRunType effectiveStored = stored == null ? PayrollRunType.REGULAR : stored;
+        PayrollRunType effectiveRequested = requested == null ? PayrollRunType.REGULAR : requested;
+        return effectiveStored == effectiveRequested;
     }
 
     private static PayrollReportSummary pickLatestSummary(List<PayrollReportSummary> summaries) {
@@ -334,16 +351,31 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
     private static String resolvePayrollType(PayrollReportSummary payrollReportSummary,
                                              PaymentInfoRequest paymentRequest) {
-        if (payrollReportSummary.isOffCycle()) {
-            return "OffCycle";
+        PayrollRunType runType = payrollReportSummary.getPayrollRunType() != null
+                ? payrollReportSummary.getPayrollRunType()
+                : resolvePayrollRunType(paymentRequest);
+        return switch (runType) {
+            case OFF_CYCLE -> "OffCycle";
+            case CUSTOM_PAY -> "Custom Pay";
+            case FINAL_PAY -> "Final Pay";
+            case REGULAR -> "Regular";
+        };
+    }
+
+    static PayrollRunType resolvePayrollRunType(PaymentInfoRequest paymentRequest) {
+        if (paymentRequest == null) {
+            return PayrollRunType.REGULAR;
+        }
+        if (paymentRequest.isOffCycle()) {
+            return PayrollRunType.OFF_CYCLE;
         }
         if (paymentRequest.isCustomPay()) {
-            return "Custom Pay";
+            return PayrollRunType.CUSTOM_PAY;
         }
         if (paymentRequest.getEmployeeId() != null && !paymentRequest.getEmployeeId().isEmpty()) {
-            return "Final Pay";
+            return PayrollRunType.FINAL_PAY;
         }
-        return "Regular";
+        return PayrollRunType.REGULAR;
     }
 
     private static int countDistinctEmployeeIds(List<?> paymentInfoList) {
@@ -516,17 +548,27 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
     @Transactional
     public ReportResponse serializeAndSaveReport(PaymentComputeResponse paymentComputeResponse, String companyId)
             throws IOException {
+        return serializeAndSaveReport(paymentComputeResponse, companyId, PayrollRunType.REGULAR);
+    }
+
+    @Override
+    @Transactional
+    public ReportResponse serializeAndSaveReport(PaymentComputeResponse paymentComputeResponse,
+                                                 PaymentInfoRequest paymentRequest) throws IOException {
+        return serializeAndSaveReport(
+                paymentComputeResponse,
+                paymentRequest.getCompanyId(),
+                resolvePayrollRunType(paymentRequest)
+        );
+    }
+
+    private ReportResponse serializeAndSaveReport(PaymentComputeResponse paymentComputeResponse,
+                                                  String companyId,
+                                                  PayrollRunType payrollRunType) throws IOException {
         long startTime = System.currentTimeMillis();
         ReportResponse reportResponse;
         try {
             deleteReportByDate(
-//                    paymentComputeResponse.getStart(),
-//                    companyId,
-//                    paymentComputeResponse.isOffCycle(),
-//                    false,
-//                    paymentComputeResponse.getOffCycleId(),
-//                    //TODO validate this to make sure is the reportId
-//                    String.valueOf(paymentComputeResponse.getId())
                     UpdateReportRequest.builder()
                             .reportId(String.valueOf(paymentComputeResponse.getId()))
                             .companyId(companyId)
@@ -534,8 +576,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                             .cancelPayroll(false)
                             .offCycleId(paymentComputeResponse.getOffCycleId())
                             .build());
-            reportResponse = getReportResponse(paymentComputeResponse, companyId);
-            //  }
+            reportResponse = getReportResponse(paymentComputeResponse, companyId, payrollRunType);
         } catch (RuntimeException e) {
             LOGGER.info(" exception {} ", e.toString());
             throw e;
@@ -546,8 +587,10 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         return reportResponse;
     }
 
-    private ReportResponse getReportResponse(PaymentComputeResponse paymentComputeResponse, String companyId) {
-        PayrollReportSummary previousReportSummary = payrollReportSummaryRepo.findTopByCompanyIdAndPayrollStatusAndOffCycleFalseOrderByEndDateDesc(companyId, PayrollStatus.COMPLETED).orElse(null);
+    private ReportResponse getReportResponse(PaymentComputeResponse paymentComputeResponse,
+                                             String companyId,
+                                             PayrollRunType payrollRunType) {
+        PayrollReportSummary previousReportSummary = findLatestCompletedRegularSummary(companyId);
         PaymentInfo paymentInfo = paymentComputeResponse.getReport().get(0);
         long totalNumberOfEmployees = paymentInfo.getTotalNumberOfEmployees();
         PaymentFrequencyEnum paymentFrequency = paymentInfo.getSalaryFrequency();
@@ -559,7 +602,6 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 .summaryDetails(paymentComputeResponse.getSummaryDetails())
                 .summaryVariance(processSummaryVariance(paymentComputeResponse.getSummary(), previousReportSummary))
                 .costCenterSummary(paymentComputeResponse.getCostCenterSummary())
-                //.summaryDetailsVariance(processSummaryDetailsVariance(paymentComputeResponse.getSummaryDetails(), previousReportSummary))
                 .build();
 
         PayComputeVarianceDetails payComputeVarianceDetails = PayComputeVarianceDetails.builder()
@@ -571,6 +613,8 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 .summaryVarianceDetails(ReportUtils.serializeResponse(payComputeVarianceDetails))
                 .build();
 
+        PayrollRunType effectiveRunType = payrollRunType != null ? payrollRunType : PayrollRunType.REGULAR;
+
         PayrollReportSummary payrollReportSummary = PayrollReportSummary.builder()
                 .id(paymentComputeResponse.getId())
                 .companyId(companyId)
@@ -581,6 +625,7 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                 .createdDate(LocalDateTime.now())
                 .payrollSimulation(paymentComputeResponse.isPayrollSimulation())
                 .offCycle(paymentComputeResponse.isOffCycle())
+                .payrollRunType(effectiveRunType)
                 .totalNumberOfEmployees(totalNumberOfEmployees)
                 .payrollStatus(paymentComputeResponse.isPayrollSimulation() ? PayrollStatus.SIMULATED : PayrollStatus.INITIATED)
                 .paymentFrequency(paymentFrequency)
@@ -592,6 +637,21 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
         payrollAsyncService.saveReportDetails(paymentComputeResponse, companyId, previousReportSummaryId);
 
         return getPayRollReport(paymentComputeResponse.getId());
+    }
+
+    private PayrollReportSummary findLatestCompletedRegularSummary(String companyId) {
+        return payrollReportSummaryRepo
+                .findAllByPayrollStatusAndCompanyIdOrderByCreatedDateAsc(PayrollStatus.COMPLETED, companyId)
+                .stream()
+                .filter(s -> !s.isOffCycle())
+                .filter(s -> PayrollRunType.isRegular(s.getPayrollRunType()))
+                .max(Comparator.comparing(
+                        PayrollReportSummary::getEndDate,
+                        Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(
+                                PayrollReportSummary::getCreatedDate,
+                                Comparator.nullsLast(Comparator.naturalOrder())))
+                .orElse(null);
     }
 
     private static ConcurrentHashMap<String, Set<SummaryDetail>> processSummaryDetailsVariance(
@@ -713,12 +773,21 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
 
     @Override
     public ReportResponse getPayRollReport(String starDate, String companyId) {
-        PayrollReportSummary payrollReportSummary = payrollReportSummaryRepo
-                .findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(starDate, companyId, false);
+        List<PayrollReportSummary> candidates = payrollReportSummaryRepo
+                .findAllByStartDateAndCompanyIdAndPayrollSimulation(starDate, companyId, false);
+        if (candidates == null || candidates.isEmpty()) {
+            return null;
+        }
+        // Prefer full Regular when Custom/Final Pay share the same start date (offCycle=false).
+        PayrollReportSummary payrollReportSummary = candidates.stream()
+                .filter(s -> PayrollRunType.isRegular(s.getPayrollRunType()))
+                .max(Comparator.comparing(
+                        PayrollReportSummary::getCreatedDate,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
+                .orElse(null);
         if (payrollReportSummary == null) {
             return null;
         }
-        //auditTrailService.logEvent(AuditTrailEvents.RETRIEVE_REPORT, "Get payroll report with start date :" + starDate + " for company id : " + companyId);
         return ReportUtils.transform(payrollReportSummary);
     }
 

@@ -28,6 +28,11 @@ public class PayrollReportSummary {
     private boolean payrollSimulation;
     private PayrollStatus payrollStatus;
     private boolean offCycle;
+    /**
+     * Product run type for locks / date lookups. Null on legacy docs means {@link PayrollRunType#REGULAR}.
+     * Independent of {@link #offCycle} (Custom/Final Pay may compute with offCycle=false).
+     */
+    private PayrollRunType payrollRunType;
     private LocalDateTime createdDate;
     private long totalNumberOfEmployees;
     private PaymentFrequencyEnum paymentFrequency;

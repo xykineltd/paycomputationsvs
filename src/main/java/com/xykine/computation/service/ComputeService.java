@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xykine.computation.entity.CompanyMetadata;
 import com.xykine.computation.entity.PaymentSettingMetaData;
 import com.xykine.computation.entity.PayrollReportSummary;
+import com.xykine.computation.entity.PayrollRunType;
 import com.xykine.computation.entity.PayrollStatus;
 import com.xykine.computation.exceptions.IncompleteEntitySetupException;
 import com.xykine.computation.exceptions.PayrollUnmodifiableException;
@@ -121,17 +122,19 @@ public class ComputeService {
         return  payInfos;
     }
     public void validatePayrollIsNotCompleted (String startDate, String companyId) {
-
+        // Only a completed FULL REGULAR run locks the period. Custom Pay / Final Pay / true
+        // off-cycle may share the same start date and compute with offCycle=false, but must not block Regular.
         List<PayrollReportSummary> payroll = payrollReportSummaryRepo
                 .findAllyByStartDateAndCompanyIdAndOffCycle(startDate, companyId, false);
 
-        payroll.forEach(p -> {
-                    if (p != null && (p.getPayrollStatus().compareTo(PayrollStatus.COMPLETED) == 0)) {
-                        throw new PayrollUnmodifiableException(startDate);
-                    }
-                }
-        );
+        boolean regularCompleted = payroll.stream()
+                .filter(Objects::nonNull)
+                .filter(p -> PayrollRunType.isRegular(p.getPayrollRunType()))
+                .anyMatch(p -> p.getPayrollStatus() == PayrollStatus.COMPLETED);
 
+        if (regularCompleted) {
+            throw new PayrollUnmodifiableException(startDate);
+        }
     }
 
     public void ensurePayrollConfiguration(String companyId) {

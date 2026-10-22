@@ -14,6 +14,9 @@ public interface PayrollReportSummaryRepo extends MongoRepository<PayrollReportS
 
     PayrollReportSummary findPayrollReportSummaryByStartDateAndCompanyIdAndPayrollSimulation(String startDate, String companyId, boolean simulation);
 
+    List<PayrollReportSummary> findAllByStartDateAndCompanyIdAndPayrollSimulation(
+            String startDate, String companyId, boolean simulation);
+
     /**
      * All simulated (or non-simulated) summaries for a period + payroll type.
      * Regular and off-cycle are separate ({@code offCycle} flag).
