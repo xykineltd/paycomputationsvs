@@ -173,6 +173,47 @@ public class AdminService {
     /**
      * After a successful Final Pay run, lock recipients so they cannot be paid again.
      */
+    /**
+     * Reads the configured taxable flag from the saved off-cycle payroll.
+     * Compute must use this — the start payload often omits {@code offCyleTaxable},
+     * which defaults to false and zeros PAYE.
+     */
+    public Boolean getOffCycleIsTaxable(String offCycleId, String token) {
+        if (offCycleId == null || offCycleId.isBlank()) {
+            return null;
+        }
+        try {
+            Map<String, Object> body = webClient
+                    .get()
+                    .uri("admin/offCycle-payrolls/{offCycleID}", offCycleId)
+                    .header(HttpHeaders.AUTHORIZATION, token)
+                    .retrieve()
+                    .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
+                    .block();
+            if (body == null) {
+                return null;
+            }
+            Object taxable = body.get("isTaxable");
+            if (taxable == null) {
+                taxable = body.get("taxable");
+            }
+            if (taxable instanceof Boolean b) {
+                return b;
+            }
+            if (taxable != null) {
+                return Boolean.parseBoolean(String.valueOf(taxable));
+            }
+            return null;
+        } catch (Exception ex) {
+            LOGGER.warn(
+                    "Could not load off-cycle taxable flag for {}: {}. Falling back to request flag.",
+                    offCycleId,
+                    ex.getMessage()
+            );
+            return null;
+        }
+    }
+
     public void lockEmployeesAfterFinalPay(Set<String> employeeIds, String token) {
         if (employeeIds == null || employeeIds.isEmpty()) {
             return;

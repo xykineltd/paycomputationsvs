@@ -161,7 +161,25 @@ public class ReportPersistenceServiceImpl implements ReportPersistenceService {
                     paymentRequest
             );
 
+            // Off-cycle tax must follow the saved OffCyclePayroll.isTaxable config.
+            // The frontend often omits offCyleTaxable on /payroll/start (boolean defaults to false).
+            if (paymentRequest.isOffCycle()
+                    && paymentRequest.getOffCycleID() != null
+                    && !paymentRequest.getOffCycleID().isBlank()) {
+                Boolean configuredTaxable = adminService.getOffCycleIsTaxable(
+                        paymentRequest.getOffCycleID(),
+                        authorizationHeader
+                );
+                if (configuredTaxable != null) {
+                    paymentRequest.setOffCyleTaxable(configuredTaxable);
+                }
+            }
             sessionCalculationObject.setOffCycleTaxable(paymentRequest.isOffCyleTaxable());
+            LOGGER.info(
+                    "Off-cycle taxable flag offCycleId={} taxable={}",
+                    paymentRequest.getOffCycleID(),
+                    paymentRequest.isOffCyleTaxable()
+            );
 
             if (paymentInfoList == null || paymentInfoList.isEmpty()) {
                 throw new PayrollValidationException("No payment information found for request");
